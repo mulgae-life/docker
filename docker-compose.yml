@@ -1,0 +1,24 @@
+services:
+  dev:
+    build:
+      context: .
+      args:
+        USERNAME: hjjo
+        PASSWORD: 1106
+    image: dev-fullstack
+    container_name: dev-fullstack
+    hostname: dev-fullstack
+    restart: unless-stopped
+    ports:
+      - "2222:22"        # SSH
+      - "3001:3001"      # Next.js (culture-calendar)
+      - "8000:8000"      # FastAPI (chatbot-poc)
+    volumes:
+      - workspace:/workspace
+    # 필요 시 추가 포트 매핑:
+    #   - "3000:3000"
+    #   - "8001:8001"
+    #   - "2024:2024"    # LangGraph Studio
+
+volumes:
+  workspace:

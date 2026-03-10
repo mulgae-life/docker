@@ -1,0 +1,128 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ============================================
+# 시스템 패키지
+# ============================================
+RUN apt update && apt install -y \
+    # 기본
+    openssh-server sudo git curl wget unzip \
+    build-essential ca-certificates \
+    # 편집/터미널
+    vim nano tmux htop jq \
+    # 검색
+    fzf ripgrep \
+    # DB
+    postgresql-client \
+    # 네트워크
+    net-tools iputils-ping dnsutils \
+    # 로케일/타임존
+    locales tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+# ============================================
+# 한글 로케일 + 서울 타임존
+# ============================================
+RUN locale-gen ko_KR.UTF-8
+ENV LANG=ko_KR.UTF-8
+ENV LC_ALL=ko_KR.UTF-8
+RUN ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
+
+# ============================================
+# Node.js 22 LTS
+# ============================================
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt install -y nodejs \
+    && npm install -g pnpm yarn typescript
+
+# ============================================
+# Python 3.12
+# ============================================
+RUN apt update && apt install -y \
+    python3 python3-pip python3-venv \
+    && ln -s /usr/bin/python3 /usr/bin/python
+
+# ============================================
+# Playwright 의존성 + Chromium + 한글폰트
+# ============================================
+RUN apt update && apt install -y \
+    libnss3 libatk1.0-0 libatk-bridge2.0-0 \
+    libcups2 libdrm2 libxkbcommon0 libxcomposite1 \
+    libxdamage1 libxrandr2 libgbm1 libasound2t64 \
+    libpango-1.0-0 libcairo2 \
+    chromium-browser fonts-nanum fonts-noto-cjk \
+    && rm -rf /var/lib/apt/lists/*
+
+# ============================================
+# Supabase CLI (직접 설치)
+# ============================================
+RUN curl -fsSL https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz | tar -xz -C /usr/local/bin
+
+# ============================================
+# Python 패키지
+# ============================================
+RUN pip install --break-system-packages \
+    # LLM
+    openai anthropic \
+    # LangChain
+    langchain-core langchain-openai langchain-anthropic \
+    langchain-google-genai langchain-ollama \
+    # 벡터DB/검색
+    chromadb kiwipiepy \
+    # 웹 프레임워크
+    fastapi uvicorn pydantic-settings \
+    sse-starlette sqlmodel jinja2 python-multipart \
+    # 크롤링
+    playwright beautifulsoup4 lxml \
+    requests httpx aiohttp \
+    # 문서 처리
+    PyPDF2 python-docx openpyxl markdown nh3 PyYAML \
+    # 데이터
+    pandas \
+    # Supabase
+    supabase python-dotenv \
+    # MCP
+    fastmcp notion-client \
+    # 개발도구
+    pytest black ruff \
+    # 유틸
+    pydantic
+
+# Playwright 브라우저 설치
+RUN playwright install chromium
+
+# ============================================
+# GitHub CLI
+# ============================================
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+    && apt update && apt install -y gh \
+    && rm -rf /var/lib/apt/lists/*
+
+# ============================================
+# 사용자 생성
+# ============================================
+ARG USERNAME=hjjo
+ARG PASSWORD=1106
+RUN useradd -m -s /bin/bash ${USERNAME} \
+    && echo "${USERNAME}:${PASSWORD}" | chpasswd \
+    && usermod -aG sudo ${USERNAME}
+# 기본 디렉토리 설정
+RUN echo "cd /workspace" >> /home/${USERNAME}/.bashrc
+
+# ============================================
+# SSH 설정
+# ============================================
+RUN mkdir /run/sshd
+
+# ============================================
+# 작업 디렉토리
+# ============================================
+WORKDIR /workspace
+RUN chown -R ${USERNAME}:${USERNAME} /workspace
+
+EXPOSE 22 3000-3009 8000-8009
+
+CMD ["/usr/sbin/sshd", "-D"]
