@@ -2,6 +2,7 @@ services:
   dev:
     build:
       context: .
+      dockerfile: Dockerfile.dev
       args:
         USERNAME: hjjo
         PASSWORD: 1106
@@ -19,6 +20,26 @@ services:
     #   - "3000:3000"
     #   - "8001:8001"
     #   - "2024:2024"    # LangGraph Studio
+
+  gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    image: dev-gpu
+    container_name: dev-gpu
+    hostname: dev-gpu
+    restart: unless-stopped
+    ports:
+      - "2223:22"        # SSH
+    volumes:
+      - workspace:/workspace
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
 volumes:
   workspace:
