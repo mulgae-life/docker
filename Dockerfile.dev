@@ -99,7 +99,8 @@ RUN useradd -m -s /bin/bash ${USERNAME} \
     && echo "set -g mouse on" > /home/${USERNAME}/.tmux.conf \
     && chown ${USERNAME}:${USERNAME} /home/${USERNAME}/.tmux.conf \
     && echo 'export NVM_DIR=/usr/local/nvm' >> /home/${USERNAME}/.bashrc \
-    && echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"' >> /home/${USERNAME}/.bashrc
+    && echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"' >> /home/${USERNAME}/.bashrc \
+    && chown -R ${USERNAME}:${USERNAME} /usr/local/nvm
 
 # ============================================
 # SSH 설정
