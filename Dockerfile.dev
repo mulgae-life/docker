@@ -30,11 +30,16 @@ ENV LC_ALL=ko_KR.UTF-8
 RUN ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 
 # ============================================
-# Node.js 22 LTS
+# nvm + Node.js 22 LTS
 # ============================================
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt install -y nodejs \
+ENV NVM_DIR=/usr/local/nvm
+RUN mkdir -p $NVM_DIR \
+    && curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash \
+    && . $NVM_DIR/nvm.sh \
+    && nvm install 22 \
+    && nvm alias default 22 \
     && npm install -g pnpm yarn typescript
+ENV PATH=$NVM_DIR/versions/node/v22/bin:$PATH
 
 # ============================================
 # Python 3.12
@@ -110,6 +115,7 @@ RUN useradd -m -s /bin/bash ${USERNAME} \
     && echo "${USERNAME}:${PASSWORD}" | chpasswd \
     && usermod -aG sudo ${USERNAME}
 RUN su - ${USERNAME} -c "git config --global --add safe.directory '*'"
+RUN echo "set -g mouse on" > /home/${USERNAME}/.tmux.conf && chown ${USERNAME}:${USERNAME} /home/${USERNAME}/.tmux.conf
 
 # ============================================
 # SSH 설정

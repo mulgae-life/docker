@@ -17,6 +17,7 @@ RUN useradd -m -s /bin/bash ${USERNAME} \
     && echo "${USERNAME}:${PASSWORD}" | chpasswd \
     && usermod -aG sudo ${USERNAME}
 RUN su - ${USERNAME} -c "git config --global --add safe.directory '*'"
+RUN echo "set -g mouse on" > /home/${USERNAME}/.tmux.conf && chown ${USERNAME}:${USERNAME} /home/${USERNAME}/.tmux.conf
 
 RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config \
     && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
@@ -24,6 +25,16 @@ RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/s
 # CUDA PATH 설정
 RUN echo 'export PATH=/usr/local/cuda/bin:$PATH' >> /home/${USERNAME}/.bashrc \
     && echo 'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH' >> /home/${USERNAME}/.bashrc
+
+# nvm + Node.js 22 LTS
+ENV NVM_DIR=/usr/local/nvm
+RUN mkdir -p $NVM_DIR \
+    && curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash \
+    && . $NVM_DIR/nvm.sh \
+    && nvm install 22 \
+    && nvm alias default 22 \
+    && npm install -g pnpm yarn typescript
+ENV PATH=$NVM_DIR/versions/node/v22/bin:$PATH
 
 RUN python3.12 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"

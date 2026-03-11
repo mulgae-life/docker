@@ -13,6 +13,7 @@ services:
     ports:
       - "5000:22"              # SSH
       - "5001-5009:5001-5009"  # 서비스
+    mem_limit: 24g
     volumes:
       - /workspace:/workspace
     deploy:
@@ -37,5 +38,6 @@ services:
     ports:
       - "5010:22"              # SSH
       - "5011-5019:5011-5019"  # 서비스
+    mem_limit: 24g
     volumes:
       - /workspace:/workspace
