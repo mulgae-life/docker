@@ -59,7 +59,14 @@ RUN useradd -m -s /bin/bash ${USERNAME} \
     && echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"' >> /home/${USERNAME}/.bashrc \
     && echo 'export PATH=/usr/local/cuda/bin:$PATH' >> /home/${USERNAME}/.bashrc \
     && echo 'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH' >> /home/${USERNAME}/.bashrc \
+    && echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/${USERNAME}/.bashrc \
     && chown -R ${USERNAME}:${USERNAME} /usr/local/nvm
+
+# ============================================
+# Claude Code + OpenAI Codex
+# ============================================
+RUN su - ${USERNAME} -c "curl -fsSL https://claude.ai/install.sh | bash"
+RUN . /usr/local/nvm/nvm.sh && npm install -g @openai/codex
 
 # ============================================
 # SSH 설정

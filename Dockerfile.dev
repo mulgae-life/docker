@@ -100,7 +100,14 @@ RUN useradd -m -s /bin/bash ${USERNAME} \
     && chown ${USERNAME}:${USERNAME} /home/${USERNAME}/.tmux.conf \
     && echo 'export NVM_DIR=/usr/local/nvm' >> /home/${USERNAME}/.bashrc \
     && echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"' >> /home/${USERNAME}/.bashrc \
+    && echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/${USERNAME}/.bashrc \
     && chown -R ${USERNAME}:${USERNAME} /usr/local/nvm
+
+# ============================================
+# Claude Code + OpenAI Codex
+# ============================================
+RUN su - ${USERNAME} -c "curl -fsSL https://claude.ai/install.sh | bash"
+RUN . /usr/local/nvm/nvm.sh && npm install -g @openai/codex
 
 # ============================================
 # SSH 설정
