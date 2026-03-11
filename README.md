@@ -20,7 +20,7 @@
 | **프레임워크** | Next.js, FastAPI, LangChain |
 | **DB/검색** | PostgreSQL client, Supabase CLI, ChromaDB |
 | **크롤링/테스트** | Playwright + Chromium, BeautifulSoup |
-| **도구** | Git, GitHub CLI, tmux, fzf, ripgrep |
+| **도구** | Git, GitHub CLI, Claude Code, Codex, tmux, fzf, ripgrep |
 | **로케일** | 한국어 (ko_KR.UTF-8), 서울 타임존 |
 
 ### cfd (GPU 연산)
@@ -29,7 +29,7 @@
 |------|------|
 | **런타임** | Node.js 22 LTS (nvm), Python 3.12, CUDA 12.6 |
 | **라이브러리** | NumPy, Numba, CuPy, Matplotlib |
-| **도구** | Git, tmux, cmake |
+| **도구** | Git, Claude Code, Codex, tmux, cmake |
 | **로케일** | 한국어 (ko_KR.UTF-8), 서울 타임존 |
 
 ## 🚀 빠른 시작
@@ -167,6 +167,12 @@ FROM nvidia/cuda:12.6.3-devel-ubuntu24.04  # ← 버전 변경
 && nvm install 22 \       # ← 원하는 버전 (예: 20, 23)
 && nvm alias default 22 \ # ← 동일하게 변경
 && ln -sf $(ls -d $NVM_DIR/versions/node/v22.* | tail -1) $NVM_DIR/versions/node/v22 \  # ← v22 부분 변경
+```
+
+`ENV PATH` 줄도 함께 변경:
+
+```dockerfile
+ENV PATH=$NVM_DIR/versions/node/v22/bin:$PATH  # ← v22 부분 변경
 ```
 
 ### Python 패키지 추가/제거
