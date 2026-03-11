@@ -6,28 +6,26 @@ ENV DEBIAN_FRONTEND=noninteractive
 # 시스템 패키지
 # ============================================
 RUN apt update && apt install -y \
-    # 기본
     openssh-server sudo git curl wget unzip \
     build-essential ca-certificates \
-    # 편집/터미널
     vim nano tmux htop jq \
-    # 검색
     fzf ripgrep \
-    # DB
     postgresql-client \
-    # 네트워크
     net-tools iputils-ping dnsutils \
-    # 로케일/타임존
     locales tzdata \
+    python3 python3-pip python3-venv \
+    && ln -sf /usr/bin/python3 /usr/bin/python \
+    && ln -sf /usr/bin/pip3 /usr/bin/pip \
     && rm -rf /var/lib/apt/lists/*
+RUN pip config set global.break-system-packages true
 
 # ============================================
 # 한글 로케일 + 서울 타임존
 # ============================================
-RUN locale-gen ko_KR.UTF-8
+RUN locale-gen ko_KR.UTF-8 \
+    && ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 ENV LANG=ko_KR.UTF-8
 ENV LC_ALL=ko_KR.UTF-8
-RUN ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
 
 # ============================================
 # nvm + Node.js 22 LTS
@@ -38,16 +36,9 @@ RUN mkdir -p $NVM_DIR \
     && . $NVM_DIR/nvm.sh \
     && nvm install 22 \
     && nvm alias default 22 \
+    && ln -sf $(ls -d $NVM_DIR/versions/node/v22.* | tail -1) $NVM_DIR/versions/node/v22 \
     && npm install -g pnpm yarn typescript
 ENV PATH=$NVM_DIR/versions/node/v22/bin:$PATH
-
-# ============================================
-# Python 3.12
-# ============================================
-RUN apt update && apt install -y \
-    python3 python3-pip python3-venv \
-    && ln -s /usr/bin/python3 /usr/bin/python \
-    && ln -s /usr/bin/pip3 /usr/bin/pip
 
 # ============================================
 # Playwright 의존성 + Chromium + 한글폰트
@@ -68,31 +59,20 @@ RUN curl -fsSL https://github.com/supabase/cli/releases/latest/download/supabase
 # ============================================
 # Python 패키지
 # ============================================
-RUN pip install --break-system-packages \
-    # LLM
+RUN pip install --no-cache-dir \
     openai anthropic \
-    # LangChain
     langchain-core langchain-openai langchain-anthropic \
     langchain-google-genai langchain-ollama \
-    # 벡터DB/검색
     chromadb kiwipiepy \
-    # 웹 프레임워크
     fastapi uvicorn pydantic-settings \
     sse-starlette sqlmodel jinja2 python-multipart \
-    # 크롤링
     playwright beautifulsoup4 lxml \
     requests httpx aiohttp \
-    # 문서 처리
     PyPDF2 python-docx openpyxl markdown nh3 PyYAML \
-    # 데이터
     pandas \
-    # Supabase
     supabase python-dotenv \
-    # MCP
     fastmcp notion-client \
-    # 개발도구
     pytest black ruff \
-    # 유틸
     pydantic
 
 # Playwright 브라우저 설치
@@ -108,22 +88,25 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
     && rm -rf /var/lib/apt/lists/*
 
 # ============================================
-# 사용자 생성
+# 사용자 생성 + 설정
 # ============================================
 ARG USERNAME=user
 ARG PASSWORD=changeme
 RUN useradd -m -s /bin/bash ${USERNAME} \
     && echo "${USERNAME}:${PASSWORD}" | chpasswd \
-    && usermod -aG sudo ${USERNAME}
-RUN su - ${USERNAME} -c "git config --global --add safe.directory '*'"
-RUN echo "set -g mouse on" > /home/${USERNAME}/.tmux.conf && chown ${USERNAME}:${USERNAME} /home/${USERNAME}/.tmux.conf
-RUN echo 'export NVM_DIR=/usr/local/nvm' >> /home/${USERNAME}/.bashrc \
+    && usermod -aG sudo ${USERNAME} \
+    && su - ${USERNAME} -c "git config --global --add safe.directory /workspace" \
+    && echo "set -g mouse on" > /home/${USERNAME}/.tmux.conf \
+    && chown ${USERNAME}:${USERNAME} /home/${USERNAME}/.tmux.conf \
+    && echo 'export NVM_DIR=/usr/local/nvm' >> /home/${USERNAME}/.bashrc \
     && echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"' >> /home/${USERNAME}/.bashrc
 
 # ============================================
 # SSH 설정
 # ============================================
-RUN mkdir /run/sshd
+RUN mkdir -p /run/sshd \
+    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config \
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
 
 # ============================================
 # 작업 디렉토리
@@ -131,6 +114,6 @@ RUN mkdir /run/sshd
 WORKDIR /workspace
 RUN chown -R ${USERNAME}:${USERNAME} /workspace
 
-EXPOSE 22 3000-3009 8000-8009
+EXPOSE 22 5011-5019
 
 CMD ["/usr/sbin/sshd", "-D"]

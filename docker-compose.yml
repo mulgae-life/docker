@@ -4,8 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile.gpu
       args:
-        USERNAME: hjjo
-        PASSWORD: 1106
+        USERNAME: ${USERNAME}
+        PASSWORD: ${PASSWORD}
     image: cfd-gpu
     container_name: cfd
     hostname: cfd
@@ -13,12 +13,12 @@ services:
     ports:
       - "5000:22"              # SSH
       - "5001-5009:5001-5009"  # 서비스
-    mem_limit: 24g
-    memswap_limit: 28g
     volumes:
       - /workspace:/workspace
     deploy:
       resources:
+        limits:
+          memory: 24g
         reservations:
           devices:
             - driver: nvidia
@@ -30,8 +30,8 @@ services:
       context: .
       dockerfile: Dockerfile.dev
       args:
-        USERNAME: hjjo
-        PASSWORD: 1106
+        USERNAME: ${USERNAME}
+        PASSWORD: ${PASSWORD}
     image: dev-fullstack
     container_name: dev-fullstack
     hostname: dev-fullstack
@@ -39,7 +39,9 @@ services:
     ports:
       - "5010:22"              # SSH
       - "5011-5019:5011-5019"  # 서비스
-    mem_limit: 24g
-    memswap_limit: 28g
     volumes:
       - /workspace:/workspace
+    deploy:
+      resources:
+        limits:
+          memory: 24g
