@@ -15,6 +15,7 @@ services:
       - "5001-5009:5001-5009"  # 서비스
     volumes:
       - /workspace:/workspace
+      - cfd-home:/home/${USERNAME}
     deploy:
       resources:
         limits:
@@ -41,7 +42,12 @@ services:
       - "5011-5019:5011-5019"  # 서비스
     volumes:
       - /workspace:/workspace
+      - dev-home:/home/${USERNAME}
     deploy:
       resources:
         limits:
           memory: 24g
+
+volumes:
+  cfd-home:
+  dev-home:
