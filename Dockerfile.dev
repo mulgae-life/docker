@@ -109,8 +109,7 @@ ARG PASSWORD=changeme
 RUN useradd -m -s /bin/bash ${USERNAME} \
     && echo "${USERNAME}:${PASSWORD}" | chpasswd \
     && usermod -aG sudo ${USERNAME}
-# 기본 디렉토리 설정
-RUN echo "cd /workspace" >> /home/${USERNAME}/.bashrc
+RUN su - ${USERNAME} -c "git config --global --add safe.directory '*'"
 
 # ============================================
 # SSH 설정
