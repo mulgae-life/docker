@@ -71,25 +71,24 @@ PASSWORD=mypassword   # SSH 및 sudo 비밀번호
 
 ## 💾 데이터 영속화
 
-| 경로 | 타입 | 설명 |
-|------|------|------|
-| `/workspace` | bind mount | 코드/프로젝트 (호스트와 공유) |
-| `/home/<USERNAME>` | named volume | 사용자 홈 (컨테이너 전용, 재빌드 시에도 유지) |
+| 경로 | 타입 | 호스트 위치 | 설명 |
+|------|------|-----------|------|
+| `/workspace` | bind mount | `/workspace` | 코드/프로젝트 (호스트와 공유) |
+| `/home/<USERNAME>` | bind mount | `/opt/docker-homes/<컨테이너>/<USERNAME>` | 사용자 홈 (재빌드 시에도 유지) |
 
-홈 디렉토리가 named volume으로 관리되므로, 재빌드해도 다음 항목이 보존됩니다:
+홈 디렉토리가 호스트에 영속화되므로, 재빌드해도 다음 항목이 보존됩니다:
 - Claude Code / Codex 로그인 및 대화기록
 - SSH 키, Git 설정
 - `.bashrc`, `.tmux.conf` 등 사용자 설정
 - npm/pip 캐시
 
-> ⚠️ `.env`에서 `USERNAME`을 변경하면 기존 volume과 경로가 맞지 않습니다. 변경 시 기존 volume을 삭제하세요:
+첫 실행 시 홈 디렉토리가 비어있으면 Dockerfile의 초기 설정이 자동 복사됩니다.
+
+> ⚠️ Dockerfile의 `.bashrc` 등 설정을 변경한 경우, 기존 파일이 우선합니다. 초기화하려면:
 > ```bash
-> docker compose down
-> docker volume rm docker_dev-home docker_cfd-home
+> sudo rm -rf /opt/docker-homes/dev/<USERNAME>
 > docker compose up -d --build
 > ```
-
-> ⚠️ Dockerfile의 `.bashrc` 등 설정을 변경한 경우, 이미 volume에 있는 파일이 우선합니다. 설정 초기화가 필요하면 위와 같이 volume을 삭제 후 재생성하세요.
 
 ## 🔌 포트 매핑
 
@@ -207,7 +206,5 @@ docker compose ps            # 상태 확인
 docker compose logs -f       # 로그
 docker compose restart       # 재시작
 docker compose up -d --build # Dockerfile 수정 후 재빌드
-docker compose down          # 컨테이너 삭제 (홈 volume 유지)
-docker compose down -v       # 컨테이너 + 홈 volume 삭제 (초기화)
-docker volume ls             # volume 목록 확인
+docker compose down          # 컨테이너 삭제 (홈 데이터 유지)
 ```

@@ -109,6 +109,9 @@ RUN useradd -m -s /bin/bash ${USERNAME} \
 RUN su - ${USERNAME} -c "curl -fsSL https://claude.ai/install.sh | bash"
 RUN . /usr/local/nvm/nvm.sh && npm install -g @openai/codex
 
+# 홈 디렉토리 초기 파일 백업 (bind mount 시 복원용)
+RUN cp -a /home/${USERNAME} /etc/docker-home-init
+
 # ============================================
 # SSH 설정
 # ============================================
@@ -122,6 +125,9 @@ RUN mkdir -p /run/sshd \
 WORKDIR /workspace
 RUN chown -R ${USERNAME}:${USERNAME} /workspace
 
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+
 EXPOSE 22 5011-5019
 
+ENTRYPOINT ["entrypoint.sh"]
 CMD ["/usr/sbin/sshd", "-D"]
