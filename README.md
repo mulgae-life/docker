@@ -15,7 +15,7 @@
 
 | 영역 | 구성 |
 |------|------|
-| **런타임** | Node.js 22 LTS, Python 3.12 |
+| **런타임** | Node.js 22 LTS (nvm), Python 3.12 |
 | **패키지 매니저** | pnpm, yarn, pip |
 | **프레임워크** | Next.js, FastAPI, LangChain |
 | **DB/검색** | PostgreSQL client, Supabase CLI, ChromaDB |
@@ -23,13 +23,14 @@
 | **도구** | Git, GitHub CLI, tmux, fzf, ripgrep |
 | **로케일** | 한국어 (ko_KR.UTF-8), 서울 타임존 |
 
-### gpu (GPU 연산)
+### cfd (GPU 연산)
 
 | 영역 | 구성 |
 |------|------|
-| **런타임** | Python 3.12, CUDA 12.6 |
+| **런타임** | Node.js 22 LTS (nvm), Python 3.12, CUDA 12.6 |
 | **라이브러리** | NumPy, Numba, CuPy, Matplotlib |
 | **도구** | Git, tmux, cmake |
+| **로케일** | 한국어 (ko_KR.UTF-8), 서울 타임존 |
 
 ## 빠른 시작
 
@@ -42,33 +43,38 @@ sudo usermod -aG docker $USER  # 재로그인 필요
 git clone https://github.com/mulgae-life/docker.git
 cd docker
 
-# 3. dev만 빌드 + 실행
+# 3. 환경 변수 설정
+cp .env.example .env
+# .env 파일에서 USERNAME, PASSWORD를 본인 계정으로 수정
+
+# 4. dev만 빌드 + 실행
 docker compose up -d --build dev
 
-# 4. GPU 포함 전체 실행 (NVIDIA GPU + nvidia-container-toolkit 필요)
+# 5. GPU 포함 전체 실행 (NVIDIA GPU + nvidia-container-toolkit 필요)
 docker compose up -d --build
 
-# 5. 접속
-ssh hjjo@localhost -p 2222      # dev
-ssh hjjo@localhost -p 2223      # gpu
+# 6. 접속 (.env에서 설정한 USERNAME 사용)
+ssh <USERNAME>@localhost -p 5010     # dev
+ssh <USERNAME>@localhost -p 5000     # cfd
 ```
 
-## 사용자명/비밀번호 변경
+## 환경 변수 (.env)
 
-```bash
-docker compose build --build-arg USERNAME=myuser --build-arg PASSWORD=mypass dev
+`.env` 파일에서 사용자 정보를 설정합니다. **이 파일은 Git에 포함되지 않습니다.**
+
+```env
+USERNAME=myuser       # 컨테이너 내 사용자명
+PASSWORD=mypassword   # SSH 및 sudo 비밀번호
 ```
+
+> `.env.example`을 복사한 후 본인 환경에 맞게 수정하세요.
 
 ## 포트 매핑
 
-| 호스트 | 컨테이너 | 서비스 | 용도 |
-|--------|----------|--------|------|
-| 2222 | 22 | dev | SSH |
-| 3001 | 3001 | dev | Next.js (culture-calendar) |
-| 8000 | 8000 | dev | FastAPI (chatbot-poc) |
-| 2223 | 22 | gpu | SSH |
-
-추가 포트가 필요하면 `docker-compose.yml`에서 수정.
+| 컨테이너 | SSH | 서비스 포트 | 메모리 제한 |
+|----------|-----|------------|-----------|
+| cfd | 5000 | 5001-5009 | 24g |
+| dev-fullstack | 5010 | 5011-5019 | 24g |
 
 ## 프로젝트 셋업
 
@@ -80,21 +86,96 @@ cd /workspace
 # GitHub 인증
 gh auth login
 
-# culture-calendar
-gh repo clone mulgae-life/culture-calendar
-cd culture-calendar
+# 프로젝트 클론 예시
+gh repo clone <org>/<repo>
+cd <repo>
 cp .env.example .env
-ln -s ../../.env apps/web/.env.local
-pnpm install
-pnpm dev                    # http://서버IP:3001
+pip install -r requirements.txt
+```
 
-# chatbot-poc
-cd /workspace
-gh repo clone mulgae-life/chatbot-poc
-cd chatbot-poc
-cp .env.example .env
-pip install -r requirements.txt --break-system-packages
-uvicorn app.main:app --host 0.0.0.0 --port 8000  # http://서버IP:8000
+## 커스터마이징 가이드
+
+### 하드웨어 사양에 따른 설정
+
+`docker-compose.yml`에서 수정:
+
+```yaml
+deploy:
+  resources:
+    limits:
+      memory: 24g    # ← 호스트 RAM에 맞게 조정
+```
+
+| 호스트 RAM | 컨테이너당 권장 | 비고 |
+|-----------|--------------|------|
+| 16GB | 12g | 호스트 여유 4GB 확보 |
+| 32GB | 24g | 현재 설정 |
+| 64GB | 48g | 대규모 모델/데이터 처리 |
+
+### GPU 설정
+
+`docker-compose.yml` → cfd 서비스:
+
+```yaml
+deploy:
+  resources:
+    reservations:
+      devices:
+        - driver: nvidia
+          count: all          # ← 특정 GPU만: count: 1
+          capabilities: [gpu]
+```
+
+GPU가 없는 환경에서는 cfd 서비스의 `deploy` 블록을 제거하고 `docker compose up -d dev`로 dev만 실행.
+
+### CUDA 버전 변경
+
+`Dockerfile.gpu` 1행:
+
+```dockerfile
+FROM nvidia/cuda:12.6.3-devel-ubuntu24.04  # ← 버전 변경
+```
+
+[사용 가능한 CUDA 이미지 목록](https://hub.docker.com/r/nvidia/cuda/tags)
+
+### Node.js 버전 변경
+
+`Dockerfile.dev`, `Dockerfile.gpu`에서:
+
+```dockerfile
+&& nvm install 22 \       # ← 원하는 버전 (예: 20, 23)
+&& nvm alias default 22 \ # ← 동일하게 변경
+&& ln -sf $(ls -d $NVM_DIR/versions/node/v22.* | tail -1) $NVM_DIR/versions/node/v22 \  # ← v22 부분 변경
+```
+
+### Python 패키지 추가/제거
+
+`Dockerfile.dev` → `pip install --no-cache-dir` 블록에서 패키지 추가/제거.
+`Dockerfile.gpu` → GPU 관련 Python 패키지 동일.
+
+### 포트 범위 변경
+
+`docker-compose.yml`의 `ports`와 Dockerfile의 `EXPOSE`를 함께 수정:
+
+```yaml
+# docker-compose.yml
+ports:
+  - "5010:22"              # SSH
+  - "5011-5019:5011-5019"  # ← 범위 변경 시 양쪽 동일하게
+```
+
+```dockerfile
+# Dockerfile
+EXPOSE 22 5011-5019        # ← compose와 일치시킴
+```
+
+### 볼륨 마운트 경로 변경
+
+작업 디렉토리를 다른 경로로 변경하려면 `docker-compose.yml`에서:
+
+```yaml
+volumes:
+  - /my/path:/workspace  # ← 호스트 경로를 원하는 곳으로 변경
 ```
 
 ## 운영 명령
@@ -104,6 +185,5 @@ docker compose ps            # 상태 확인
 docker compose logs -f       # 로그
 docker compose restart       # 재시작
 docker compose up -d --build # Dockerfile 수정 후 재빌드
-docker compose down -v       # 완전 삭제 (주의: 데이터 삭제)
+docker compose down          # 컨테이너 삭제
 ```
-
