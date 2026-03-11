@@ -37,7 +37,7 @@ RUN mkdir -p $NVM_DIR \
     && nvm install 22 \
     && nvm alias default 22 \
     && ln -sf $(ls -d $NVM_DIR/versions/node/v22.* | tail -1) $NVM_DIR/versions/node/v22 \
-    && npm install -g pnpm yarn typescript
+    && npm install -g npm@latest pnpm yarn typescript
 ENV PATH=$NVM_DIR/versions/node/v22/bin:$PATH
 
 # ============================================
