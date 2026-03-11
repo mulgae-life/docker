@@ -92,7 +92,14 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
 # ============================================
 ARG USERNAME=user
 ARG PASSWORD=changeme
-RUN useradd -m -s /bin/bash ${USERNAME} \
+ARG UID=1000
+ARG GID=1000
+RUN existing_user=$(getent passwd ${UID} | cut -d: -f1 || true); \
+    [ -n "$existing_user" ] && userdel -r "$existing_user" || true; \
+    existing_group=$(getent group ${GID} | cut -d: -f1 || true); \
+    [ -n "$existing_group" ] && groupdel "$existing_group" || true; \
+    groupadd -g ${GID} ${USERNAME} || true; \
+    useradd -m -s /bin/bash -u ${UID} -g ${GID} ${USERNAME} \
     && echo "${USERNAME}:${PASSWORD}" | chpasswd \
     && usermod -aG sudo ${USERNAME} \
     && su - ${USERNAME} -c "git config --global --add safe.directory /workspace" \

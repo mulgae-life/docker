@@ -65,6 +65,8 @@ ssh <USERNAME>@localhost -p 5000     # cfd
 ```env
 USERNAME=myuser       # 컨테이너 내 사용자명
 PASSWORD=mypassword   # SSH 및 sudo 비밀번호
+UID=1000              # 호스트 사용자의 UID (id -u 로 확인)
+GID=1000              # 호스트 사용자의 GID (id -g 로 확인)
 ```
 
 > `.env.example`을 복사한 후 본인 환경에 맞게 수정하세요.
