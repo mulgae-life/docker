@@ -11,49 +11,49 @@
 
 ## 🛠️ 포함 스택
 
-### 💻 dev (풀스택 개발)
+### dev (풀스택 개발)
 
 | 영역 | 구성 |
 |------|------|
-| ⚡ **런타임** | Node.js 22 LTS (nvm), Python 3.12 |
-| 📦 **패키지 매니저** | pnpm, yarn, pip |
-| 🧩 **프레임워크** | Next.js, FastAPI, LangChain |
-| 🗄️ **DB/검색** | PostgreSQL client, Supabase CLI, ChromaDB |
-| 🕷️ **크롤링/테스트** | Playwright + Chromium, BeautifulSoup |
-| 🔧 **도구** | Git, GitHub CLI, tmux, fzf, ripgrep |
-| 🌏 **로케일** | 한국어 (ko_KR.UTF-8), 서울 타임존 |
+| **런타임** | Node.js 22 LTS (nvm), Python 3.12 |
+| **패키지 매니저** | pnpm, yarn, pip |
+| **프레임워크** | Next.js, FastAPI, LangChain |
+| **DB/검색** | PostgreSQL client, Supabase CLI, ChromaDB |
+| **크롤링/테스트** | Playwright + Chromium, BeautifulSoup |
+| **도구** | Git, GitHub CLI, tmux, fzf, ripgrep |
+| **로케일** | 한국어 (ko_KR.UTF-8), 서울 타임존 |
 
-### 🎮 cfd (GPU 연산)
+### cfd (GPU 연산)
 
 | 영역 | 구성 |
 |------|------|
-| ⚡ **런타임** | Node.js 22 LTS (nvm), Python 3.12, CUDA 12.6 |
-| 📊 **라이브러리** | NumPy, Numba, CuPy, Matplotlib |
-| 🔧 **도구** | Git, tmux, cmake |
-| 🌏 **로케일** | 한국어 (ko_KR.UTF-8), 서울 타임존 |
+| **런타임** | Node.js 22 LTS (nvm), Python 3.12, CUDA 12.6 |
+| **라이브러리** | NumPy, Numba, CuPy, Matplotlib |
+| **도구** | Git, tmux, cmake |
+| **로케일** | 한국어 (ko_KR.UTF-8), 서울 타임존 |
 
 ## 🚀 빠른 시작
 
 ```bash
-# 1️⃣ Docker 설치 (없을 경우)
+# 1. Docker 설치 (없을 경우)
 curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER  # 재로그인 필요
 
-# 2️⃣ 레포 클론
+# 2. 레포 클론
 git clone https://github.com/mulgae-life/docker.git
 cd docker
 
-# 3️⃣ 환경 변수 설정
+# 3. 환경 변수 설정
 cp .env.example .env
 # .env 파일에서 USERNAME, PASSWORD를 본인 계정으로 수정
 
-# 4️⃣ dev만 빌드 + 실행
+# 4. dev만 빌드 + 실행
 docker compose up -d --build dev
 
-# 5️⃣ GPU 포함 전체 실행 (NVIDIA GPU + nvidia-container-toolkit 필요)
+# 5. GPU 포함 전체 실행 (NVIDIA GPU + nvidia-container-toolkit 필요)
 docker compose up -d --build
 
-# 6️⃣ 접속 (.env에서 설정한 USERNAME 사용)
+# 6. 접속 (.env에서 설정한 USERNAME 사용)
 ssh <USERNAME>@localhost -p 5010     # dev
 ssh <USERNAME>@localhost -p 5000     # cfd
 ```
@@ -67,14 +67,14 @@ USERNAME=myuser       # 컨테이너 내 사용자명
 PASSWORD=mypassword   # SSH 및 sudo 비밀번호
 ```
 
-> 💡 `.env.example`을 복사한 후 본인 환경에 맞게 수정하세요.
+> `.env.example`을 복사한 후 본인 환경에 맞게 수정하세요.
 
 ## 🔌 포트 매핑
 
 | 컨테이너 | SSH | 서비스 포트 | 메모리 제한 |
 |----------|-----|------------|-----------|
-| 🎮 cfd | 5000 | 5001-5009 | 24g |
-| 💻 dev-fullstack | 5010 | 5011-5019 | 24g |
+| cfd | 5000 | 5001-5009 | 24g |
+| dev-fullstack | 5010 | 5011-5019 | 24g |
 
 ## 📂 프로젝트 셋업
 
@@ -95,7 +95,7 @@ pip install -r requirements.txt
 
 ## ⚙️ 커스터마이징 가이드
 
-### 🧠 하드웨어 사양에 따른 설정
+### 하드웨어 사양에 따른 설정
 
 `docker-compose.yml`에서 수정:
 
@@ -112,7 +112,7 @@ deploy:
 | 32GB | 24g | 현재 설정 |
 | 64GB | 48g | 대규모 모델/데이터 처리 |
 
-### 🎮 GPU 설정
+### GPU 설정
 
 `docker-compose.yml` → cfd 서비스:
 
@@ -126,9 +126,9 @@ deploy:
           capabilities: [gpu]
 ```
 
-> ⚠️ GPU가 없는 환경에서는 cfd 서비스의 `deploy` 블록을 제거하고 `docker compose up -d dev`로 dev만 실행.
+GPU가 없는 환경에서는 cfd 서비스의 `deploy` 블록을 제거하고 `docker compose up -d dev`로 dev만 실행.
 
-### 🔥 CUDA 버전 변경
+### CUDA 버전 변경
 
 `Dockerfile.gpu` 1행:
 
@@ -136,9 +136,9 @@ deploy:
 FROM nvidia/cuda:12.6.3-devel-ubuntu24.04  # ← 버전 변경
 ```
 
-🔗 [사용 가능한 CUDA 이미지 목록](https://hub.docker.com/r/nvidia/cuda/tags)
+[사용 가능한 CUDA 이미지 목록](https://hub.docker.com/r/nvidia/cuda/tags)
 
-### 💚 Node.js 버전 변경
+### Node.js 버전 변경
 
 `Dockerfile.dev`, `Dockerfile.gpu`에서:
 
@@ -148,12 +148,12 @@ FROM nvidia/cuda:12.6.3-devel-ubuntu24.04  # ← 버전 변경
 && ln -sf $(ls -d $NVM_DIR/versions/node/v22.* | tail -1) $NVM_DIR/versions/node/v22 \  # ← v22 부분 변경
 ```
 
-### 🐍 Python 패키지 추가/제거
+### Python 패키지 추가/제거
 
 `Dockerfile.dev` → `pip install --no-cache-dir` 블록에서 패키지 추가/제거.
 `Dockerfile.gpu` → GPU 관련 Python 패키지 동일.
 
-### 🔌 포트 범위 변경
+### 포트 범위 변경
 
 `docker-compose.yml`의 `ports`와 Dockerfile의 `EXPOSE`를 함께 수정:
 
@@ -169,7 +169,7 @@ ports:
 EXPOSE 22 5011-5019        # ← compose와 일치시킴
 ```
 
-### 📁 볼륨 마운트 경로 변경
+### 볼륨 마운트 경로 변경
 
 작업 디렉토리를 다른 경로로 변경하려면 `docker-compose.yml`에서:
 
@@ -181,9 +181,9 @@ volumes:
 ## 🏃 운영 명령
 
 ```bash
-docker compose ps            # 📋 상태 확인
-docker compose logs -f       # 📜 로그
-docker compose restart       # 🔄 재시작
-docker compose up -d --build # 🔨 Dockerfile 수정 후 재빌드
-docker compose down          # 🛑 컨테이너 삭제
+docker compose ps            # 상태 확인
+docker compose logs -f       # 로그
+docker compose restart       # 재시작
+docker compose up -d --build # Dockerfile 수정 후 재빌드
+docker compose down          # 컨테이너 삭제
 ```
