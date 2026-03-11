@@ -104,8 +104,8 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | d
 # ============================================
 # 사용자 생성
 # ============================================
-ARG USERNAME=hjjo
-ARG PASSWORD=1106
+ARG USERNAME=user
+ARG PASSWORD=changeme
 RUN useradd -m -s /bin/bash ${USERNAME} \
     && echo "${USERNAME}:${PASSWORD}" | chpasswd \
     && usermod -aG sudo ${USERNAME}

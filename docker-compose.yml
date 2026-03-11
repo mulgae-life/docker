@@ -1,4 +1,28 @@
 services:
+  cfd:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+      args:
+        USERNAME: hjjo
+        PASSWORD: 1106
+    image: cfd-gpu
+    container_name: cfd
+    hostname: cfd
+    restart: unless-stopped
+    ports:
+      - "5000:22"              # SSH
+      - "5001-5009:5001-5009"  # 서비스
+    volumes:
+      - /workspace:/workspace
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
   dev:
     build:
       context: .
@@ -11,35 +35,7 @@ services:
     hostname: dev-fullstack
     restart: unless-stopped
     ports:
-      - "2222:22"        # SSH
-      - "3001:3001"      # Next.js (culture-calendar)
-      - "8000:8000"      # FastAPI (chatbot-poc)
+      - "5010:22"              # SSH
+      - "5011-5019:5011-5019"  # 서비스
     volumes:
-      - workspace:/workspace
-    # 필요 시 추가 포트 매핑:
-    #   - "3000:3000"
-    #   - "8001:8001"
-    #   - "2024:2024"    # LangGraph Studio
-
-  gpu:
-    build:
-      context: .
-      dockerfile: Dockerfile.gpu
-    image: dev-gpu
-    container_name: dev-gpu
-    hostname: dev-gpu
-    restart: unless-stopped
-    ports:
-      - "2222:22"        # SSH
-    volumes:
-      - workspace:/workspace
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-
-volumes:
-  workspace:
+      - /workspace:/workspace
