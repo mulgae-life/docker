@@ -114,7 +114,7 @@ RUN existing_user=$(getent passwd ${UID} | cut -d: -f1 || true); \
 # Claude Code + OpenAI Codex
 # ============================================
 RUN su - ${USERNAME} -c "curl -fsSL https://claude.ai/install.sh | bash"
-RUN . /usr/local/nvm/nvm.sh && npm install -g @openai/codex
+RUN su - ${USERNAME} -c "npm install -g @openai/codex"
 
 # 홈 디렉토리 초기 파일 백업 (bind mount 시 복원용)
 RUN mkdir -p /etc/docker-home-init && cp -a /home/${USERNAME} /etc/docker-home-init/
