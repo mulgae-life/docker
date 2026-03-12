@@ -102,7 +102,7 @@ RUN existing_user=$(getent passwd ${UID} | cut -d: -f1 || true); \
     useradd -m -s /bin/bash -u ${UID} -g ${GID} ${USERNAME} \
     && echo "${USERNAME}:${PASSWORD}" | chpasswd \
     && usermod -aG sudo ${USERNAME} \
-    && su - ${USERNAME} -c "git config --global --add safe.directory /workspace" \
+    && su - ${USERNAME} -c "git config --global --add safe.directory /workspace && git config --global core.quotePath false" \
     && echo "set -g mouse on" > /home/${USERNAME}/.tmux.conf \
     && chown ${USERNAME}:${USERNAME} /home/${USERNAME}/.tmux.conf \
     && echo 'export NVM_DIR=/usr/local/nvm' >> /home/${USERNAME}/.bashrc \
