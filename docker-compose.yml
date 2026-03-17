@@ -12,6 +12,8 @@ services:
     container_name: cfd
     hostname: cfd
     restart: unless-stopped
+    security_opt:
+      - apparmor=unconfined
     ports:
       - "5000:22"              # SSH
       - "5001-5009:5001-5009"  # 서비스
@@ -41,6 +43,8 @@ services:
     container_name: dev-fullstack
     hostname: dev-fullstack
     restart: unless-stopped
+    security_opt:
+      - apparmor=unconfined
     ports:
       - "5010:22"              # SSH
       - "5011-5019:5011-5019"  # 서비스
