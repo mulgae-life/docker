@@ -14,6 +14,7 @@ services:
     restart: unless-stopped
     security_opt:
       - apparmor=unconfined
+      - seccomp=unconfined
     ports:
       - "5000:22"              # SSH
       - "5001-5009:5001-5009"  # 서비스
@@ -45,6 +46,7 @@ services:
     restart: unless-stopped
     security_opt:
       - apparmor=unconfined
+      - seccomp=unconfined
     ports:
       - "5010:22"              # SSH
       - "5011-5019:5011-5019"  # 서비스
