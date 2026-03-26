@@ -29,7 +29,7 @@ services:
       - ${VOLUME_PATH:-/volume}/data:/data
       - ${VOLUME_PATH:-/volume}/homes/${USERNAME:-user}:/home/${USERNAME:-user}
     environment:
-      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}
+      - HF_TOKEN=${HF_TOKEN:-}
       - EXTRA_REQUIREMENTS=${EXTRA_REQUIREMENTS:-}
     shm_size: ${SHM_SIZE:-16g}
     deploy:
@@ -57,7 +57,8 @@ services:
   #   profiles: ["alice"]
   #   ports:
   #     - "5030:22"
-  #     - "5031-5039:5031-5039"
+  #     - "5031:8000"
+  #     - "5032-5039:5032-5039"
   #   volumes:
   #     - ${VOLUME_PATH:-/volume}/workspace/alice:/workspace
   #     - ${VOLUME_PATH:-/volume}/models:/models
@@ -76,7 +77,8 @@ services:
   #   profiles: ["bob"]
   #   ports:
   #     - "5040:22"
-  #     - "5041-5049:5041-5049"
+  #     - "5041:8000"
+  #     - "5042-5049:5042-5049"
   #   volumes:
   #     - ${VOLUME_PATH:-/volume}/workspace/bob:/workspace
   #     - ${VOLUME_PATH:-/volume}/models:/models

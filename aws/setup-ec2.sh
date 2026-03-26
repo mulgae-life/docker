@@ -23,6 +23,7 @@ SETUP_PASSWORD="${SETUP_PASSWORD:-}"
 VOLUME_PATH="${VOLUME_PATH:-/volume}"
 SSH_PORT="${SSH_PORT:-5555}"
 CONTAINER_UID="${CONTAINER_UID:-1000}"
+CONTAINER_GID="${CONTAINER_GID:-1000}"
 
 # EBS 볼륨 디바이스 경로 (lsblk로 확인 후 설정)
 VOLUME_DEVICE="${VOLUME_DEVICE:-}"         # 예: /dev/nvme1n1
@@ -115,7 +116,23 @@ phase1() {
         if id "$SETUP_USERNAME" &>/dev/null; then
             log "  사용자 $SETUP_USERNAME 이미 존재. 건너뜀."
         else
-            useradd -m -s /bin/bash -u "$CONTAINER_UID" "$SETUP_USERNAME"
+            # UID/GID 충돌 확인 (ec2-user 등이 CONTAINER_UID/GID를 점유할 수 있음)
+            local existing_uid_user
+            existing_uid_user=$(getent passwd "$CONTAINER_UID" | cut -d: -f1 || true)
+            if [ -n "$existing_uid_user" ]; then
+                local new_uid=$(( CONTAINER_UID + 5000 ))
+                log "  UID ${CONTAINER_UID}를 ${existing_uid_user}이(가) 사용 중 → UID ${new_uid}로 변경"
+                usermod -u "$new_uid" "$existing_uid_user"
+            fi
+            local existing_gid_group
+            existing_gid_group=$(getent group "$CONTAINER_GID" | cut -d: -f1 || true)
+            if [ -n "$existing_gid_group" ]; then
+                local new_gid=$(( CONTAINER_GID + 5000 ))
+                log "  GID ${CONTAINER_GID}를 ${existing_gid_group}이(가) 사용 중 → GID ${new_gid}로 변경"
+                groupmod -g "$new_gid" "$existing_gid_group"
+            fi
+            groupadd -g "$CONTAINER_GID" "$SETUP_USERNAME" 2>/dev/null || true
+            useradd -m -s /bin/bash -u "$CONTAINER_UID" -g "$CONTAINER_GID" "$SETUP_USERNAME"
             if [ -n "$SETUP_PASSWORD" ]; then
                 echo "${SETUP_USERNAME}:${SETUP_PASSWORD}" | chpasswd
             fi
@@ -137,6 +154,8 @@ phase1() {
     sed -i 's/^#\?KbdInteractiveAuthentication.*/KbdInteractiveAuthentication yes/' /etc/ssh/sshd_config
     sed -i 's/^#\?MaxAuthTries.*/MaxAuthTries 5/' /etc/ssh/sshd_config
     grep -q "^MaxAuthTries" /etc/ssh/sshd_config || echo "MaxAuthTries 5" >> /etc/ssh/sshd_config
+    # cloud-init이 SSH 설정을 덮어쓰지 않도록 드롭인 파일 정리
+    rm -f /etc/ssh/sshd_config.d/50-cloud-init.conf 2>/dev/null || true
     systemctl restart sshd
 
     # fail2ban 설치 + SSH jail 설정
@@ -186,11 +205,19 @@ JAIL
     dnf update -y --exclude='kernel*'
     dnf install -y \
         dnf-plugins-core curl wget git jq htop tmux \
-        kernel-devel-"$(uname -r)" kernel-headers-"$(uname -r)" \
         gcc dkms --allowerasing
-    dnf install -y \
-        kernel-modules-extra-"$(uname -r)" \
-        kernel-modules-extra-common-"$(uname -r)" 2>/dev/null || true
+
+    # AL2023 커널 패키지명 자동 감지 (6.1: kernel-devel, 6.12+: kernel6.12-devel)
+    local kver kpkg
+    kver=$(uname -r)
+    case "$kver" in
+        6.1.*) kpkg="kernel" ;;
+        *)     kpkg="kernel$(echo "$kver" | cut -d. -f1,2)" ;;
+    esac
+    log "  커널 패키지 접두사: ${kpkg} (커널: ${kver})"
+    dnf install -y "${kpkg}-devel-${kver}" "${kpkg}-headers-${kver}" --allowerasing
+    dnf install -y "${kpkg}-modules-extra-${kver}" 2>/dev/null || true
+    dnf install -y "${kpkg}-modules-extra-common-${kver}" 2>/dev/null || true
 
     # --- Docker 설치 ---
     log "[6/8] Docker 설치"
@@ -254,6 +281,9 @@ JAIL
 # Phase 2: Container Toolkit + Fabric Manager
 # ============================================
 phase2() {
+    # Phase 2 실패 시 systemd 서비스 + phase 파일 정리 (리부트 루프 방지)
+    trap 'cleanup_phase2_service; rm -f "$PHASE_FILE"' ERR
+
     log "========== Phase 2 시작 =========="
 
     # --- NVIDIA 드라이버 확인 ---
@@ -318,7 +348,8 @@ phase2() {
         log "  ⚠️ Docker GPU 테스트 실패. docker 재시작 후 재시도 필요"
     fi
 
-    # Phase 2 완료 정리
+    # Phase 2 완료 — ERR trap 해제 후 정리
+    trap - ERR
     cleanup_phase2_service
     rm -f "$PHASE_FILE"
 
@@ -386,6 +417,8 @@ main() {
     # .env 파일이 있으면 항상 로드 (phase2 자동 실행 시에도 적용)
     if [ -f "$(dirname "$SCRIPT_PATH")/.env" ]; then
         log ".env 파일 로드"
+        # Windows 줄 끝(CRLF) 제거
+        sed -i 's/\r$//' "$(dirname "$SCRIPT_PATH")/.env"
         set -a
         source "$(dirname "$SCRIPT_PATH")/.env"
         set +a

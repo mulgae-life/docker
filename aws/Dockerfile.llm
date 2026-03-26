@@ -47,7 +47,7 @@ RUN mkdir -p /etc/docker-home-init && cp -a /home/${USERNAME} /etc/docker-home-i
 # SSH 설정
 # ============================================
 RUN mkdir -p /run/sshd \
-    && echo -e "PermitRootLogin no\nPasswordAuthentication yes" > /etc/ssh/sshd_config.d/custom.conf
+    && printf "PermitRootLogin no\nPasswordAuthentication yes\n" > /etc/ssh/sshd_config.d/custom.conf
 
 # ============================================
 # 작업 디렉토리

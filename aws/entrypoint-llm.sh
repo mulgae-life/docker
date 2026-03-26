@@ -21,4 +21,9 @@ if [ -n "${EXTRA_REQUIREMENTS:-}" ] && [ -f "${EXTRA_REQUIREMENTS:-}" ]; then
     pip install --no-cache-dir -q -r "$EXTRA_REQUIREMENTS"
 fi
 
+# Docker 환경변수를 SSH 세션에서도 사용할 수 있도록 프로필에 추가
+if [ -n "${HF_TOKEN:-}" ]; then
+    echo "export HF_TOKEN=\"$HF_TOKEN\"" > /etc/profile.d/docker-env.sh
+fi
+
 exec "$@"
