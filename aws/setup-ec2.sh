@@ -22,6 +22,7 @@ SETUP_USERNAME="${SETUP_USERNAME:-}"
 SETUP_PASSWORD="${SETUP_PASSWORD:-}"
 VOLUME_PATH="${VOLUME_PATH:-/volume}"
 SSH_PORT="${SSH_PORT:-5555}"
+CONTAINER_UID="${CONTAINER_UID:-1000}"
 
 # EBS 볼륨 디바이스 경로 (lsblk로 확인 후 설정)
 VOLUME_DEVICE="${VOLUME_DEVICE:-}"         # 예: /dev/nvme1n1
@@ -86,7 +87,11 @@ mount_ebs_volume() {
 
     # fstab 등록 (중복 방지)
     local uuid
-    uuid=$(blkid -o value -s UUID "$device")
+    uuid=$(blkid -o value -s UUID "$device" 2>/dev/null || true)
+    if [ -z "$uuid" ]; then
+        log "  ⚠️ ${device}의 UUID를 읽을 수 없습니다. fstab 등록 건너뜀."
+        return
+    fi
     if ! grep -q "$uuid" /etc/fstab; then
         cp /etc/fstab /etc/fstab.bak
         local fstab_type
@@ -110,7 +115,7 @@ phase1() {
         if id "$SETUP_USERNAME" &>/dev/null; then
             log "  사용자 $SETUP_USERNAME 이미 존재. 건너뜀."
         else
-            useradd -m -s /bin/bash "$SETUP_USERNAME"
+            useradd -m -s /bin/bash -u "$CONTAINER_UID" "$SETUP_USERNAME"
             if [ -n "$SETUP_PASSWORD" ]; then
                 echo "${SETUP_USERNAME}:${SETUP_PASSWORD}" | chpasswd
             fi
@@ -148,8 +153,7 @@ JAIL
         systemctl start fail2ban
         log "  fail2ban 활성화 완료"
     else
-        log "  ⚠️ fail2ban 패키지를 찾을 수 없습니다. pip로 설치 시도..."
-        pip3 install fail2ban 2>/dev/null || log "  ⚠️ fail2ban 설치 실패. 수동 설치 필요."
+        log "  ⚠️ fail2ban 설치 실패. AL2023.6 이상에서 dnf install -y fail2ban 으로 수동 설치하세요."
     fi
     log "  SSH 포트 ${SSH_PORT}, 비밀번호 인증 활성화 완료"
 
@@ -179,7 +183,7 @@ JAIL
 
     # --- 시스템 업데이트 + 커널 패키지 ---
     log "[5/8] 시스템 업데이트 + 커널 패키지 설치"
-    dnf update -y
+    dnf update -y --exclude='kernel*'
     dnf install -y \
         dnf-plugins-core curl wget git jq htop tmux \
         kernel-devel-"$(uname -r)" kernel-headers-"$(uname -r)" \
@@ -228,11 +232,11 @@ JAIL
     fi
 
     # NVIDIA repo 추가 + 드라이버 설치
-    dnf install -y nvidia-release 2>/dev/null || true
     dnf config-manager --add-repo \
         https://developer.download.nvidia.com/compute/cuda/repos/amzn2023/x86_64/cuda-amzn2023.repo 2>/dev/null || true
     dnf clean expire-cache
-    # AL2023은 DNF modularity 미지원 — nvidia-open 직접 설치
+    # CUDA repo의 모듈 스트림 활성화 후 오픈소스 드라이버 설치
+    dnf module enable -y nvidia-driver:open-dkms 2>/dev/null || true
     dnf install -y nvidia-open
 
     # Phase 2 자동 실행을 위한 systemd 서비스 등록
@@ -385,6 +389,11 @@ main() {
         set -a
         source "$(dirname "$SCRIPT_PATH")/.env"
         set +a
+    fi
+
+    # SETUP_USERNAME과 USERNAME 불일치 검증 (볼륨 경로 불일치 방지)
+    if [ -n "${SETUP_USERNAME:-}" ] && [ -n "${USERNAME:-}" ] && [ "$SETUP_USERNAME" != "$USERNAME" ]; then
+        error_exit "SETUP_USERNAME($SETUP_USERNAME)과 USERNAME($USERNAME)이 다릅니다. .env를 확인하세요."
     fi
 
     case "${1:-}" in
