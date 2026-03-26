@@ -53,7 +53,8 @@ mount_ebs_volume() {
     local mount_point="$2"
 
     if [ -z "$device" ]; then
-        log "  ${mount_point}: 디바이스 미설정. 건너뜀."
+        log "  ⚠️ ${mount_point}: VOLUME_DEVICE 미설정. 로컬 디렉토리로 대체합니다."
+        log "     데이터가 루트 디스크에 저장되므로, EBS 사용 시 .env의 VOLUME_DEVICE를 설정하세요."
         mkdir -p "$mount_point"
         return
     fi
@@ -117,6 +118,7 @@ phase1() {
             log "  사용자 $SETUP_USERNAME 이미 존재. 건너뜀."
         else
             # UID/GID 충돌 확인 (ec2-user 등이 CONTAINER_UID/GID를 점유할 수 있음)
+            # 주의: 초기 세팅 전용. 운영 중인 서버에서는 기존 사용자 파일 소유권이 변경될 수 있음
             local existing_uid_user
             existing_uid_user=$(getent passwd "$CONTAINER_UID" | cut -d: -f1 || true)
             if [ -n "$existing_uid_user" ]; then
