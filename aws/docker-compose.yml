@@ -1,0 +1,127 @@
+services:
+  # ============================================
+  # LLM 서빙 (vLLM OpenAI-compatible API)
+  # ============================================
+  llm-serve:
+    build:
+      context: .
+      dockerfile: Dockerfile.llm
+      args:
+        USERNAME: ${USERNAME}
+        PASSWORD: ${PASSWORD}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    image: llm-serve
+    container_name: llm-serve
+    hostname: llm-serve
+    restart: unless-stopped
+    command: >
+      vllm serve ${VLLM_MODEL:-meta-llama/Llama-3.1-8B-Instruct}
+      --host 0.0.0.0
+      --port 8000
+      --tensor-parallel-size ${VLLM_TP_SIZE:-1}
+      --gpu-memory-utilization ${VLLM_GPU_MEM_UTIL:-0.9}
+      --max-model-len ${VLLM_MAX_MODEL_LEN:-4096}
+    ports:
+      - "${LLM_API_PORT:-8000}:8000"
+    volumes:
+      - ${MODEL_PATH:-/data/models}:/models
+      - ${DATA_PATH:-/data}:/data
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}
+    shm_size: ${SHM_SIZE:-8g}
+    deploy:
+      resources:
+        limits:
+          memory: ${LLM_MEMORY:-512g}
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${LLM_SERVE_GPU_COUNT:-all}
+              capabilities: [gpu]
+
+  # ============================================
+  # LLM 개발환경 (SSH 접속)
+  # ============================================
+  llm-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.llm
+      args:
+        USERNAME: ${USERNAME}
+        PASSWORD: ${PASSWORD}
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    image: llm-serve
+    container_name: llm-dev
+    hostname: llm-dev
+    restart: unless-stopped
+    security_opt:
+      - apparmor=unconfined
+      - seccomp=unconfined
+    ports:
+      - "${LLM_DEV_SSH_PORT:-5020}:22"
+      - "5021-5029:5021-5029"
+    volumes:
+      - ${MODEL_PATH:-/data/models}:/models
+      - ${DATA_PATH:-/data}:/data
+      - /workspace/${USERNAME}:/workspace
+      - /opt/docker-homes/llm-dev/${USERNAME}:/home/${USERNAME}
+    environment:
+      - HUGGING_FACE_HUB_TOKEN=${HF_TOKEN:-}
+      - EXTRA_REQUIREMENTS=${EXTRA_REQUIREMENTS:-}
+    shm_size: ${SHM_SIZE:-8g}
+    deploy:
+      resources:
+        limits:
+          memory: ${LLM_MEMORY:-512g}
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${LLM_DEV_GPU_COUNT:-all}
+              capabilities: [gpu]
+
+  # ============================================
+  # 다중 사용자 예시 (profiles)
+  #
+  # 사용법:
+  #   docker compose --profile alice up -d
+  #   docker compose --profile bob up -d
+  # ============================================
+  # llm-dev-alice:
+  #   extends:
+  #     service: llm-dev
+  #   container_name: llm-dev-alice
+  #   hostname: llm-dev-alice
+  #   profiles: ["alice"]
+  #   ports:
+  #     - "5030:22"
+  #     - "5031-5039:5031-5039"
+  #   volumes:
+  #     - ${MODEL_PATH:-/data/models}:/models
+  #     - ${DATA_PATH:-/data}:/data
+  #     - /workspace/alice:/workspace
+  #     - /opt/docker-homes/llm-dev-alice/alice:/home/alice
+  #   build:
+  #     args:
+  #       USERNAME: alice
+  #       PASSWORD: ${ALICE_PASSWORD:-changeme}
+  #
+  # llm-dev-bob:
+  #   extends:
+  #     service: llm-dev
+  #   container_name: llm-dev-bob
+  #   hostname: llm-dev-bob
+  #   profiles: ["bob"]
+  #   ports:
+  #     - "5040:22"
+  #     - "5041-5049:5041-5049"
+  #   volumes:
+  #     - ${MODEL_PATH:-/data/models}:/models
+  #     - ${DATA_PATH:-/data}:/data
+  #     - /workspace/bob:/workspace
+  #     - /opt/docker-homes/llm-dev-bob/bob:/home/bob
+  #   build:
+  #     args:
+  #       USERNAME: bob
+  #       PASSWORD: ${BOB_PASSWORD:-changeme}

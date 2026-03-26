@@ -1,0 +1,64 @@
+FROM vllm/vllm-openai:v0.18.0
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ============================================
+# 시스템 패키지
+# ============================================
+RUN apt-get update && apt-get install -y \
+    openssh-server sudo git curl wget \
+    vim nano tmux htop jq \
+    net-tools iputils-ping dnsutils \
+    locales tzdata \
+    && rm -rf /var/lib/apt/lists/*
+
+# ============================================
+# 한글 로케일 + 서울 타임존
+# ============================================
+RUN locale-gen ko_KR.UTF-8 \
+    && ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime
+ENV LANG=ko_KR.UTF-8
+ENV LC_ALL=ko_KR.UTF-8
+
+# ============================================
+# 사용자 생성 + 설정
+# ============================================
+ARG USERNAME=user
+ARG PASSWORD=changeme
+ARG UID=1000
+ARG GID=1000
+RUN existing_user=$(getent passwd ${UID} | cut -d: -f1 || true); \
+    [ -n "$existing_user" ] && userdel -r "$existing_user" || true; \
+    existing_group=$(getent group ${GID} | cut -d: -f1 || true); \
+    [ -n "$existing_group" ] && groupdel "$existing_group" || true; \
+    groupadd -g ${GID} ${USERNAME} || true; \
+    useradd -m -s /bin/bash -u ${UID} -g ${GID} ${USERNAME} \
+    && echo "${USERNAME}:${PASSWORD}" | chpasswd \
+    && usermod -aG sudo ${USERNAME} \
+    && su - ${USERNAME} -c "git config --global --add safe.directory /workspace && git config --global core.quotePath false" \
+    && echo "set -g mouse on" > /home/${USERNAME}/.tmux.conf \
+    && chown ${USERNAME}:${USERNAME} /home/${USERNAME}/.tmux.conf \
+    && echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/${USERNAME}/.bashrc
+
+# 홈 디렉토리 초기 파일 백업 (bind mount 시 복원용)
+RUN mkdir -p /etc/docker-home-init && cp -a /home/${USERNAME} /etc/docker-home-init/
+
+# ============================================
+# SSH 설정
+# ============================================
+RUN mkdir -p /run/sshd \
+    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config \
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+
+# ============================================
+# 작업 디렉토리
+# ============================================
+WORKDIR /workspace
+
+COPY entrypoint-llm.sh /usr/local/bin/entrypoint-llm.sh
+RUN chmod +x /usr/local/bin/entrypoint-llm.sh
+
+EXPOSE 22 8000
+
+ENTRYPOINT ["entrypoint-llm.sh"]
+CMD ["/usr/sbin/sshd", "-D"]
