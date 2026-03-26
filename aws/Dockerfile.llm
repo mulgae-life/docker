@@ -25,14 +25,14 @@ ENV LC_ALL=ko_KR.UTF-8
 # ============================================
 ARG USERNAME=user
 ARG PASSWORD=changeme
-ARG UID=1000
-ARG GID=1000
-RUN existing_user=$(getent passwd ${UID} | cut -d: -f1 || true); \
+ARG CONTAINER_UID=1000
+ARG CONTAINER_GID=1000
+RUN existing_user=$(getent passwd ${CONTAINER_UID} | cut -d: -f1 || true); \
     [ -n "$existing_user" ] && userdel -r "$existing_user" || true; \
-    existing_group=$(getent group ${GID} | cut -d: -f1 || true); \
+    existing_group=$(getent group ${CONTAINER_GID} | cut -d: -f1 || true); \
     [ -n "$existing_group" ] && groupdel "$existing_group" || true; \
-    groupadd -g ${GID} ${USERNAME} || true; \
-    useradd -m -s /bin/bash -u ${UID} -g ${GID} ${USERNAME} \
+    groupadd -g ${CONTAINER_GID} ${USERNAME} || true; \
+    useradd -m -s /bin/bash -u ${CONTAINER_UID} -g ${CONTAINER_GID} ${USERNAME} \
     && echo "${USERNAME}:${PASSWORD}" | chpasswd \
     && usermod -aG sudo ${USERNAME} \
     && su - ${USERNAME} -c "git config --global --add safe.directory /workspace && git config --global core.quotePath false" \
@@ -60,5 +60,5 @@ RUN chmod +x /usr/local/bin/entrypoint-llm.sh
 
 EXPOSE 22 8000
 
-ENTRYPOINT ["entrypoint-llm.sh"]
+ENTRYPOINT ["/usr/local/bin/entrypoint-llm.sh"]
 CMD ["/usr/sbin/sshd", "-D"]

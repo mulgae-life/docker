@@ -20,11 +20,11 @@ LOG_FILE="/var/log/ec2-setup.log"
 # 기본 설정 (.env 파일 또는 환경변수로 오버라이드 가능)
 SETUP_USERNAME="${SETUP_USERNAME:-}"
 SETUP_PASSWORD="${SETUP_PASSWORD:-}"
-DATA_PATH="${DATA_PATH:-/data}"
+VOLUME_PATH="${VOLUME_PATH:-/volume}"
+SSH_PORT="${SSH_PORT:-5555}"
 
 # EBS 볼륨 디바이스 경로 (lsblk로 확인 후 설정)
-WORKSPACE_DEVICE="${WORKSPACE_DEVICE:-}"   # 예: /dev/nvme1n1
-DATA_DEVICE="${DATA_DEVICE:-}"             # 예: /dev/nvme2n1
+VOLUME_DEVICE="${VOLUME_DEVICE:-}"         # 예: /dev/nvme1n1
 
 # ============================================
 # 유틸리티 함수
@@ -89,7 +89,9 @@ mount_ebs_volume() {
     uuid=$(blkid -o value -s UUID "$device")
     if ! grep -q "$uuid" /etc/fstab; then
         cp /etc/fstab /etc/fstab.bak
-        echo "UUID=${uuid} ${mount_point} xfs defaults,nofail 0 2" >> /etc/fstab
+        local fstab_type
+        fstab_type=$(blkid -o value -s TYPE "$device" 2>/dev/null || echo "xfs")
+        echo "UUID=${uuid} ${mount_point} ${fstab_type} defaults,nofail 0 2" >> /etc/fstab
         log "  fstab 등록 완료 (UUID=${uuid})"
     else
         log "  fstab에 이미 등록됨. 건너뜀."
@@ -121,32 +123,58 @@ phase1() {
         log "[1/8] SETUP_USERNAME 미설정. 사용자 생성 건너뜀."
     fi
 
-    # --- SSH 설정 ---
-    log "[2/8] SSH 설정"
+    # --- SSH 설정 + fail2ban ---
+    log "[2/8] SSH 설정 + fail2ban (포트: ${SSH_PORT})"
+    sed -i "s/^#\?Port .*/Port ${SSH_PORT}/" /etc/ssh/sshd_config
+    grep -q "^Port ${SSH_PORT}" /etc/ssh/sshd_config || echo "Port ${SSH_PORT}" >> /etc/ssh/sshd_config
     sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+    grep -q "^PasswordAuthentication yes" /etc/ssh/sshd_config || echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
     sed -i 's/^#\?KbdInteractiveAuthentication.*/KbdInteractiveAuthentication yes/' /etc/ssh/sshd_config
+    sed -i 's/^#\?MaxAuthTries.*/MaxAuthTries 5/' /etc/ssh/sshd_config
+    grep -q "^MaxAuthTries" /etc/ssh/sshd_config || echo "MaxAuthTries 5" >> /etc/ssh/sshd_config
     systemctl restart sshd
-    log "  SSH 비밀번호 인증 활성화 완료"
+
+    # fail2ban 설치 + SSH jail 설정
+    if dnf install -y fail2ban 2>/dev/null; then
+        cat > /etc/fail2ban/jail.local <<JAIL
+[sshd]
+enabled = true
+port = ${SSH_PORT}
+maxretry = 5
+bantime = 3600
+findtime = 600
+JAIL
+        systemctl enable fail2ban
+        systemctl start fail2ban
+        log "  fail2ban 활성화 완료"
+    else
+        log "  ⚠️ fail2ban 패키지를 찾을 수 없습니다. pip로 설치 시도..."
+        pip3 install fail2ban 2>/dev/null || log "  ⚠️ fail2ban 설치 실패. 수동 설치 필요."
+    fi
+    log "  SSH 포트 ${SSH_PORT}, 비밀번호 인증 활성화 완료"
 
     # --- EBS 볼륨 마운트 ---
     log "[3/8] EBS 볼륨 마운트"
-    if [ -n "$WORKSPACE_DEVICE" ] || [ -n "$DATA_DEVICE" ]; then
+    if [ -n "$VOLUME_DEVICE" ]; then
         log "  사용 가능한 블록 디바이스:"
         lsblk -o NAME,SIZE,TYPE,MOUNTPOINT | tee -a "$LOG_FILE"
     fi
-    mount_ebs_volume "$WORKSPACE_DEVICE" "/workspace"
-    mount_ebs_volume "$DATA_DEVICE" "$DATA_PATH"
+    mount_ebs_volume "$VOLUME_DEVICE" "$VOLUME_PATH"
 
-    # --- 작업/데이터 디렉토리 권한 ---
+    # --- 작업/데이터 디렉토리 설정 ---
     log "[4/8] 작업/데이터 디렉토리 설정"
-    chmod 775 "$DATA_PATH"
-    chmod 775 /workspace
+    chmod 775 "$VOLUME_PATH"
+    mkdir -p "${VOLUME_PATH}/workspace"
+    mkdir -p "${VOLUME_PATH}/data"
+    mkdir -p "${VOLUME_PATH}/models"
+    mkdir -p "${VOLUME_PATH}/homes"
     if [ -n "$SETUP_USERNAME" ]; then
-        chown "$SETUP_USERNAME":"$SETUP_USERNAME" "$DATA_PATH"
-        # 유저별 workspace: /workspace/<username> → 컨테이너 내 /workspace로 마운트
-        mkdir -p "/workspace/${SETUP_USERNAME}"
-        chown "$SETUP_USERNAME":"$SETUP_USERNAME" "/workspace/${SETUP_USERNAME}"
-        log "  /workspace/${SETUP_USERNAME} 생성 완료"
+        chown "$SETUP_USERNAME":"$SETUP_USERNAME" "$VOLUME_PATH"
+        mkdir -p "${VOLUME_PATH}/workspace/${SETUP_USERNAME}"
+        mkdir -p "${VOLUME_PATH}/homes/${SETUP_USERNAME}"
+        chown -R "$SETUP_USERNAME":"$SETUP_USERNAME" "${VOLUME_PATH}/workspace/${SETUP_USERNAME}"
+        chown -R "$SETUP_USERNAME":"$SETUP_USERNAME" "${VOLUME_PATH}/homes/${SETUP_USERNAME}"
+        log "  ${VOLUME_PATH}/{workspace,homes}/${SETUP_USERNAME} 생성 완료"
     fi
 
     # --- 시스템 업데이트 + 커널 패키지 ---
@@ -204,8 +232,7 @@ phase1() {
     dnf config-manager --add-repo \
         https://developer.download.nvidia.com/compute/cuda/repos/amzn2023/x86_64/cuda-amzn2023.repo 2>/dev/null || true
     dnf clean expire-cache
-    dnf module reset -y nvidia-driver 2>/dev/null || true
-    dnf module enable -y nvidia-driver:open-dkms
+    # AL2023은 DNF modularity 미지원 — nvidia-open 직접 설치
     dnf install -y nvidia-open
 
     # Phase 2 자동 실행을 위한 systemd 서비스 등록
@@ -261,9 +288,9 @@ phase2() {
         local driver_version
         driver_version=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1 | tr -d ' ')
 
-        # CUDA repo 추가 (Fabric Manager 패키지용)
+        # CUDA repo 추가 (Fabric Manager 패키지용 — Phase 1과 동일한 amzn2023 repo 사용)
         dnf config-manager --add-repo \
-            https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo 2>/dev/null || true
+            https://developer.download.nvidia.com/compute/cuda/repos/amzn2023/x86_64/cuda-amzn2023.repo 2>/dev/null || true
         dnf clean expire-cache
 
         # 드라이버 버전에 맞는 Fabric Manager 설치 시도
@@ -305,9 +332,9 @@ phase2() {
     done
     log ""
     log "  다음 단계:"
-    log "    cd /path/to/aws"
+    log "    cd $(dirname "$SCRIPT_PATH")"
     log "    cp .env.example .env  # 설정 수정"
-    log "    docker compose up -d llm-serve"
+    log "    docker compose up -d llm"
     log ""
     log "  로그: $LOG_FILE"
     log "============================================"
