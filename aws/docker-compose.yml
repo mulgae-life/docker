@@ -32,6 +32,7 @@ services:
     environment:
       - HF_TOKEN=${HF_TOKEN:-}
       - EXTRA_REQUIREMENTS=${EXTRA_REQUIREMENTS:-}
+      - NVIDIA_VISIBLE_DEVICES=${LLM_GPUS:-all}
     shm_size: ${SHM_SIZE:-16g}
     deploy:
       resources:
@@ -40,7 +41,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: ${LLM_GPU_COUNT:-all}
+              count: all
               capabilities: [gpu]
 
   # ============================================
@@ -65,6 +66,8 @@ services:
   #     - ${VOLUME_PATH:-/volume}/models:/models
   #     - ${VOLUME_PATH:-/volume}/data:/data
   #     - ${VOLUME_PATH:-/volume}/homes/${ALICE_USERNAME:-alice}:/home/${ALICE_USERNAME:-alice}
+  #   environment:
+  #     - NVIDIA_VISIBLE_DEVICES=${ALICE_GPUS:-all}
   #   build:
   #     args:
   #       USERNAME: ${ALICE_USERNAME:-alice}
@@ -85,6 +88,8 @@ services:
   #     - ${VOLUME_PATH:-/volume}/models:/models
   #     - ${VOLUME_PATH:-/volume}/data:/data
   #     - ${VOLUME_PATH:-/volume}/homes/${BOB_USERNAME:-bob}:/home/${BOB_USERNAME:-bob}
+  #   environment:
+  #     - NVIDIA_VISIBLE_DEVICES=${BOB_GPUS:-all}
   #   build:
   #     args:
   #       USERNAME: ${BOB_USERNAME:-bob}

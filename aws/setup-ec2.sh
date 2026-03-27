@@ -18,8 +18,8 @@ PHASE_FILE="/var/tmp/ec2-setup-phase"
 LOG_FILE="/var/log/ec2-setup.log"
 
 # 기본 설정 (.env 파일 또는 환경변수로 오버라이드 가능)
-SETUP_USERNAME="${SETUP_USERNAME:-}"
-SETUP_PASSWORD="${SETUP_PASSWORD:-}"
+USERNAME="${USERNAME:-}"
+PASSWORD="${PASSWORD:-}"
 VOLUME_PATH="${VOLUME_PATH:-/volume}"
 SSH_PORT="${SSH_PORT:-5555}"
 CONTAINER_UID="${CONTAINER_UID:-1000}"
@@ -113,10 +113,10 @@ phase1() {
     log "========== Phase 1 시작 =========="
 
     # --- 사용자 생성 ---
-    if [ -n "$SETUP_USERNAME" ]; then
-        log "[1/8] 사용자 생성: $SETUP_USERNAME"
-        if id "$SETUP_USERNAME" &>/dev/null; then
-            log "  사용자 $SETUP_USERNAME 이미 존재. 건너뜀."
+    if [ -n "$USERNAME" ]; then
+        log "[1/8] 사용자 생성: $USERNAME"
+        if id "$USERNAME" &>/dev/null; then
+            log "  사용자 $USERNAME 이미 존재. 건너뜀."
         else
             # UID/GID 충돌 확인 (ec2-user 등이 CONTAINER_UID/GID를 점유할 수 있음)
             # 주의: 초기 세팅 전용. 운영 중인 서버에서는 기존 사용자 파일 소유권이 변경될 수 있음
@@ -134,18 +134,18 @@ phase1() {
                 log "  GID ${CONTAINER_GID}를 ${existing_gid_group}이(가) 사용 중 → GID ${new_gid}로 변경"
                 groupmod -g "$new_gid" "$existing_gid_group"
             fi
-            groupadd -g "$CONTAINER_GID" "$SETUP_USERNAME" 2>/dev/null || true
-            useradd -m -s /bin/bash -u "$CONTAINER_UID" -g "$CONTAINER_GID" "$SETUP_USERNAME"
-            if [ -n "$SETUP_PASSWORD" ]; then
-                echo "${SETUP_USERNAME}:${SETUP_PASSWORD}" | chpasswd
+            groupadd -g "$CONTAINER_GID" "$USERNAME" 2>/dev/null || true
+            useradd -m -s /bin/bash -u "$CONTAINER_UID" -g "$CONTAINER_GID" "$USERNAME"
+            if [ -n "$PASSWORD" ]; then
+                echo "${USERNAME}:${PASSWORD}" | chpasswd
             fi
             # sudoers.d 방식 (안전)
-            echo "${SETUP_USERNAME} ALL=(ALL:ALL) ALL" > "/etc/sudoers.d/${SETUP_USERNAME}"
-            chmod 0440 "/etc/sudoers.d/${SETUP_USERNAME}"
+            echo "${USERNAME} ALL=(ALL:ALL) ALL" > "/etc/sudoers.d/${USERNAME}"
+            chmod 0440 "/etc/sudoers.d/${USERNAME}"
             log "  사용자 생성 완료 + sudo 권한 부여"
         fi
     else
-        log "[1/8] SETUP_USERNAME 미설정. 사용자 생성 건너뜀."
+        log "[1/8] USERNAME 미설정. 사용자 생성 건너뜀."
     fi
 
     # --- SSH 설정 + fail2ban ---
@@ -194,13 +194,13 @@ JAIL
     mkdir -p "${VOLUME_PATH}/data"
     mkdir -p "${VOLUME_PATH}/models"
     mkdir -p "${VOLUME_PATH}/homes"
-    if [ -n "$SETUP_USERNAME" ]; then
-        chown "$SETUP_USERNAME":"$SETUP_USERNAME" "$VOLUME_PATH"
-        mkdir -p "${VOLUME_PATH}/workspace/${SETUP_USERNAME}"
-        mkdir -p "${VOLUME_PATH}/homes/${SETUP_USERNAME}"
-        chown -R "$SETUP_USERNAME":"$SETUP_USERNAME" "${VOLUME_PATH}/workspace/${SETUP_USERNAME}"
-        chown -R "$SETUP_USERNAME":"$SETUP_USERNAME" "${VOLUME_PATH}/homes/${SETUP_USERNAME}"
-        log "  ${VOLUME_PATH}/{workspace,homes}/${SETUP_USERNAME} 생성 완료"
+    if [ -n "$USERNAME" ]; then
+        chown "$USERNAME":"$USERNAME" "$VOLUME_PATH"
+        mkdir -p "${VOLUME_PATH}/workspace/${USERNAME}"
+        mkdir -p "${VOLUME_PATH}/homes/${USERNAME}"
+        chown -R "$USERNAME":"$USERNAME" "${VOLUME_PATH}/workspace/${USERNAME}"
+        chown -R "$USERNAME":"$USERNAME" "${VOLUME_PATH}/homes/${USERNAME}"
+        log "  ${VOLUME_PATH}/{workspace,homes}/${USERNAME} 생성 완료"
     fi
 
     # --- 시스템 업데이트 + 커널 패키지 ---
@@ -232,7 +232,7 @@ JAIL
         systemctl enable docker
     fi
     # 기본 사용자들을 docker 그룹에 추가
-    for u in ec2-user ssm-user ${SETUP_USERNAME:-}; do
+    for u in ec2-user ssm-user ${USERNAME:-}; do
         if id "$u" &>/dev/null; then
             usermod -aG docker "$u" 2>/dev/null || true
         fi
@@ -429,11 +429,6 @@ main() {
         set -a
         source "$(dirname "$SCRIPT_PATH")/.env"
         set +a
-    fi
-
-    # SETUP_USERNAME과 USERNAME 불일치 검증 (볼륨 경로 불일치 방지)
-    if [ -n "${SETUP_USERNAME:-}" ] && [ -n "${USERNAME:-}" ] && [ "$SETUP_USERNAME" != "$USERNAME" ]; then
-        error_exit "SETUP_USERNAME($SETUP_USERNAME)과 USERNAME($USERNAME)이 다릅니다. .env를 확인하세요."
     fi
 
     case "${1:-}" in
