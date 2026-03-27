@@ -7,11 +7,12 @@ services:
       context: .
       dockerfile: Dockerfile.llm
       args:
+        BASE_IMAGE: ${VLLM_IMAGE:-vllm/vllm-openai:v0.18.0}
         USERNAME: ${USERNAME:-user}
         PASSWORD: ${PASSWORD:-changeme}
         CONTAINER_UID: ${CONTAINER_UID:-1000}
         CONTAINER_GID: ${CONTAINER_GID:-1000}
-    image: llm-dev
+    image: ${LLM_IMAGE_NAME:-llm-dev}
     container_name: llm-${USERNAME:-user}
     hostname: llm-${USERNAME:-user}
     restart: unless-stopped
@@ -22,7 +23,7 @@ services:
     ports:
       - "${LLM_SSH_PORT:-5020}:22"
       - "${LLM_API_PORT:-8000}:8000"
-      - "5021-5029:5021-5029"
+      - "${LLM_EXTRA_PORTS:-5021-5029}:${LLM_EXTRA_PORTS:-5021-5029}"
     volumes:
       - ${VOLUME_PATH:-/volume}/workspace/${USERNAME:-user}:/workspace
       - ${VOLUME_PATH:-/volume}/models:/models
@@ -52,39 +53,39 @@ services:
   # llm-alice:
   #   extends:
   #     service: llm
-  #   container_name: llm-alice
-  #   hostname: llm-alice
+  #   container_name: llm-${ALICE_USERNAME:-alice}
+  #   hostname: llm-${ALICE_USERNAME:-alice}
   #   profiles: ["alice"]
   #   ports:
-  #     - "5030:22"
-  #     - "5031:8000"
-  #     - "5032-5039:5032-5039"
+  #     - "${ALICE_SSH_PORT:-5030}:22"
+  #     - "${ALICE_API_PORT:-5031}:8000"
+  #     - "${ALICE_EXTRA_PORTS:-5032-5039}:${ALICE_EXTRA_PORTS:-5032-5039}"
   #   volumes:
-  #     - ${VOLUME_PATH:-/volume}/workspace/alice:/workspace
+  #     - ${VOLUME_PATH:-/volume}/workspace/${ALICE_USERNAME:-alice}:/workspace
   #     - ${VOLUME_PATH:-/volume}/models:/models
   #     - ${VOLUME_PATH:-/volume}/data:/data
-  #     - ${VOLUME_PATH:-/volume}/homes/alice:/home/alice
+  #     - ${VOLUME_PATH:-/volume}/homes/${ALICE_USERNAME:-alice}:/home/${ALICE_USERNAME:-alice}
   #   build:
   #     args:
-  #       USERNAME: alice
+  #       USERNAME: ${ALICE_USERNAME:-alice}
   #       PASSWORD: ${ALICE_PASSWORD:-changeme}
   #
   # llm-bob:
   #   extends:
   #     service: llm
-  #   container_name: llm-bob
-  #   hostname: llm-bob
+  #   container_name: llm-${BOB_USERNAME:-bob}
+  #   hostname: llm-${BOB_USERNAME:-bob}
   #   profiles: ["bob"]
   #   ports:
-  #     - "5040:22"
-  #     - "5041:8000"
-  #     - "5042-5049:5042-5049"
+  #     - "${BOB_SSH_PORT:-5040}:22"
+  #     - "${BOB_API_PORT:-5041}:8000"
+  #     - "${BOB_EXTRA_PORTS:-5042-5049}:${BOB_EXTRA_PORTS:-5042-5049}"
   #   volumes:
-  #     - ${VOLUME_PATH:-/volume}/workspace/bob:/workspace
+  #     - ${VOLUME_PATH:-/volume}/workspace/${BOB_USERNAME:-bob}:/workspace
   #     - ${VOLUME_PATH:-/volume}/models:/models
   #     - ${VOLUME_PATH:-/volume}/data:/data
-  #     - ${VOLUME_PATH:-/volume}/homes/bob:/home/bob
+  #     - ${VOLUME_PATH:-/volume}/homes/${BOB_USERNAME:-bob}:/home/${BOB_USERNAME:-bob}
   #   build:
   #     args:
-  #       USERNAME: bob
+  #       USERNAME: ${BOB_USERNAME:-bob}
   #       PASSWORD: ${BOB_PASSWORD:-changeme}

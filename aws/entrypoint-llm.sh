@@ -16,14 +16,20 @@ for INIT_DIR in /etc/docker-home-init/*/; do
 done
 
 # 런타임 requirements 설치 (환경변수로 경로 지정 시)
-if [ -n "${EXTRA_REQUIREMENTS:-}" ] && [ -f "${EXTRA_REQUIREMENTS:-}" ]; then
-    echo "==> 추가 패키지 설치: $EXTRA_REQUIREMENTS"
-    pip install --no-cache-dir -q -r "$EXTRA_REQUIREMENTS"
+if [ -n "${EXTRA_REQUIREMENTS:-}" ]; then
+    if [ -f "${EXTRA_REQUIREMENTS}" ]; then
+        echo "==> 추가 패키지 설치: $EXTRA_REQUIREMENTS"
+        pip install --no-cache-dir -q -r "$EXTRA_REQUIREMENTS"
+    else
+        echo "⚠️ EXTRA_REQUIREMENTS=${EXTRA_REQUIREMENTS} 파일이 존재하지 않습니다." >&2
+    fi
 fi
 
 # Docker 환경변수를 SSH 세션에서도 사용할 수 있도록 프로필에 추가
 if [ -n "${HF_TOKEN:-}" ]; then
     echo "export HF_TOKEN=\"$HF_TOKEN\"" > /etc/profile.d/docker-env.sh
+else
+    rm -f /etc/profile.d/docker-env.sh
 fi
 
 exec "$@"

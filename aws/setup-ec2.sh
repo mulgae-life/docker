@@ -27,6 +27,7 @@ CONTAINER_GID="${CONTAINER_GID:-1000}"
 
 # EBS 볼륨 디바이스 경로 (lsblk로 확인 후 설정)
 VOLUME_DEVICE="${VOLUME_DEVICE:-}"         # 예: /dev/nvme1n1
+CUDA_TEST_IMAGE="${CUDA_TEST_IMAGE:-nvidia/cuda:12.8.1-base-ubuntu24.04}"
 
 # ============================================
 # 유틸리티 함수
@@ -329,14 +330,18 @@ phase2() {
             https://developer.download.nvidia.com/compute/cuda/repos/amzn2023/x86_64/cuda-amzn2023.repo 2>/dev/null || true
         dnf clean expire-cache
 
-        # 드라이버 버전에 맞는 Fabric Manager 설치 시도
-        if dnf install -y "nvidia-fabric-manager-${driver_version}" 2>/dev/null; then
+        # AL2023는 모듈 프로파일(/fm) 방식이 공식 가이드
+        # 현재 드라이버 브랜치에 맞는 open 스트림을 우선 시도 → 실패 시 open-dkms 폴백
+        local driver_branch
+        driver_branch="${driver_version%%.*}-open"
+        if dnf module install -y "nvidia-driver:${driver_branch}/fm" --allowerasing 2>/dev/null \
+            || dnf module install -y "nvidia-driver:open-dkms/fm" --allowerasing 2>/dev/null; then
             systemctl enable nvidia-fabricmanager
             systemctl start nvidia-fabricmanager
-            log "  Fabric Manager ${driver_version} 설치 + 시작 완료"
+            log "  Fabric Manager 설치 + 시작 완료 (driver=${driver_version})"
         else
             log "  ⚠️ Fabric Manager 자동 설치 실패. 수동 설치 필요:"
-            log "     dnf install -y nvidia-fabric-manager-<버전>"
+            log "     dnf module install -y nvidia-driver:${driver_branch}/fm --allowerasing"
         fi
     else
         log "  NVSwitch GPU 미감지 (L40S 등). Fabric Manager 불필요."
@@ -344,7 +349,7 @@ phase2() {
 
     # --- Docker GPU 테스트 ---
     log "[4/4] Docker GPU 연동 테스트"
-    if docker run --rm --gpus all nvidia/cuda:12.8.1-base-ubuntu24.04 nvidia-smi &>/dev/null; then
+    if docker run --rm --gpus all "$CUDA_TEST_IMAGE" nvidia-smi &>/dev/null; then
         log "  ✅ Docker GPU 연동 정상"
     else
         log "  ⚠️ Docker GPU 테스트 실패. docker 재시작 후 재시도 필요"
@@ -389,7 +394,7 @@ Wants=network-online.target docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash ${SCRIPT_PATH} --phase2
+ExecStart=/bin/bash "${SCRIPT_PATH}" --phase2
 RemainAfterExit=no
 StandardOutput=journal+console
 
