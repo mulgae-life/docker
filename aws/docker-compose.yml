@@ -1,6 +1,6 @@
 services:
   # ============================================
-  # LLM 개발/서빙 환경 (SSH 접속 → 내부에서 vllm 실행)
+  # LLM 개발/서빙 환경 (메인 사용자)
   # ============================================
   llm:
     build:
@@ -8,28 +8,26 @@ services:
       dockerfile: Dockerfile.llm
       args:
         BASE_IMAGE: ${VLLM_IMAGE:-vllm/vllm-openai:v0.18.0}
-        USERNAME: ${USERNAME:-user}
-        PASSWORD: ${PASSWORD:-changeme}
-        CONTAINER_UID: ${CONTAINER_UID:-1000}
-        CONTAINER_GID: ${CONTAINER_GID:-1000}
     image: ${LLM_IMAGE_NAME:-llm-dev}
     container_name: llm-${USERNAME:-user}
     hostname: llm-${USERNAME:-user}
     restart: unless-stopped
-    # GPU 컨테이너 호환성을 위해 해제. 프로덕션 시 최소 권한으로 재설정 권장
     security_opt:
       - apparmor=unconfined
       - seccomp=unconfined
     ports:
-      - "${LLM_SSH_PORT:-5020}:22"
-      - "${LLM_API_PORT:-8000}:8000"
-      - "${LLM_EXTRA_PORTS:-5021-5029}:${LLM_EXTRA_PORTS:-5021-5029}"
+      - "${LLM_SSH_PORT:-5000}:5555"
+      - "${LLM_EXTRA_PORTS:-5001-5009}:${LLM_EXTRA_PORTS:-5001-5009}"
     volumes:
       - ${VOLUME_PATH:-/volume}/workspace/${USERNAME:-user}:/workspace
       - ${VOLUME_PATH:-/volume}/models:/models
       - ${VOLUME_PATH:-/volume}/data:/data
       - ${VOLUME_PATH:-/volume}/homes/${USERNAME:-user}:/home/${USERNAME:-user}
     environment:
+      - USERNAME=${USERNAME:-user}
+      - PASSWORD=${PASSWORD:-changeme}
+      - CONTAINER_UID=${CONTAINER_UID:-1000}
+      - CONTAINER_GID=${CONTAINER_GID:-1000}
       - HF_TOKEN=${HF_TOKEN:-}
       - EXTRA_REQUIREMENTS=${EXTRA_REQUIREMENTS:-}
       - NVIDIA_VISIBLE_DEVICES=${LLM_GPUS:-all}
@@ -45,52 +43,5 @@ services:
               capabilities: [gpu]
 
   # ============================================
-  # 다중 사용자 예시 (profiles)
-  #
-  # 사용법:
-  #   docker compose --profile alice up -d
-  #   docker compose --profile bob up -d
+  # 다중 사용자: ./user.sh up <username> 으로 관리
   # ============================================
-  # llm-alice:
-  #   extends:
-  #     service: llm
-  #   container_name: llm-${ALICE_USERNAME:-alice}
-  #   hostname: llm-${ALICE_USERNAME:-alice}
-  #   profiles: ["alice"]
-  #   ports:
-  #     - "${ALICE_SSH_PORT:-5030}:22"
-  #     - "${ALICE_API_PORT:-5031}:8000"
-  #     - "${ALICE_EXTRA_PORTS:-5032-5039}:${ALICE_EXTRA_PORTS:-5032-5039}"
-  #   volumes:
-  #     - ${VOLUME_PATH:-/volume}/workspace/${ALICE_USERNAME:-alice}:/workspace
-  #     - ${VOLUME_PATH:-/volume}/models:/models
-  #     - ${VOLUME_PATH:-/volume}/data:/data
-  #     - ${VOLUME_PATH:-/volume}/homes/${ALICE_USERNAME:-alice}:/home/${ALICE_USERNAME:-alice}
-  #   environment:
-  #     - NVIDIA_VISIBLE_DEVICES=${ALICE_GPUS:-all}
-  #   build:
-  #     args:
-  #       USERNAME: ${ALICE_USERNAME:-alice}
-  #       PASSWORD: ${ALICE_PASSWORD:-changeme}
-  #
-  # llm-bob:
-  #   extends:
-  #     service: llm
-  #   container_name: llm-${BOB_USERNAME:-bob}
-  #   hostname: llm-${BOB_USERNAME:-bob}
-  #   profiles: ["bob"]
-  #   ports:
-  #     - "${BOB_SSH_PORT:-5040}:22"
-  #     - "${BOB_API_PORT:-5041}:8000"
-  #     - "${BOB_EXTRA_PORTS:-5042-5049}:${BOB_EXTRA_PORTS:-5042-5049}"
-  #   volumes:
-  #     - ${VOLUME_PATH:-/volume}/workspace/${BOB_USERNAME:-bob}:/workspace
-  #     - ${VOLUME_PATH:-/volume}/models:/models
-  #     - ${VOLUME_PATH:-/volume}/data:/data
-  #     - ${VOLUME_PATH:-/volume}/homes/${BOB_USERNAME:-bob}:/home/${BOB_USERNAME:-bob}
-  #   environment:
-  #     - NVIDIA_VISIBLE_DEVICES=${BOB_GPUS:-all}
-  #   build:
-  #     args:
-  #       USERNAME: ${BOB_USERNAME:-bob}
-  #       PASSWORD: ${BOB_PASSWORD:-changeme}

@@ -2,6 +2,10 @@ ARG BASE_IMAGE=vllm/vllm-openai:v0.18.0
 FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV USERNAME=user
+ENV PASSWORD=changeme
+ENV CONTAINER_UID=1000
+ENV CONTAINER_GID=1000
 
 # ============================================
 # 시스템 패키지
@@ -22,33 +26,15 @@ ENV LANG=ko_KR.UTF-8
 ENV LC_ALL=ko_KR.UTF-8
 
 # ============================================
-# 사용자 생성 + 설정
+# 사용자 생성은 런타임(entrypoint)에서 처리
+# USERNAME, PASSWORD 환경변수로 전달
 # ============================================
-ARG USERNAME=user
-ARG PASSWORD=changeme
-ARG CONTAINER_UID=1000
-ARG CONTAINER_GID=1000
-RUN existing_user=$(getent passwd ${CONTAINER_UID} | cut -d: -f1 || true); \
-    [ -n "$existing_user" ] && userdel -r "$existing_user" || true; \
-    existing_group=$(getent group ${CONTAINER_GID} | cut -d: -f1 || true); \
-    [ -n "$existing_group" ] && groupdel "$existing_group" || true; \
-    groupadd -g ${CONTAINER_GID} ${USERNAME} || true; \
-    useradd -m -s /bin/bash -u ${CONTAINER_UID} -g ${CONTAINER_GID} ${USERNAME} \
-    && echo "${USERNAME}:${PASSWORD}" | chpasswd \
-    && usermod -aG sudo ${USERNAME} \
-    && su - ${USERNAME} -c "git config --global --add safe.directory /workspace && git config --global core.quotePath false" \
-    && echo "set -g mouse on" > /home/${USERNAME}/.tmux.conf \
-    && chown ${USERNAME}:${USERNAME} /home/${USERNAME}/.tmux.conf \
-    && echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/${USERNAME}/.bashrc
-
-# 홈 디렉토리 초기 파일 백업 (bind mount 시 복원용)
-RUN mkdir -p /etc/docker-home-init && cp -a /home/${USERNAME} /etc/docker-home-init/
 
 # ============================================
 # SSH 설정
 # ============================================
 RUN mkdir -p /run/sshd \
-    && printf "PermitRootLogin no\nPasswordAuthentication yes\n" > /etc/ssh/sshd_config.d/custom.conf
+    && printf "Port 5555\nPermitRootLogin no\nPasswordAuthentication yes\n" > /etc/ssh/sshd_config.d/custom.conf
 
 # ============================================
 # 작업 디렉토리
@@ -58,7 +44,7 @@ WORKDIR /workspace
 COPY entrypoint-llm.sh /usr/local/bin/entrypoint-llm.sh
 RUN chmod +x /usr/local/bin/entrypoint-llm.sh
 
-EXPOSE 22 8000
+EXPOSE 5555
 
 ENTRYPOINT ["/usr/local/bin/entrypoint-llm.sh"]
 CMD ["/usr/sbin/sshd", "-D"]
