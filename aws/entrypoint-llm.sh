@@ -19,6 +19,11 @@ setup_user_home() {
         echo 'export PATH="/usr/local/cuda/bin:$HOME/.local/bin:$PATH"' >> "$home_dir/.bashrc"
         echo 'export LD_LIBRARY_PATH="/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"' >> "$home_dir/.bashrc"
     fi
+    # nvm 설정 (sudo 없이 npm 사용)
+    if ! grep -q 'NVM_DIR' "$home_dir/.bashrc" 2>/dev/null; then
+        echo 'export NVM_DIR=/usr/local/nvm' >> "$home_dir/.bashrc"
+        echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"' >> "$home_dir/.bashrc"
+    fi
     chown -R "${USERNAME}:${USERNAME}" "$home_dir"
 }
 
@@ -62,11 +67,24 @@ if [ -n "${EXTRA_REQUIREMENTS:-}" ]; then
 fi
 
 # ============================================
+# Claude Code 설치 (사용자별, 홈 bind mount 시 persist)
+# ============================================
+if [ ! -f "/home/${USERNAME}/.claude/bin/claude" ]; then
+    echo "==> Claude Code 설치: ${USERNAME}"
+    su - "$USERNAME" -c "curl -fsSL https://claude.ai/install.sh | bash" || echo "⚠️ Claude Code 설치 실패 (네트워크 문제일 수 있음)" >&2
+fi
+
+# nvm 소유권 (사용자가 npm global 패키지 설치 가능하도록)
+chown -R "${USERNAME}:${USERNAME}" /usr/local/nvm
+
+# ============================================
 # Docker 환경변수를 SSH 세션에서도 사용할 수 있도록
 # (대화형 + 비대화형 SSH 모두 적용)
 # ============================================
 {
-    echo 'export PATH="/usr/local/cuda/bin:$HOME/.local/bin:$PATH"'
+    echo 'export NVM_DIR=/usr/local/nvm'
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
+    echo 'export PATH="/usr/local/cuda/bin:$HOME/.local/bin:$HOME/.claude/bin:$PATH"'
     echo 'export LD_LIBRARY_PATH="/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"'
     [ -n "${HF_TOKEN:-}" ] && echo "export HF_TOKEN=\"$HF_TOKEN\""
     [ -n "${NVIDIA_VISIBLE_DEVICES:-}" ] && echo "export NVIDIA_VISIBLE_DEVICES=\"$NVIDIA_VISIBLE_DEVICES\""
