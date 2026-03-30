@@ -39,6 +39,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
+              # GPU 접근 활성화. 실제 GPU 필터링은 NVIDIA_VISIBLE_DEVICES 환경변수로 제어
               count: all
               capabilities: [gpu]
 

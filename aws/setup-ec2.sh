@@ -95,7 +95,7 @@ mount_ebs_volume() {
         log "  ⚠️ ${device}의 UUID를 읽을 수 없습니다. fstab 등록 건너뜀."
         return
     fi
-    if ! grep -q "$uuid" /etc/fstab; then
+    if ! grep -q "UUID=${uuid}" /etc/fstab; then
         cp /etc/fstab /etc/fstab.bak
         local fstab_type
         fstab_type=$(blkid -o value -s TYPE "$device" 2>/dev/null || echo "xfs")
@@ -258,7 +258,7 @@ JAIL
         curl -fsSL "https://github.com/docker/buildx/releases/download/v0.21.2/buildx-v0.21.2.linux-${buildx_arch}" \
             -o /usr/libexec/docker/cli-plugins/docker-buildx
         chmod +x /usr/libexec/docker/cli-plugins/docker-buildx
-        log "  Docker Buildx $(docker buildx version 2>/dev/null | head -1 || echo 'installed') 설치 완��"
+        log "  Docker Buildx $(docker buildx version 2>/dev/null | head -1 || echo 'installed') 설치 완료"
     fi
 
     # --- Claude Code ---

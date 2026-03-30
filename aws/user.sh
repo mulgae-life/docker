@@ -10,14 +10,14 @@ set -euo pipefail
 #   ./user.sh list
 #
 # 포트 할당 (자동):
-#   사용자 0: 5000(SSH), 5001-5009
-#   사용자 1: 5010(SSH), 5011-5019
+#   docker-compose 메인: 5000(SSH), 5001-5009
+#   user.sh 사용자 1:    5010(SSH), 5011-5019
+#   user.sh 사용자 2:    5020(SSH), 5021-5029
 #   ...
-#   최대 5490(SSH) 까지 (인바운드 5000-5500)
+#   user.sh 최대:        5490(SSH), 5491-5499
 # ============================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# 5000-5009는 docker-compose 메인 서비스용 (예약)
 PORT_BASE=5010
 PORT_STEP=10
 PORT_MAX=5500
@@ -36,6 +36,8 @@ HF_TOKEN="${HF_TOKEN:-}"
 EXTRA_REQUIREMENTS="${EXTRA_REQUIREMENTS:-}"
 SHM_SIZE="${SHM_SIZE:-16g}"
 LLM_MEMORY="${LLM_MEMORY:-360g}"
+CONTAINER_UID="${CONTAINER_UID:-1000}"
+CONTAINER_GID="${CONTAINER_GID:-1000}"
 
 usage() {
     echo "사용법:"
@@ -45,11 +47,22 @@ usage() {
     exit 1
 }
 
-# 사용 중인 포트 베이스 목록 조회
+# username 검증 (영문자 시작, 영문/숫자/밑줄/하이픈, 최대 32자)
+validate_username() {
+    local name="$1"
+    if ! [[ "$name" =~ ^[a-zA-Z][a-zA-Z0-9_-]{0,31}$ ]]; then
+        echo "❌ username은 영문자로 시작, 영문/숫자/밑줄/하이픈만 허용 (최대 32자)"
+        exit 1
+    fi
+}
+
+# 사용 중인 포트 베이스 목록 조회 (중지된 컨테이너 포함)
 get_used_bases() {
     docker ps -a --filter "name=^${CONTAINER_PREFIX}" --format '{{.Names}}' 2>/dev/null | while read -r name; do
-        # 컨테이너의 SSH 포트(호스트 바인딩)에서 베이스 추출
-        ssh_port=$(docker port "$name" 5555 2>/dev/null | head -1 | cut -d: -f2 || true)
+        local ssh_port
+        ssh_port=$(docker inspect \
+            --format='{{range $p, $conf := .HostConfig.PortBindings}}{{if eq $p "5555/tcp"}}{{(index $conf 0).HostPort}}{{end}}{{end}}' \
+            "$name" 2>/dev/null || true)
         if [ -n "$ssh_port" ]; then
             echo "$ssh_port"
         fi
@@ -86,8 +99,12 @@ cmd_up() {
     # 인자 파싱
     while [ $# -gt 0 ]; do
         case "$1" in
-            --password) password="$2"; shift 2 ;;
-            --gpus) gpus="$2"; shift 2 ;;
+            --password)
+                [ $# -ge 2 ] || { echo "❌ --password에 값이 필요합니다."; usage; }
+                password="$2"; shift 2 ;;
+            --gpus)
+                [ $# -ge 2 ] || { echo "❌ --gpus에 값이 필요합니다."; usage; }
+                gpus="$2"; shift 2 ;;
             -*) echo "알 수 없는 옵션: $1"; usage ;;
             *) username="$1"; shift ;;
         esac
@@ -97,6 +114,8 @@ cmd_up() {
         echo "❌ username을 지정해주세요."
         usage
     fi
+
+    validate_username "$username"
 
     # 이미 존재하는 컨테이너 확인
     if container_exists "$username"; then
@@ -108,6 +127,8 @@ cmd_up() {
             return
         else
             echo "🔄 중지된 컨테이너 재시작: ${CONTAINER_PREFIX}${username}"
+            echo "   ⚠️ 기존 설정으로 재시작됩니다. 옵션 변경이 필요하면:"
+            echo "      $0 down ${username} && $0 up ${username} [옵션]"
             docker start "${CONTAINER_PREFIX}${username}"
             echo "✅ 재시작 완료"
             docker port "${CONTAINER_PREFIX}${username}"
@@ -138,12 +159,12 @@ cmd_up() {
     mkdir -p "${VOLUME_PATH}/workspace/${username}"
     mkdir -p "${VOLUME_PATH}/homes/${username}"
 
-    # GPU 옵션
-    local gpu_opts=""
+    # GPU 옵션 (배열 방식 — eval 없이 안전하게 처리)
+    local -a gpu_opts=()
     if [ "$gpus" = "all" ]; then
-        gpu_opts="--gpus all"
+        gpu_opts=(--gpus all)
     else
-        gpu_opts="--gpus '\"device=${gpus}\"'"
+        gpu_opts=(--gpus "device=${gpus}")
     fi
 
     echo "🚀 컨테이너 생성: ${CONTAINER_PREFIX}${username}"
@@ -151,8 +172,7 @@ cmd_up() {
     echo "   포트: ${extra_start}-${extra_end} (1:1 매핑)"
     echo "   GPU: ${gpus}"
 
-    # docker run
-    eval docker run -d \
+    docker run -d \
         --name "${CONTAINER_PREFIX}${username}" \
         --hostname "llm-${username}" \
         --restart unless-stopped \
@@ -168,23 +188,24 @@ cmd_up() {
         -v "${VOLUME_PATH}/homes/${username}:/home/${username}" \
         -e "USERNAME=${username}" \
         -e "PASSWORD=${password}" \
-        -e "CONTAINER_UID=1000" \
-        -e "CONTAINER_GID=1000" \
+        -e "CONTAINER_UID=${CONTAINER_UID}" \
+        -e "CONTAINER_GID=${CONTAINER_GID}" \
         -e "HF_TOKEN=${HF_TOKEN}" \
         -e "EXTRA_REQUIREMENTS=${EXTRA_REQUIREMENTS}" \
-        -e "NVIDIA_VISIBLE_DEVICES=${gpus}" \
-        ${gpu_opts} \
+        "${gpu_opts[@]}" \
         "$IMAGE_NAME"
 
     echo "✅ 완료"
 }
 
 cmd_down() {
-    local username="$1"
+    local username="${1:-}"
     if [ -z "$username" ]; then
         echo "❌ username을 지정해주세요."
         usage
     fi
+
+    validate_username "$username"
 
     if ! container_exists "$username"; then
         echo "❌ 컨테이너 '${CONTAINER_PREFIX}${username}'이 없습니다."
@@ -199,12 +220,12 @@ cmd_down() {
 
 cmd_list() {
     echo "=== LLM 사용자 컨테이너 ==="
-    local found=false
-    docker ps -a --filter "name=^${CONTAINER_PREFIX}" --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null | while IFS= read -r line; do
-        found=true
-        echo "$line"
-    done
-    if [ "$found" = false ]; then
+    local output
+    output=$(docker ps -a --filter "name=^${CONTAINER_PREFIX}" \
+        --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null)
+    if [ -n "$output" ]; then
+        echo "$output"
+    else
         echo "(없음)"
     fi
 }

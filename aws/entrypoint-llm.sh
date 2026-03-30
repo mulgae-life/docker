@@ -9,6 +9,17 @@ PASSWORD="${PASSWORD:-changeme}"
 CONTAINER_UID="${CONTAINER_UID:-1000}"
 CONTAINER_GID="${CONTAINER_GID:-1000}"
 
+# 홈 디렉토리 기본 설정
+setup_user_home() {
+    local home_dir="$1"
+    su - "$USERNAME" -c "git config --global --add safe.directory /workspace && git config --global core.quotePath false"
+    echo "set -g mouse on" > "$home_dir/.tmux.conf"
+    # CUDA + pip 사용자 패키지 PATH
+    echo 'export PATH="/usr/local/cuda/bin:$HOME/.local/bin:$PATH"' >> "$home_dir/.bashrc"
+    echo 'export LD_LIBRARY_PATH="/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"' >> "$home_dir/.bashrc"
+    chown -R "${USERNAME}:${USERNAME}" "$home_dir"
+}
+
 if ! id "$USERNAME" &>/dev/null; then
     # 기존 UID/GID 충돌 제거
     existing_user=$(getent passwd "$CONTAINER_UID" | cut -d: -f1 || true)
@@ -21,11 +32,7 @@ if ! id "$USERNAME" &>/dev/null; then
     echo "${USERNAME}:${PASSWORD}" | chpasswd
     usermod -aG sudo "$USERNAME"
 
-    # 기본 설정
-    su - "$USERNAME" -c "git config --global --add safe.directory /workspace && git config --global core.quotePath false"
-    echo "set -g mouse on" > "/home/${USERNAME}/.tmux.conf"
-    chown "${USERNAME}:${USERNAME}" "/home/${USERNAME}/.tmux.conf"
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "/home/${USERNAME}/.bashrc"
+    setup_user_home "/home/${USERNAME}"
 fi
 
 # ============================================
@@ -33,12 +40,9 @@ fi
 # ============================================
 HOME_DIR="/home/$USERNAME"
 if [ -d "$HOME_DIR" ] && [ -z "$(ls -A "$HOME_DIR" 2>/dev/null)" ]; then
-    # 빈 bind mount → 기본 파일 복사
+    # 빈 bind mount -> 기본 파일 복사
     cp -a /etc/skel/. "$HOME_DIR/" 2>/dev/null || true
-    su - "$USERNAME" -c "git config --global --add safe.directory /workspace && git config --global core.quotePath false"
-    echo "set -g mouse on" > "$HOME_DIR/.tmux.conf"
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME_DIR/.bashrc"
-    chown -R "${USERNAME}:${USERNAME}" "$HOME_DIR"
+    setup_user_home "$HOME_DIR"
 elif [ -d "$HOME_DIR" ] && [ "$(stat -c %u "$HOME_DIR")" != "$CONTAINER_UID" ]; then
     chown -R "${USERNAME}:${USERNAME}" "$HOME_DIR"
 fi
@@ -57,9 +61,14 @@ fi
 
 # ============================================
 # Docker 환경변수를 SSH 세션에서도 사용할 수 있도록
+# (대화형 + 비대화형 SSH 모두 적용)
 # ============================================
 {
+    echo 'export PATH="/usr/local/cuda/bin:$HOME/.local/bin:$PATH"'
+    echo 'export LD_LIBRARY_PATH="/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"'
     [ -n "${HF_TOKEN:-}" ] && echo "export HF_TOKEN=\"$HF_TOKEN\""
+    [ -n "${NVIDIA_VISIBLE_DEVICES:-}" ] && echo "export NVIDIA_VISIBLE_DEVICES=\"$NVIDIA_VISIBLE_DEVICES\""
+    [ -n "${CUDA_VISIBLE_DEVICES:-}" ] && echo "export CUDA_VISIBLE_DEVICES=\"$CUDA_VISIBLE_DEVICES\""
     true
 } > /etc/profile.d/docker-env.sh
 
