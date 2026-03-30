@@ -201,6 +201,7 @@ cmd_up() {
     docker run -d \
         --name "${CONTAINER_PREFIX}${username}" \
         --hostname "llm-${username}" \
+        --label "managed-by=user.sh" \
         --restart unless-stopped \
         --security-opt apparmor=unconfined \
         --security-opt seccomp=unconfined \
@@ -250,7 +251,7 @@ cmd_list() {
     local output
     output=$(docker ps -a \
         --filter "name=^${CONTAINER_PREFIX}" \
-        --filter "label!=com.docker.compose.service" \
+        --filter "label=managed-by=user.sh" \
         --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null)
     if [ -n "$output" ]; then
         echo "$output"
@@ -280,7 +281,7 @@ cmd_rebuild() {
         # docker-compose 컨테이너 제외 (com.docker.compose.service 라벨이 없는 것만)
         containers=$(docker ps -a \
             --filter "name=^${CONTAINER_PREFIX}" \
-            --filter "label!=com.docker.compose.service" \
+            --filter "label=managed-by=user.sh" \
             --format '{{.Names}}' 2>/dev/null)
         if [ -z "$containers" ]; then
             echo "재생성할 컨테이너가 없습니다."
