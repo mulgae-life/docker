@@ -12,11 +12,13 @@ CONTAINER_GID="${CONTAINER_GID:-1000}"
 # 홈 디렉토리 기본 설정
 setup_user_home() {
     local home_dir="$1"
-    su - "$USERNAME" -c "git config --global --add safe.directory /workspace && git config --global core.quotePath false"
+    su - "$USERNAME" -c "git config --global --add safe.directory /workspace && git config --global core.quotePath false" || true
     echo "set -g mouse on" > "$home_dir/.tmux.conf"
-    # CUDA + pip 사용자 패키지 PATH
-    echo 'export PATH="/usr/local/cuda/bin:$HOME/.local/bin:$PATH"' >> "$home_dir/.bashrc"
-    echo 'export LD_LIBRARY_PATH="/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"' >> "$home_dir/.bashrc"
+    # CUDA + pip 사용자 패키지 PATH (중복 추가 방지)
+    if ! grep -q '/usr/local/cuda/bin' "$home_dir/.bashrc" 2>/dev/null; then
+        echo 'export PATH="/usr/local/cuda/bin:$HOME/.local/bin:$PATH"' >> "$home_dir/.bashrc"
+        echo 'export LD_LIBRARY_PATH="/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"' >> "$home_dir/.bashrc"
+    fi
     chown -R "${USERNAME}:${USERNAME}" "$home_dir"
 }
 
@@ -68,7 +70,6 @@ fi
     echo 'export LD_LIBRARY_PATH="/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"'
     [ -n "${HF_TOKEN:-}" ] && echo "export HF_TOKEN=\"$HF_TOKEN\""
     [ -n "${NVIDIA_VISIBLE_DEVICES:-}" ] && echo "export NVIDIA_VISIBLE_DEVICES=\"$NVIDIA_VISIBLE_DEVICES\""
-    [ -n "${CUDA_VISIBLE_DEVICES:-}" ] && echo "export CUDA_VISIBLE_DEVICES=\"$CUDA_VISIBLE_DEVICES\""
     true
 } > /etc/profile.d/docker-env.sh
 

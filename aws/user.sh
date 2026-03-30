@@ -56,6 +56,16 @@ validate_username() {
     fi
 }
 
+# GPU 값 검증 (all 또는 숫자/콤마 조합)
+validate_gpus() {
+    local gpus="$1"
+    if [ "$gpus" = "all" ]; then return 0; fi
+    if ! [[ "$gpus" =~ ^[0-9](,[0-9])*$ ]]; then
+        echo "❌ --gpus는 'all' 또는 GPU 번호(예: 0,1,2)만 허용"
+        exit 1
+    fi
+}
+
 # 사용 중인 포트 베이스 목록 조회 (중지된 컨테이너 포함)
 get_used_bases() {
     docker ps -a --filter "name=^${CONTAINER_PREFIX}" --format '{{.Names}}' 2>/dev/null | while read -r name; do
@@ -116,6 +126,11 @@ cmd_up() {
     fi
 
     validate_username "$username"
+    validate_gpus "$gpus"
+
+    if [ "$password" = "changeme" ]; then
+        echo "⚠️ 기본 비밀번호(changeme)를 사용합니다. --password로 변경을 권장합니다."
+    fi
 
     # 이미 존재하는 컨테이너 확인
     if container_exists "$username"; then
@@ -192,6 +207,7 @@ cmd_up() {
         -e "CONTAINER_GID=${CONTAINER_GID}" \
         -e "HF_TOKEN=${HF_TOKEN}" \
         -e "EXTRA_REQUIREMENTS=${EXTRA_REQUIREMENTS}" \
+        -e "NVIDIA_VISIBLE_DEVICES=${gpus}" \
         "${gpu_opts[@]}" \
         "$IMAGE_NAME"
 
