@@ -114,7 +114,7 @@ phase1() {
 
     # --- 사용자 생성 ---
     if [ -n "$USERNAME" ]; then
-        log "[1/8] 사용자 생성: $USERNAME"
+        log "[1/9] 사용자 생성: $USERNAME"
         if id "$USERNAME" &>/dev/null; then
             log "  사용자 $USERNAME 이미 존재. 건너뜀."
         else
@@ -145,11 +145,11 @@ phase1() {
             log "  사용자 생성 완료 + sudo 권한 부여"
         fi
     else
-        log "[1/8] USERNAME 미설정. 사용자 생성 건너뜀."
+        log "[1/9] USERNAME 미설정. 사용자 생성 건너뜀."
     fi
 
     # --- SSH 설정 + fail2ban ---
-    log "[2/8] SSH 설정 + fail2ban (포트: ${SSH_PORT})"
+    log "[2/9] SSH 설정 + fail2ban (포트: ${SSH_PORT})"
     sed -i "s/^#\?Port .*/Port ${SSH_PORT}/" /etc/ssh/sshd_config
     grep -q "^Port ${SSH_PORT}" /etc/ssh/sshd_config || echo "Port ${SSH_PORT}" >> /etc/ssh/sshd_config
     sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
@@ -180,7 +180,7 @@ JAIL
     log "  SSH 포트 ${SSH_PORT}, 비밀번호 인증 활성화 완료"
 
     # --- EBS 볼륨 마운트 ---
-    log "[3/8] EBS 볼륨 마운트"
+    log "[3/9] EBS 볼륨 마운트"
     if [ -n "$VOLUME_DEVICE" ]; then
         log "  사용 가능한 블록 디바이스:"
         lsblk -o NAME,SIZE,TYPE,MOUNTPOINT | tee -a "$LOG_FILE"
@@ -188,7 +188,7 @@ JAIL
     mount_ebs_volume "$VOLUME_DEVICE" "$VOLUME_PATH"
 
     # --- 작업/데이터 디렉토리 설정 ---
-    log "[4/8] 작업/데이터 디렉토리 설정"
+    log "[4/9] 작업/데이터 디렉토리 설정"
     chmod 775 "$VOLUME_PATH"
     mkdir -p "${VOLUME_PATH}/workspace"
     mkdir -p "${VOLUME_PATH}/data"
@@ -204,7 +204,7 @@ JAIL
     fi
 
     # --- 시스템 업데이트 + 커널 패키지 ---
-    log "[5/8] 시스템 업데이트 + 커널 패키지 설치"
+    log "[5/9] 시스템 업데이트 + 커널 패키지 설치"
     dnf update -y --exclude='kernel*'
     dnf install -y \
         dnf-plugins-core curl wget git jq htop tmux \
@@ -223,7 +223,7 @@ JAIL
     dnf install -y "${kpkg}-modules-extra-common-${kver}" 2>/dev/null || true
 
     # --- Docker 설치 ---
-    log "[6/8] Docker 설치"
+    log "[6/9] Docker 설치"
     if command -v docker &>/dev/null; then
         log "  Docker 이미 설치됨. 건너뜀."
     else
@@ -240,7 +240,7 @@ JAIL
     log "  Docker 설치 완료"
 
     # --- Docker Compose V2 플러그인 ---
-    log "[7/8] Docker Compose V2 설치"
+    log "[7/9] Docker Compose V2 설치"
     if docker compose version &>/dev/null; then
         log "  Docker Compose 이미 설치됨. 건너뜀."
     else
@@ -251,8 +251,24 @@ JAIL
         log "  Docker Compose $(docker compose version --short) 설치 완료"
     fi
 
+    # --- Claude Code ---
+    log "[8/9] Claude Code 설치"
+    if [ -n "$USERNAME" ]; then
+        if su - "$USERNAME" -c "command -v claude" &>/dev/null; then
+            log "  Claude Code 이미 설치됨. 건너뜀."
+        else
+            if su - "$USERNAME" -c "curl -fsSL https://claude.ai/install.sh | bash" 2>/dev/null; then
+                log "  Claude Code 설치 완료"
+            else
+                log "  ⚠️ Claude Code 설치 실패. 수동 설치: curl -fsSL https://claude.ai/install.sh | bash"
+            fi
+        fi
+    else
+        log "  USERNAME 미설정. 건너뜀."
+    fi
+
     # --- NVIDIA 드라이버 ---
-    log "[8/8] NVIDIA 드라이버 설치"
+    log "[9/9] NVIDIA 드라이버 설치"
     if nvidia-smi &>/dev/null; then
         log "  NVIDIA 드라이버 이미 설치됨. 건너뜀."
         echo "2" > "$PHASE_FILE"
