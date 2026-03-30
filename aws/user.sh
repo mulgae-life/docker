@@ -7,6 +7,7 @@ set -euo pipefail
 # 사용법:
 #   ./user.sh up <username> [--password <pw>] [--gpus <gpus>]
 #   ./user.sh down <username>
+#   ./user.sh rebuild [username]   ← 이미지 변경 후 컨테이너 재생성
 #   ./user.sh list
 #
 # 포트 할당 (자동):
@@ -43,6 +44,7 @@ usage() {
     echo "사용법:"
     echo "  $0 up <username> [--password <pw>] [--gpus <gpus>]"
     echo "  $0 down <username>"
+    echo "  $0 rebuild [username]   # 이미지 변경 후 재생성 (전체 또는 특정 사용자)"
     echo "  $0 list"
     exit 1
 }
@@ -105,6 +107,7 @@ cmd_up() {
     local username=""
     local password="changeme"
     local gpus="all"
+    local forced_port=""
 
     # 인자 파싱
     while [ $# -gt 0 ]; do
@@ -115,6 +118,10 @@ cmd_up() {
             --gpus)
                 [ $# -ge 2 ] || { echo "❌ --gpus에 값이 필요합니다."; usage; }
                 gpus="$2"; shift 2 ;;
+            --ssh-port)
+                # rebuild 내부용: 기존 포트 보존
+                [ $# -ge 2 ] || { echo "❌ --ssh-port에 값이 필요합니다."; exit 1; }
+                forced_port="$2"; shift 2 ;;
             -*) echo "알 수 없는 옵션: $1"; usage ;;
             *) username="$1"; shift ;;
         esac
@@ -158,12 +165,16 @@ cmd_up() {
         exit 1
     fi
 
-    # 포트 할당
+    # 포트 할당 (--ssh-port 지정 시 해당 포트 사용, 아니면 자동 할당)
     local base
-    base=$(next_port_base)
-    if [ -z "$base" ]; then
-        echo "❌ 포트 범위 초과 (최대 ${PORT_MAX}). 더 이상 사용자를 생성할 수 없습니다."
-        exit 1
+    if [ -n "$forced_port" ]; then
+        base=$forced_port
+    else
+        base=$(next_port_base)
+        if [ -z "$base" ]; then
+            echo "❌ 포트 범위 초과 (최대 ${PORT_MAX}). 더 이상 사용자를 생성할 수 없습니다."
+            exit 1
+        fi
     fi
 
     local ssh_port=$base
@@ -235,15 +246,96 @@ cmd_down() {
 }
 
 cmd_list() {
-    echo "=== LLM 사용자 컨테이너 ==="
+    echo "=== LLM 사용자 컨테이너 (user.sh 관리) ==="
     local output
-    output=$(docker ps -a --filter "name=^${CONTAINER_PREFIX}" \
+    output=$(docker ps -a \
+        --filter "name=^${CONTAINER_PREFIX}" \
+        --filter "label!=com.docker.compose.service" \
         --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null)
     if [ -n "$output" ]; then
         echo "$output"
     else
         echo "(없음)"
     fi
+}
+
+cmd_rebuild() {
+    local target="${1:-}"
+    local containers
+
+    # jq 필수 (환경변수 추출용)
+    if ! command -v jq &>/dev/null; then
+        echo "❌ rebuild에는 jq가 필요합니다. 설치: sudo yum install -y jq"
+        exit 1
+    fi
+
+    if [ -n "$target" ]; then
+        validate_username "$target"
+        if ! container_exists "$target"; then
+            echo "❌ 컨테이너 '${CONTAINER_PREFIX}${target}'이 없습니다."
+            exit 1
+        fi
+        containers="${CONTAINER_PREFIX}${target}"
+    else
+        # docker-compose 컨테이너 제외 (com.docker.compose.service 라벨이 없는 것만)
+        containers=$(docker ps -a \
+            --filter "name=^${CONTAINER_PREFIX}" \
+            --filter "label!=com.docker.compose.service" \
+            --format '{{.Names}}' 2>/dev/null)
+        if [ -z "$containers" ]; then
+            echo "재생성할 컨테이너가 없습니다."
+            return
+        fi
+    fi
+
+    # 이미지 확인
+    if ! docker image inspect "$IMAGE_NAME" &>/dev/null; then
+        echo "⚠️ 이미지 '$IMAGE_NAME'이 없습니다. 먼저 빌드하세요:"
+        echo "   cd $SCRIPT_DIR && docker compose build"
+        exit 1
+    fi
+
+    # here-string으로 현재 쉘에서 실행 (서브쉘 회피)
+    while read -r cname; do
+        [ -z "$cname" ] && continue
+        local uname="${cname#${CONTAINER_PREFIX}}"
+
+        # 기존 컨테이너에서 설정 추출
+        local env_json
+        env_json=$(docker inspect --format='{{json .Config.Env}}' "$cname" 2>/dev/null)
+
+        local old_password old_gpus old_uid old_gid old_ssh_port
+        old_password=$(echo "$env_json" | jq -r '.[] | select(startswith("PASSWORD=")) | sub("^PASSWORD=";"")')
+        old_gpus=$(echo "$env_json" | jq -r '.[] | select(startswith("NVIDIA_VISIBLE_DEVICES=")) | sub("^NVIDIA_VISIBLE_DEVICES=";"")')
+        old_uid=$(echo "$env_json" | jq -r '.[] | select(startswith("CONTAINER_UID=")) | sub("^CONTAINER_UID=";"")')
+        old_gid=$(echo "$env_json" | jq -r '.[] | select(startswith("CONTAINER_GID=")) | sub("^CONTAINER_GID=";"")')
+
+        # 기존 SSH 포트 보존
+        old_ssh_port=$(docker inspect \
+            --format='{{range $p, $conf := .HostConfig.PortBindings}}{{if eq $p "5555/tcp"}}{{(index $conf 0).HostPort}}{{end}}{{end}}' \
+            "$cname" 2>/dev/null || true)
+
+        old_password="${old_password:-changeme}"
+        old_gpus="${old_gpus:-all}"
+        old_uid="${old_uid:-1000}"
+        old_gid="${old_gid:-1000}"
+        old_ssh_port="${old_ssh_port:-}"
+
+        echo "🔄 재생성: ${cname} (GPU: ${old_gpus}, SSH: ${old_ssh_port:-auto})"
+
+        # 기존 컨테이너 제거
+        docker stop "$cname" 2>/dev/null || true
+        docker rm "$cname" 2>/dev/null || true
+
+        # 동일 설정으로 재생성 (포트 보존)
+        local -a port_opts=()
+        [ -n "$old_ssh_port" ] && port_opts=(--ssh-port "$old_ssh_port")
+
+        CONTAINER_UID="$old_uid" CONTAINER_GID="$old_gid" \
+            cmd_up "$uname" --password "$old_password" --gpus "$old_gpus" "${port_opts[@]}"
+    done <<< "$containers"
+
+    echo "✅ rebuild 완료"
 }
 
 # ============================================
@@ -255,8 +347,9 @@ CMD="$1"
 shift
 
 case "$CMD" in
-    up)   cmd_up "$@" ;;
-    down) cmd_down "${1:-}" ;;
-    list) cmd_list ;;
-    *)    usage ;;
+    up)      cmd_up "$@" ;;
+    down)    cmd_down "${1:-}" ;;
+    rebuild) cmd_rebuild "${1:-}" ;;
+    list)    cmd_list ;;
+    *)       usage ;;
 esac
