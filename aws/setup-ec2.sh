@@ -253,10 +253,12 @@ JAIL
     if docker buildx version &>/dev/null; then
         log "  Docker Buildx 이미 설치됨. 건너뜀."
     else
-        curl -fsSL "https://github.com/docker/buildx/releases/latest/download/buildx-v0.21.2.linux-$(uname -m)" \
+        local buildx_arch="amd64"
+        [ "$(uname -m)" = "aarch64" ] && buildx_arch="arm64"
+        curl -fsSL "https://github.com/docker/buildx/releases/download/v0.21.2/buildx-v0.21.2.linux-${buildx_arch}" \
             -o /usr/libexec/docker/cli-plugins/docker-buildx
         chmod +x /usr/libexec/docker/cli-plugins/docker-buildx
-        log "  Docker Buildx $(docker buildx version --short 2>/dev/null || echo 'installed') 설치 완료"
+        log "  Docker Buildx $(docker buildx version 2>/dev/null | head -1 || echo 'installed') 설치 완��"
     fi
 
     # --- Claude Code ---
