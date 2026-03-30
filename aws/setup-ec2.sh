@@ -239,16 +239,24 @@ JAIL
     done
     log "  Docker 설치 완료"
 
-    # --- Docker Compose V2 플러그인 ---
-    log "[7/9] Docker Compose V2 설치"
+    # --- Docker Compose V2 + Buildx 플러그인 ---
+    log "[7/9] Docker Compose V2 + Buildx 설치"
+    mkdir -p /usr/libexec/docker/cli-plugins
     if docker compose version &>/dev/null; then
         log "  Docker Compose 이미 설치됨. 건너뜀."
     else
-        mkdir -p /usr/libexec/docker/cli-plugins
         curl -fsSL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-$(uname -m)" \
             -o /usr/libexec/docker/cli-plugins/docker-compose
         chmod +x /usr/libexec/docker/cli-plugins/docker-compose
         log "  Docker Compose $(docker compose version --short) 설치 완료"
+    fi
+    if docker buildx version &>/dev/null; then
+        log "  Docker Buildx 이미 설치됨. 건너뜀."
+    else
+        curl -fsSL "https://github.com/docker/buildx/releases/latest/download/buildx-v0.21.2.linux-$(uname -m)" \
+            -o /usr/libexec/docker/cli-plugins/docker-buildx
+        chmod +x /usr/libexec/docker/cli-plugins/docker-buildx
+        log "  Docker Buildx $(docker buildx version --short 2>/dev/null || echo 'installed') 설치 완료"
     fi
 
     # --- Claude Code ---
