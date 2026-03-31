@@ -320,6 +320,10 @@ cmd_rebuild() {
         local old_password old_gpus old_uid old_gid old_ssh_port
         old_password=$(echo "$env_json" | jq -r '.[] | select(startswith("PASSWORD=")) | sub("^PASSWORD=";"")')
         old_gpus=$(echo "$env_json" | jq -r '.[] | select(startswith("ASSIGNED_GPUS=")) | sub("^ASSIGNED_GPUS=";"")')
+        # 이전 버전 호환 (NVIDIA_VISIBLE_DEVICES → ASSIGNED_GPUS 마이그레이션)
+        if [ -z "$old_gpus" ]; then
+            old_gpus=$(echo "$env_json" | jq -r '.[] | select(startswith("NVIDIA_VISIBLE_DEVICES=")) | sub("^NVIDIA_VISIBLE_DEVICES=";"")')
+        fi
         old_uid=$(echo "$env_json" | jq -r '.[] | select(startswith("CONTAINER_UID=")) | sub("^CONTAINER_UID=";"")')
         old_gid=$(echo "$env_json" | jq -r '.[] | select(startswith("CONTAINER_GID=")) | sub("^CONTAINER_GID=";"")')
 
