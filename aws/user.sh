@@ -185,13 +185,17 @@ cmd_up() {
     mkdir -p "${VOLUME_PATH}/homes/${username}"
 
     # GPU 옵션 (--gpus로 직접 제어, NVIDIA_VISIBLE_DEVICES 환경변수 미사용)
+    # 주의: --gpus "device=2,3"은 Docker 파서가 "device=2"(DeviceID) + "3"(Count)으로
+    #       분리하여 충돌 발생. "device=2,device=3" 형식이 올바른 문법.
     local -a gpu_opts=()
     if [ "$gpus" = "none" ]; then
         gpu_opts=(--runtime=runc)
     elif [ "$gpus" = "all" ]; then
         gpu_opts=(--gpus all)
     else
-        gpu_opts=(--gpus "device=${gpus}")
+        # "0,1,2" → "device=0,device=1,device=2"
+        local gpu_device_list="device=${gpus//,/,device=}"
+        gpu_opts=(--gpus "$gpu_device_list")
     fi
 
     echo "🚀 컨테이너 생성: ${username}"
