@@ -184,12 +184,14 @@ cmd_up() {
     mkdir -p "${VOLUME_PATH}/workspace/${username}"
     mkdir -p "${VOLUME_PATH}/homes/${username}"
 
-    # GPU 옵션 (docker-compose와 동일: --gpus all + NVIDIA_VISIBLE_DEVICES로 필터링)
+    # GPU 옵션 (--gpus로 직접 제어, NVIDIA_VISIBLE_DEVICES 환경변수 미사용)
     local -a gpu_opts=()
     if [ "$gpus" = "none" ]; then
-        gpu_opts=()
-    else
+        gpu_opts=(--runtime=runc)
+    elif [ "$gpus" = "all" ]; then
         gpu_opts=(--gpus all)
+    else
+        gpu_opts=(--gpus "device=${gpus}")
     fi
 
     echo "🚀 컨테이너 생성: ${username}"
@@ -218,7 +220,7 @@ cmd_up() {
         -e "CONTAINER_GID=${CONTAINER_GID}" \
         -e "HF_TOKEN=${HF_TOKEN}" \
         -e "EXTRA_REQUIREMENTS=${EXTRA_REQUIREMENTS}" \
-        -e "NVIDIA_VISIBLE_DEVICES=${gpus}" \
+        -e "ASSIGNED_GPUS=${gpus}" \
         "${gpu_opts[@]}" \
         "$IMAGE_NAME"
 
@@ -312,7 +314,7 @@ cmd_rebuild() {
 
         local old_password old_gpus old_uid old_gid old_ssh_port
         old_password=$(echo "$env_json" | jq -r '.[] | select(startswith("PASSWORD=")) | sub("^PASSWORD=";"")')
-        old_gpus=$(echo "$env_json" | jq -r '.[] | select(startswith("NVIDIA_VISIBLE_DEVICES=")) | sub("^NVIDIA_VISIBLE_DEVICES=";"")')
+        old_gpus=$(echo "$env_json" | jq -r '.[] | select(startswith("ASSIGNED_GPUS=")) | sub("^ASSIGNED_GPUS=";"")')
         old_uid=$(echo "$env_json" | jq -r '.[] | select(startswith("CONTAINER_UID=")) | sub("^CONTAINER_UID=";"")')
         old_gid=$(echo "$env_json" | jq -r '.[] | select(startswith("CONTAINER_GID=")) | sub("^CONTAINER_GID=";"")')
 

@@ -80,7 +80,7 @@ chown -R "${USERNAME}:${USERNAME}" /usr/local/nvm
     echo 'export PATH="/usr/local/cuda/bin:$HOME/.local/bin:$PATH"'
     echo 'export LD_LIBRARY_PATH="/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"'
     [ -n "${HF_TOKEN:-}" ] && echo "export HF_TOKEN=\"$HF_TOKEN\""
-    [ -n "${NVIDIA_VISIBLE_DEVICES:-}" ] && echo "export NVIDIA_VISIBLE_DEVICES=\"$NVIDIA_VISIBLE_DEVICES\""
+    [ -n "${ASSIGNED_GPUS:-}" ] && echo "export NVIDIA_VISIBLE_DEVICES=\"$ASSIGNED_GPUS\""
     true
 } > /etc/profile.d/docker-env.sh
 
