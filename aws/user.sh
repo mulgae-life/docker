@@ -180,9 +180,11 @@ cmd_up() {
     local extra_start=$((base + 1))
     local extra_end=$((base + PORT_STEP - 1))
 
-    # 디렉토리 생성
+    # 디렉토리 생성 + 소유권 설정 (sudo로 실행되므로 root 소유 방지)
     mkdir -p "${VOLUME_PATH}/workspace/${username}"
     mkdir -p "${VOLUME_PATH}/homes/${username}"
+    chown "${CONTAINER_UID}:${CONTAINER_GID}" "${VOLUME_PATH}/workspace/${username}"
+    chown "${CONTAINER_UID}:${CONTAINER_GID}" "${VOLUME_PATH}/homes/${username}"
 
     # GPU 옵션 (--gpus로 직접 제어, NVIDIA_VISIBLE_DEVICES 환경변수 미사용)
     # Docker --gpus 파서는 CSV 방식: 쉼표가 필드 구분자.
