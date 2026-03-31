@@ -12,8 +12,8 @@ set -euo pipefail
 #
 # 포트 할당 (자동):
 #   docker-compose 메인: 5000(SSH), 5001-5009
-#   user.sh 사용자 1:    5010(SSH), 5011-5019
-#   user.sh 사용자 2:    5020(SSH), 5021-5029
+#   user.sh alice:       5010(SSH), 5011-5019
+#   user.sh bob:         5020(SSH), 5021-5029
 #   ...
 #   user.sh 최대:        5490(SSH), 5491-5499
 # ============================================
@@ -22,7 +22,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PORT_BASE=5010
 PORT_STEP=10
 PORT_MAX=5500
-CONTAINER_PREFIX="llm-"
 IMAGE_NAME="llm-dev"
 
 # .env 로드 (VOLUME_PATH, HF_TOKEN 등)
@@ -70,7 +69,7 @@ validate_gpus() {
 
 # 사용 중인 포트 베이스 목록 조회 (중지된 컨테이너 포함)
 get_used_bases() {
-    docker ps -a --filter "name=^${CONTAINER_PREFIX}" --format '{{.Names}}' 2>/dev/null | while read -r name; do
+    docker ps -a --filter "label=managed-by=user.sh" --format '{{.Names}}' 2>/dev/null | while read -r name; do
         local ssh_port
         ssh_port=$(docker inspect \
             --format='{{range $p, $conf := .HostConfig.PortBindings}}{{if eq $p "5555/tcp"}}{{(index $conf 0).HostPort}}{{end}}{{end}}' \
@@ -100,7 +99,7 @@ next_port_base() {
 
 # 컨테이너가 이미 존재하는지 확인
 container_exists() {
-    docker ps -a --filter "name=^${CONTAINER_PREFIX}${1}$" --format '{{.Names}}' 2>/dev/null | grep -q .
+    docker ps -a --filter "name=^${1}$" --format '{{.Names}}' 2>/dev/null | grep -q .
 }
 
 cmd_up() {
@@ -142,18 +141,18 @@ cmd_up() {
     # 이미 존재하는 컨테이너 확인
     if container_exists "$username"; then
         local state
-        state=$(docker inspect -f '{{.State.Status}}' "${CONTAINER_PREFIX}${username}" 2>/dev/null || true)
+        state=$(docker inspect -f '{{.State.Status}}' "${username}" 2>/dev/null || true)
         if [ "$state" = "running" ]; then
-            echo "✅ ${CONTAINER_PREFIX}${username} 이미 실행 중"
-            docker port "${CONTAINER_PREFIX}${username}"
+            echo "✅ ${username} 이미 실행 중"
+            docker port "${username}"
             return
         else
-            echo "🔄 중지된 컨테이너 재시작: ${CONTAINER_PREFIX}${username}"
+            echo "🔄 중지된 컨테이너 재시작: ${username}"
             echo "   ⚠️ 기존 설정으로 재시작됩니다. 옵션 변경이 필요하면:"
             echo "      $0 down ${username} && $0 up ${username} [옵션]"
-            docker start "${CONTAINER_PREFIX}${username}"
+            docker start "${username}"
             echo "✅ 재시작 완료"
-            docker port "${CONTAINER_PREFIX}${username}"
+            docker port "${username}"
             return
         fi
     fi
@@ -195,14 +194,14 @@ cmd_up() {
         gpu_opts=(--gpus "device=${gpus}")
     fi
 
-    echo "🚀 컨테이너 생성: ${CONTAINER_PREFIX}${username}"
+    echo "🚀 컨테이너 생성: ${username}"
     echo "   SSH: ssh -p ${ssh_port} ${username}@<host>"
     echo "   포트: ${extra_start}-${extra_end} (1:1 매핑)"
     echo "   GPU: ${gpus}"
 
     docker run -d \
-        --name "${CONTAINER_PREFIX}${username}" \
-        --hostname "llm-${username}" \
+        --name "${username}" \
+        --hostname "${username}" \
         --label "managed-by=user.sh" \
         --restart unless-stopped \
         --security-opt apparmor=unconfined \
@@ -238,13 +237,18 @@ cmd_down() {
     validate_username "$username"
 
     if ! container_exists "$username"; then
-        echo "❌ 컨테이너 '${CONTAINER_PREFIX}${username}'이 없습니다."
+        echo "❌ 컨테이너 '${username}'이 없습니다."
         exit 1
     fi
 
-    echo "🗑️ 컨테이너 중지 및 제거: ${CONTAINER_PREFIX}${username}"
-    docker stop "${CONTAINER_PREFIX}${username}" 2>/dev/null || true
-    docker rm "${CONTAINER_PREFIX}${username}" 2>/dev/null || true
+    if ! docker inspect --format='{{index .Config.Labels "managed-by"}}' "$username" 2>/dev/null | grep -q "user.sh"; then
+        echo "❌ '${username}'은 user.sh로 관리되는 컨테이너가 아닙니다."
+        exit 1
+    fi
+
+    echo "🗑️ 컨테이너 중지 및 제거: ${username}"
+    docker stop "${username}" 2>/dev/null || true
+    docker rm "${username}" 2>/dev/null || true
     echo "✅ 완료 (데이터는 ${VOLUME_PATH}에 보존됨)"
 }
 
@@ -252,7 +256,6 @@ cmd_list() {
     echo "=== LLM 사용자 컨테이너 (user.sh 관리) ==="
     local output
     output=$(docker ps -a \
-        --filter "name=^${CONTAINER_PREFIX}" \
         --filter "label=managed-by=user.sh" \
         --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' 2>/dev/null)
     if [ -n "$output" ]; then
@@ -275,14 +278,16 @@ cmd_rebuild() {
     if [ -n "$target" ]; then
         validate_username "$target"
         if ! container_exists "$target"; then
-            echo "❌ 컨테이너 '${CONTAINER_PREFIX}${target}'이 없습니다."
+            echo "❌ 컨테이너 '${target}'이 없습니다."
             exit 1
         fi
-        containers="${CONTAINER_PREFIX}${target}"
+        if ! docker inspect --format='{{index .Config.Labels "managed-by"}}' "$target" 2>/dev/null | grep -q "user.sh"; then
+            echo "❌ '${target}'은 user.sh로 관리되는 컨테이너가 아닙니다."
+            exit 1
+        fi
+        containers="${target}"
     else
-        # docker-compose 컨테이너 제외 (com.docker.compose.service 라벨이 없는 것만)
         containers=$(docker ps -a \
-            --filter "name=^${CONTAINER_PREFIX}" \
             --filter "label=managed-by=user.sh" \
             --format '{{.Names}}' 2>/dev/null)
         if [ -z "$containers" ]; then
@@ -301,7 +306,7 @@ cmd_rebuild() {
     # here-string으로 현재 쉘에서 실행 (서브쉘 회피)
     while read -r cname; do
         [ -z "$cname" ] && continue
-        local uname="${cname#${CONTAINER_PREFIX}}"
+        local uname="$cname"
 
         # 기존 컨테이너에서 설정 추출
         local env_json
