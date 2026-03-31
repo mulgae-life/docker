@@ -61,7 +61,7 @@ validate_username() {
 validate_gpus() {
     local gpus="$1"
     if [ "$gpus" = "all" ] || [ "$gpus" = "none" ]; then return 0; fi
-    if ! [[ "$gpus" =~ ^[0-9](,[0-9])*$ ]]; then
+    if ! [[ "$gpus" =~ ^[0-9]+(,[0-9]+)*$ ]]; then
         echo "❌ --gpus는 'none', 'all' 또는 GPU 번호(예: 0,1,2)만 허용"
         exit 1
     fi
@@ -184,14 +184,12 @@ cmd_up() {
     mkdir -p "${VOLUME_PATH}/workspace/${username}"
     mkdir -p "${VOLUME_PATH}/homes/${username}"
 
-    # GPU 옵션 (배열 방식 — eval 없이 안전하게 처리)
+    # GPU 옵션 (docker-compose와 동일: --gpus all + NVIDIA_VISIBLE_DEVICES로 필터링)
     local -a gpu_opts=()
     if [ "$gpus" = "none" ]; then
         gpu_opts=()
-    elif [ "$gpus" = "all" ]; then
-        gpu_opts=(--gpus all)
     else
-        gpu_opts=(--gpus "device=${gpus}")
+        gpu_opts=(--gpus all)
     fi
 
     echo "🚀 컨테이너 생성: ${username}"

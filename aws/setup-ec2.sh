@@ -264,7 +264,7 @@ JAIL
     # --- Claude Code ---
     log "[8/9] Claude Code 설치"
     if [ -n "$USERNAME" ]; then
-        if su - "$USERNAME" -c "command -v claude" &>/dev/null; then
+        if [ -f "/home/${USERNAME}/.local/bin/claude" ]; then
             log "  Claude Code 이미 설치됨. 건너뜀."
         else
             if su - "$USERNAME" -c "curl -fsSL https://claude.ai/install.sh | bash" 2>/dev/null; then
