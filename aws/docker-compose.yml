@@ -30,7 +30,7 @@ services:
       - CONTAINER_GID=${CONTAINER_GID:-1000}
       - HF_TOKEN=${HF_TOKEN:-}
       - EXTRA_REQUIREMENTS=${EXTRA_REQUIREMENTS:-}
-      - NVIDIA_VISIBLE_DEVICES=${LLM_GPUS:-all}
+      - ASSIGNED_GPUS=${LLM_GPUS:-all}
     shm_size: ${SHM_SIZE:-16g}
     deploy:
       resources:
