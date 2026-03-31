@@ -1,0 +1,21 @@
+# ============================================
+# LLM 개발서버 (AWS EC2 g6e.12xlarge)
+# ============================================
+
+Host AWS-jin
+    HostName 3.35.12.44
+    Port 5020
+    User jin
+    # 추가 포트: 5021-5029
+
+Host AWS-song
+    HostName 3.35.12.44
+    Port 5030
+    User song
+    # 추가 포트: 5031-5039
+
+Host AWS-mail
+    HostName 3.35.12.44
+    Port 5040
+    User mail
+    # 추가 포트: 5041-5049
