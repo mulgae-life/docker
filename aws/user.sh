@@ -58,12 +58,12 @@ validate_username() {
     fi
 }
 
-# GPU 값 검증 (all 또는 숫자/콤마 조합)
+# GPU 값 검증 (none, all 또는 숫자/콤마 조합)
 validate_gpus() {
     local gpus="$1"
-    if [ "$gpus" = "all" ]; then return 0; fi
+    if [ "$gpus" = "all" ] || [ "$gpus" = "none" ]; then return 0; fi
     if ! [[ "$gpus" =~ ^[0-9](,[0-9])*$ ]]; then
-        echo "❌ --gpus는 'all' 또는 GPU 번호(예: 0,1,2)만 허용"
+        echo "❌ --gpus는 'none', 'all' 또는 GPU 번호(예: 0,1,2)만 허용"
         exit 1
     fi
 }
@@ -187,7 +187,9 @@ cmd_up() {
 
     # GPU 옵션 (배열 방식 — eval 없이 안전하게 처리)
     local -a gpu_opts=()
-    if [ "$gpus" = "all" ]; then
+    if [ "$gpus" = "none" ]; then
+        gpu_opts=()
+    elif [ "$gpus" = "all" ]; then
         gpu_opts=(--gpus all)
     else
         gpu_opts=(--gpus "device=${gpus}")
