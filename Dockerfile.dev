@@ -60,7 +60,7 @@ RUN curl -fsSL https://github.com/supabase/cli/releases/latest/download/supabase
 # ============================================
 # Python 패키지
 # ============================================
-RUN pip install --no-cache-dir \
+RUN pip install --no-cache-dir --ignore-installed \
     openai anthropic \
     langchain-core langchain-openai langchain-anthropic \
     langchain-google-genai langchain-ollama \
