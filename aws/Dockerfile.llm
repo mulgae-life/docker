@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=vllm/vllm-openai:v0.18.0
+ARG BASE_IMAGE=vllm/vllm-openai:v0.19.0
 FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -18,6 +18,10 @@ RUN apt-get update && apt-get install -y \
     bubblewrap \
     net-tools iputils-ping dnsutils \
     locales tzdata \
+    # Playwright/Puppeteer headless Chrome 의존성
+    libnspr4 libnss3 \
+    libatk1.0-0 libatk-bridge2.0-0 libatspi2.0-0 \
+    libxcomposite1 libxdamage1 \
     && ln -sf /usr/bin/python3 /usr/bin/python \
     && rm -rf /var/lib/apt/lists/*
 
@@ -52,6 +56,13 @@ ENV PATH=$NVM_DIR/versions/node/default/bin:$PATH
 # ============================================
 RUN mkdir -p /run/sshd \
     && printf "Port 5555\nPermitRootLogin no\nPasswordAuthentication yes\n" > /etc/ssh/sshd_config.d/custom.conf
+
+# ============================================
+# Python 패키지 (빌드 타임)
+# ============================================
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt \
+    && pip install --no-cache-dir --no-deps "transformers>=5.5.0"
 
 # ============================================
 # 작업 디렉토리

@@ -60,7 +60,7 @@ fi
 if [ -n "${EXTRA_REQUIREMENTS:-}" ]; then
     if [ -f "${EXTRA_REQUIREMENTS}" ]; then
         echo "==> 추가 패키지 설치: $EXTRA_REQUIREMENTS"
-        pip install --no-cache-dir -q -r "$EXTRA_REQUIREMENTS"
+        pip install --no-cache-dir --break-system-packages -q -r "$EXTRA_REQUIREMENTS"
     else
         echo "⚠️ EXTRA_REQUIREMENTS=${EXTRA_REQUIREMENTS} 파일이 존재하지 않습니다." >&2
     fi
