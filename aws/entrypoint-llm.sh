@@ -2,8 +2,9 @@
 set -euo pipefail
 
 # ============================================
-# 런타임 사용자 생성
+# 배포 모드 (DEV: SSH/Claude 셋업, PRD: vLLM 서비스 전용)
 # ============================================
+MODE="${MODE:-DEV}"
 USERNAME="${USERNAME:-user}"
 PASSWORD="${PASSWORD:-changeme}"
 CONTAINER_UID="${CONTAINER_UID:-1000}"
@@ -27,6 +28,29 @@ setup_user_home() {
     chown -R "${USERNAME}:${USERNAME}" "$home_dir"
 }
 
+# ============================================
+# 런타임 requirements 설치 (DEV/PRD 공통 — vLLM 의존성)
+# ============================================
+if [ -n "${EXTRA_REQUIREMENTS:-}" ]; then
+    if [ -f "${EXTRA_REQUIREMENTS}" ]; then
+        echo "==> 추가 패키지 설치: $EXTRA_REQUIREMENTS"
+        pip install --no-cache-dir --break-system-packages -q -r "$EXTRA_REQUIREMENTS"
+    else
+        echo "⚠️ EXTRA_REQUIREMENTS=${EXTRA_REQUIREMENTS} 파일이 존재하지 않습니다." >&2
+    fi
+fi
+
+# ============================================
+# PRD: SSH 사용자/Claude 셋업 모두 스킵 → root로 vLLM 서비스 운영
+# ============================================
+if [ "$MODE" = "PRD" ]; then
+    echo "==> MODE=PRD: SSH 사용자/Claude 셋업 스킵 (vLLM 서비스 전용)"
+    exec "$@"
+fi
+
+# ============================================
+# DEV: 런타임 사용자 생성 + SSH 셋업
+# ============================================
 if ! id "$USERNAME" &>/dev/null; then
     # 기존 UID/GID 충돌 제거
     existing_user=$(getent passwd "$CONTAINER_UID" | cut -d: -f1 || true)
@@ -52,18 +76,6 @@ if [ -d "$HOME_DIR" ] && [ -z "$(ls -A "$HOME_DIR" 2>/dev/null)" ]; then
     setup_user_home "$HOME_DIR"
 elif [ -d "$HOME_DIR" ] && [ "$(stat -c %u "$HOME_DIR")" != "$CONTAINER_UID" ]; then
     chown -R "${USERNAME}:${USERNAME}" "$HOME_DIR"
-fi
-
-# ============================================
-# 런타임 requirements 설치
-# ============================================
-if [ -n "${EXTRA_REQUIREMENTS:-}" ]; then
-    if [ -f "${EXTRA_REQUIREMENTS}" ]; then
-        echo "==> 추가 패키지 설치: $EXTRA_REQUIREMENTS"
-        pip install --no-cache-dir --break-system-packages -q -r "$EXTRA_REQUIREMENTS"
-    else
-        echo "⚠️ EXTRA_REQUIREMENTS=${EXTRA_REQUIREMENTS} 파일이 존재하지 않습니다." >&2
-    fi
 fi
 
 # nvm 소유권 (사용자가 npm global 패키지 설치 가능하도록)
