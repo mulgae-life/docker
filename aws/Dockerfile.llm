@@ -2,10 +2,6 @@ ARG BASE_IMAGE=vllm/vllm-openai:v0.19.0
 FROM ${BASE_IMAGE}
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV USERNAME=user
-ENV PASSWORD=changeme
-ENV CONTAINER_UID=1000
-ENV CONTAINER_GID=1000
 
 # ============================================
 # 시스템 패키지
