@@ -44,10 +44,11 @@ ssh -p 5000 <user>@<host>
 aws ssm start-session \
   --target i-<INSTANCE_ID> \
   --document-name AWS-StartPortForwardingSession \
-  --parameters '{"portNumber":["5001"],"localPortNumber":["8443"]}'
+  --parameters '{"portNumber":["7777"],"localPortNumber":["8443"]}'
 ```
 브라우저 `http://localhost:8443` 접속 (비밀번호 = `.env`의 `PASSWORD`).
-다른 사용자 컨테이너는 `portNumber`를 5011/5021/5031/... 로 변경.
+- 메인 컨테이너: `portNumber` = `LLM_CODE_SERVER_PORT` 값 (기본 7777)
+- user.sh 사용자 컨테이너: `portNumber` = 각 사용자 포트 범위의 첫 포트 (5011/5021/5031/…)
 
 ## 7. 추가 사용자 관리
 ```bash
@@ -68,7 +69,7 @@ sudo ~/aws/user.sh down jin
 sudo ~/aws/user.sh down song
 sudo ~/aws/user.sh down mail
 ```
-포트 자동 할당: `alice` = 5010(SSH) + 5011–5019, `bob` = 5020(SSH) + 5021–5029 …
+포트 자동 할당: 사용자별 10포트씩 (첫 사용자 5010(SSH) + 5011–5019, 두 번째 5020 + 5021–5029, …)
 
 ## 8. VS Code 확장 추가 (폐쇄망용)
 1. 인터넷 되는 PC에서 Marketplace → `.vsix` 다운로드
@@ -93,7 +94,7 @@ chmod +x ~/aws/setup-ec2.sh ~/aws/user.sh
 cd ~/aws
 docker compose build --no-cache && docker compose up -d
 sudo ~/aws/user.sh rebuild          # 전체 사용자 컨테이너 재생성
-sudo ~/aws/user.sh rebuild alice    # 특정 사용자만
+sudo ~/aws/user.sh rebuild hjjo     # 특정 사용자만
 ```
 
 ---
@@ -105,15 +106,15 @@ Host AWS-main
     Port 5000
     User <user>
 
-Host AWS-alice
+Host AWS-hjjo
     HostName <host>
     Port 5010
-    User alice
+    User hjjo
     # 추가 포트: 5011-5019
 
-Host AWS-bob
+Host AWS-jin
     HostName <host>
     Port 5020
-    User bob
+    User jin
     # 추가 포트: 5021-5029
 ```

@@ -11,7 +11,7 @@ USERNAME="${USERNAME:-user}"
 PASSWORD="${PASSWORD:-changeme}"
 CONTAINER_UID="${CONTAINER_UID:-1000}"
 CONTAINER_GID="${CONTAINER_GID:-1000}"
-CODE_SERVER_PORT="${CODE_SERVER_PORT:-8443}"
+CODE_SERVER_PORT="${CODE_SERVER_PORT:-7777}"
 
 # 홈 디렉토리 기본 설정
 setup_user_home() {
@@ -133,22 +133,11 @@ if [ "$USERNAME" != "root" ]; then
     chown -R "${USERNAME}:${USERNAME}" "${USER_HOME}/.config"
 fi
 
-# code-server 시작 + 자동 복구 루프
-# root 운영계는 SSH 접속이 불가하므로 code-server 크래시 시 복구 경로가 없음
-# → 백그라운드 watchdog 으로 30초마다 프로세스 체크 후 재기동
-start_code_server() {
-    if ! pgrep -u "$USERNAME" -f "code-server" >/dev/null 2>&1; then
-        echo "==> code-server 실행 (user: ${USERNAME}, home: ${USER_HOME}, port: ${CODE_SERVER_PORT})"
-        su - "$USERNAME" -c "nohup code-server /workspace > ${USER_HOME}/.code-server.log 2>&1 &"
-    fi
-}
-start_code_server
-
-(
-    while true; do
-        sleep 30
-        start_code_server
-    done
-) &
+# code-server 시작 (자동 복구 없음 — 크래시는 docker healthcheck로 가시화,
+# 복구는 관리자가 로그 확인 후 수동으로: docker exec <ctn> su - <user> -c 'code-server /workspace &')
+if ! pgrep -u "$USERNAME" -f "code-server" >/dev/null 2>&1; then
+    echo "==> code-server 실행 (user: ${USERNAME}, home: ${USER_HOME}, port: ${CODE_SERVER_PORT})"
+    su - "$USERNAME" -c "nohup code-server /workspace > ${USER_HOME}/.code-server.log 2>&1 &"
+fi
 
 exec "$@"
