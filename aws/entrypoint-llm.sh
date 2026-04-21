@@ -106,7 +106,8 @@ fi
 # ============================================
 if [ ! -f "${USER_HOME}/.local/bin/claude" ]; then
     echo "==> Claude Code 설치 시도: ${USERNAME} (home: ${USER_HOME})"
-    su - "$USERNAME" -c "curl -fsSL https://claude.ai/install.sh | bash" \
+    # timeout 필수: 폐쇄망 방화벽이 TCP SYN을 drop하면 기본 curl은 수 분간 재전송 대기 → 컨테이너 기동이 행 걸린 것처럼 보임
+    su - "$USERNAME" -c "curl -fsSL --connect-timeout 5 --max-time 30 https://claude.ai/install.sh | bash" \
         || echo "⚠️ Claude Code 설치 실패 (폐쇄망이거나 네트워크 문제) — 무시하고 진행" >&2
 fi
 

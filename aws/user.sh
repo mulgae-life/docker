@@ -22,15 +22,16 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PORT_BASE=5010
 PORT_STEP=10
 PORT_MAX=5500
-IMAGE_NAME="llm-dev"
 
-# .env 로드 (VOLUME_PATH, HF_TOKEN 등)
+# .env 로드 (VOLUME_PATH, HF_TOKEN, LLM_IMAGE_NAME 등)
 if [ -f "$SCRIPT_DIR/.env" ]; then
     set -a
     source "$SCRIPT_DIR/.env"
     set +a
 fi
 
+# docker-compose.yml 의 LLM_IMAGE_NAME 과 반드시 동일 값이어야 함 (설정 채널 일원화)
+IMAGE_NAME="${LLM_IMAGE_NAME:-llm-dev}"
 VOLUME_PATH="${VOLUME_PATH:-/volume}"
 HF_TOKEN="${HF_TOKEN:-}"
 EXTRA_REQUIREMENTS="${EXTRA_REQUIREMENTS:-}"
