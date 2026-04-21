@@ -143,12 +143,16 @@ if ! pgrep -u "$USERNAME" -f "code-server" >/dev/null 2>&1; then
 fi
 
 # ============================================
-# SSH host key 정리 (sshd "UNPROTECTED PRIVATE KEY FILE" 방지)
-# - 베이스 이미지 레이어에서 /etc/ssh/ssh_host_*_key 가 0777 로 박히면
-#   sshd 가 key 를 reject 하여 `no hostkeys available -- exiting` 으로 종료 → 재시작 루프
-# - ssh-keygen -A: 없는 key 만 생성 (멱등)
-# - chmod 600: 이미 있는 key 의 퍼미션 강제 정정
+# SSH 기동 준비 (sshd 실행 직전 필수 조건 정리)
+# - /run/sshd: privilege separation 디렉토리. "must be owned by root" 체크 실패 시 sshd 즉시 종료
+#   (Docker 에서 /run 이 tmpfs 로 초기화되어 이미지 빌드 시 만든 디렉토리가 사라지는 케이스 대응)
+# - /etc/ssh/ssh_host_*_key: 퍼미션 600 필수 ("UNPROTECTED PRIVATE KEY FILE" 방지)
+# - 두 체크 중 하나라도 실패하면 sshd 가 즉시 exit → restart 루프
 # ============================================
+mkdir -p /run/sshd
+chown root:root /run/sshd
+chmod 0755 /run/sshd
+
 ssh-keygen -A 2>/dev/null || true
 chmod 600 /etc/ssh/ssh_host_*_key 2>/dev/null || true
 chmod 644 /etc/ssh/ssh_host_*_key.pub 2>/dev/null || true
