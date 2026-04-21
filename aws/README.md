@@ -64,9 +64,10 @@ sudo ~/aws/user.sh up jeon --password 1234 --gpus 2,3
 sudo ~/aws/user.sh up min --password 1234 --gpus 3
 
 # 운영계 root 컨테이너 (--root): 내부 OS=root, SSH 불가, code-server 전용
-# 홈은 컨테이너별 /volume/root-homes/<name> 에 독립 보존 → 여러 개 병렬 운영 가능
-sudo ~/aws/user.sh up prd-job   --root --password aiteam12! --gpus all
-sudo ~/aws/user.sh up prod-batch --root --password aiteam12! --gpus 2,3
+# 포트는 .env 의 LLM_SSH_PORT / LLM_EXTRA_PORTS / LLM_CODE_SERVER_PORT 사용 (compose llm 과 동일)
+# → compose llm 이나 기존 --root 가 올라가 있으면 포트 충돌. .env 를 수정하고 교체 실행
+# 홈은 컨테이너별 /volume/root-homes/<name> 에 독립 보존
+sudo ~/aws/user.sh up prd-job --root --password aiteam12! --gpus all
 
 sudo ~/aws/user.sh list
 
@@ -90,7 +91,7 @@ docker compose up -d
 - 사용자 생성/홈 셋업 스킵, `/root` 홈 기준으로 code-server 동반 기동
 - `/root` 는 호스트 `/volume/root` 에 영속화 (bash history, code-server 설정 보존)
 - SSH 접속 불가 → **6번 SSM 포트 포워딩으로만 접속**
-- **단일 운영계 슬롯 전용**. 여러 root 컨테이너를 병렬로 돌리려면 `user.sh up <name> --root` (7번) 사용 → 홈은 `/volume/root-homes/<name>` 에 컨테이너별 독립 보존
+- **단일 운영계 슬롯**. `user.sh --root` (7번) 도 동일한 `.env` 포트(`LLM_SSH_PORT`/`LLM_EXTRA_PORTS`/`LLM_CODE_SERVER_PORT`)를 쓰므로 compose `llm-root` 와 동시 운용 불가. 이름만 바꿔 운영계를 재배포하려면 `user.sh --root` 사용 → 홈은 `/volume/root-homes/<name>` 에 컨테이너별 독립 보존
 
 ## 10. 코드 변경 반영
 ```bash

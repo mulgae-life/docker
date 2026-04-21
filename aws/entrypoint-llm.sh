@@ -142,4 +142,15 @@ if ! pgrep -u "$USERNAME" -f "code-server" >/dev/null 2>&1; then
     su - "$USERNAME" -c "nohup code-server /workspace > ${USER_HOME}/.code-server.log 2>&1 &"
 fi
 
+# ============================================
+# SSH host key 정리 (sshd "UNPROTECTED PRIVATE KEY FILE" 방지)
+# - 베이스 이미지 레이어에서 /etc/ssh/ssh_host_*_key 가 0777 로 박히면
+#   sshd 가 key 를 reject 하여 `no hostkeys available -- exiting` 으로 종료 → 재시작 루프
+# - ssh-keygen -A: 없는 key 만 생성 (멱등)
+# - chmod 600: 이미 있는 key 의 퍼미션 강제 정정
+# ============================================
+ssh-keygen -A 2>/dev/null || true
+chmod 600 /etc/ssh/ssh_host_*_key 2>/dev/null || true
+chmod 644 /etc/ssh/ssh_host_*_key.pub 2>/dev/null || true
+
 exec "$@"

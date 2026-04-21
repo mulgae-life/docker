@@ -181,21 +181,32 @@ cmd_up() {
         exit 1
     fi
 
-    # 포트 할당 (--ssh-port 지정 시 해당 포트 사용, 아니면 자동 할당)
-    local base
-    if [ -n "$forced_port" ]; then
-        base=$forced_port
+    # 포트 할당
+    # --root: .env 의 LLM_SSH_PORT / LLM_EXTRA_PORTS / LLM_CODE_SERVER_PORT 그대로 사용
+    #         → compose llm 서비스와 같은 포트 체계. 병렬 운용은 .env 포트를 수정해 교대 실행.
+    # 일반  : base 자동 할당 (5010, 5020, ...) 또는 --ssh-port 로 강제
+    local ssh_port extra_start extra_end extra_ports_spec
+    if $as_root; then
+        ssh_port="${LLM_SSH_PORT:-5000}"
+        extra_start="${LLM_CODE_SERVER_PORT:-7777}"
+        extra_end="$extra_start"
+        extra_ports_spec="${LLM_EXTRA_PORTS:-5001-5009}"
     else
-        base=$(next_port_base)
-        if [ -z "$base" ]; then
-            echo "❌ 포트 범위 초과 (최대 ${PORT_MAX}). 더 이상 사용자를 생성할 수 없습니다."
-            exit 1
+        local base
+        if [ -n "$forced_port" ]; then
+            base=$forced_port
+        else
+            base=$(next_port_base)
+            if [ -z "$base" ]; then
+                echo "❌ 포트 범위 초과 (최대 ${PORT_MAX}). 더 이상 사용자를 생성할 수 없습니다."
+                exit 1
+            fi
         fi
+        ssh_port=$base
+        extra_start=$((base + 1))
+        extra_end=$((base + PORT_STEP - 1))
+        extra_ports_spec=""
     fi
-
-    local ssh_port=$base
-    local extra_start=$((base + 1))
-    local extra_end=$((base + PORT_STEP - 1))
 
     # 홈 볼륨 분기: --root는 /volume/root-homes/<name>:/root, 일반은 /volume/homes/<name>:/home/<name>
     # compose 메인(운영계)이 쓰는 /volume/root 와 구분되도록 root-homes 네임스페이스 별도 사용
@@ -241,12 +252,23 @@ cmd_up() {
     echo "🚀 컨테이너 생성: ${username}"
     if $as_root; then
         echo "   모드:         root (SSH 접속 불가 — code-server 전용)"
+        echo "   code-server:  :${extra_start} (.env LLM_CODE_SERVER_PORT)"
+        echo "   서비스 포트:  ${extra_ports_spec} (.env LLM_EXTRA_PORTS)"
     else
         echo "   SSH:          ssh -p ${ssh_port} ${username}@<host>"
+        echo "   code-server:  :${extra_start} (SSM 포트 포워딩으로 접속 권장)"
+        echo "   포트 범위:    ${extra_start}-${extra_end} (1:1 매핑)"
     fi
-    echo "   code-server:  :${extra_start} (SSM 포트 포워딩으로 접속 권장)"
-    echo "   포트 범위:    ${extra_start}-${extra_end} (1:1 매핑)"
     echo "   GPU:          ${gpus}"
+
+    # 포트 바인딩: --root 는 compose 와 동일한 3개 별도 매핑, 일반은 range 매핑
+    local -a port_opts=(-p "${ssh_port}:5555")
+    if $as_root; then
+        port_opts+=(-p "${extra_ports_spec}:${extra_ports_spec}")
+        port_opts+=(-p "${extra_start}:${extra_start}")
+    else
+        port_opts+=(-p "${extra_start}-${extra_end}:${extra_start}-${extra_end}")
+    fi
 
     docker run -d \
         --name "${username}" \
@@ -258,8 +280,7 @@ cmd_up() {
         --security-opt seccomp=unconfined \
         --shm-size "$SHM_SIZE" \
         --memory "$LLM_MEMORY" \
-        -p "${ssh_port}:5555" \
-        -p "${extra_start}-${extra_end}:${extra_start}-${extra_end}" \
+        "${port_opts[@]}" \
         -v "${VOLUME_PATH}/workspace/${username}:/workspace" \
         -v "${VOLUME_PATH}/models:/models" \
         -v "${VOLUME_PATH}/data:/data" \
@@ -395,10 +416,15 @@ cmd_rebuild() {
         docker stop "$cname" 2>/dev/null || true
         docker rm "$cname" 2>/dev/null || true
 
-        # 동일 설정으로 재생성 (포트 보존)
+        # 동일 설정으로 재생성
+        # 일반  : 기존 SSH 포트 보존 (--ssh-port 전달)
+        # --root: .env 포트 재참조 (포트 변경하려면 .env 수정 후 rebuild)
         local -a port_opts=() root_opts=()
-        [ -n "$old_ssh_port" ] && port_opts=(--ssh-port "$old_ssh_port")
-        [ "$old_as_root" = "true" ] && root_opts=(--root)
+        if [ "$old_as_root" = "true" ]; then
+            root_opts=(--root)
+        else
+            [ -n "$old_ssh_port" ] && port_opts=(--ssh-port "$old_ssh_port")
+        fi
 
         CONTAINER_UID="$old_uid" CONTAINER_GID="$old_gid" \
             cmd_up "$uname" "${root_opts[@]}" --password "$old_password" --gpus "$old_gpus" "${port_opts[@]}"
