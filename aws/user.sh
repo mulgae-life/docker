@@ -49,8 +49,15 @@ usage() {
 }
 
 # username 검증 (영문자 시작, 영문/숫자/밑줄/하이픈, 최대 32자)
+# root는 운영계 전용 → docker compose 로 별도 관리
 validate_username() {
     local name="$1"
+    if [ "$name" = "root" ]; then
+        echo "❌ root는 user.sh 관리 대상이 아닙니다."
+        echo "   - 운영계 생성: .env에 USERNAME=root 후 'docker compose up -d'"
+        echo "   - 기존 root 컨테이너 제거: 'docker stop <name> && docker rm <name>'"
+        exit 1
+    fi
     if ! [[ "$name" =~ ^[a-zA-Z][a-zA-Z0-9_-]{0,31}$ ]]; then
         echo "❌ username은 영문자로 시작, 영문/숫자/밑줄/하이픈만 허용 (최대 32자)"
         exit 1
@@ -204,9 +211,10 @@ cmd_up() {
     fi
 
     echo "🚀 컨테이너 생성: ${username}"
-    echo "   SSH: ssh -p ${ssh_port} ${username}@<host>"
-    echo "   포트: ${extra_start}-${extra_end} (1:1 매핑)"
-    echo "   GPU: ${gpus}"
+    echo "   SSH:          ssh -p ${ssh_port} ${username}@<host>"
+    echo "   code-server:  :${extra_start} (SSM 포트 포워딩으로 접속 권장)"
+    echo "   포트 범위:    ${extra_start}-${extra_end} (1:1 매핑)"
+    echo "   GPU:          ${gpus}"
 
     docker run -d \
         --name "${username}" \
@@ -230,6 +238,7 @@ cmd_up() {
         -e "HF_TOKEN=${HF_TOKEN}" \
         -e "EXTRA_REQUIREMENTS=${EXTRA_REQUIREMENTS}" \
         -e "ASSIGNED_GPUS=${gpus}" \
+        -e "CODE_SERVER_PORT=${extra_start}" \
         "${gpu_opts[@]}" \
         "$IMAGE_NAME"
 

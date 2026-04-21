@@ -23,8 +23,9 @@ services:
       - ${VOLUME_PATH:-/volume}/models:/models
       - ${VOLUME_PATH:-/volume}/data:/data
       - ${VOLUME_PATH:-/volume}/homes/${USERNAME:-user}:/home/${USERNAME:-user}
+      # root 모드 전용 홈 보존 (일반 모드에선 사용 안 됨, 빈 폴더만 생성)
+      - ${VOLUME_PATH:-/volume}/root:/root
     environment:
-      - MODE=${MODE:-DEV}
       - USERNAME=${USERNAME:-user}
       - PASSWORD=${PASSWORD:-changeme}
       - CONTAINER_UID=${CONTAINER_UID:-1000}
@@ -32,6 +33,8 @@ services:
       - HF_TOKEN=${HF_TOKEN:-}
       - EXTRA_REQUIREMENTS=${EXTRA_REQUIREMENTS:-}
       - ASSIGNED_GPUS=${LLM_GPUS:-all}
+      # code-server 바인딩 포트 (컨테이너 내부). LLM_EXTRA_PORTS 범위 안이어야 외부 접근 가능
+      - CODE_SERVER_PORT=${LLM_CODE_SERVER_PORT:-5001}
     shm_size: ${SHM_SIZE:-16g}
     deploy:
       resources:

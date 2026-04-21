@@ -2,13 +2,16 @@
 set -euo pipefail
 
 # ============================================
-# 배포 모드 (DEV: SSH/Claude 셋업, PRD: vLLM 서비스 전용)
+# 런타임 초기화
+# - USERNAME=root: 운영계 모드 (사용자 생성 스킵, root 홈 /root 사용)
+# - USERNAME=<일반>: 개발 모드 (사용자 생성 + 홈 셋업)
+# - code-server 와 Claude 설치는 양쪽 모두 공통 수행
 # ============================================
-MODE="${MODE:-DEV}"
 USERNAME="${USERNAME:-user}"
 PASSWORD="${PASSWORD:-changeme}"
 CONTAINER_UID="${CONTAINER_UID:-1000}"
 CONTAINER_GID="${CONTAINER_GID:-1000}"
+CODE_SERVER_PORT="${CODE_SERVER_PORT:-8443}"
 
 # 홈 디렉토리 기본 설정
 setup_user_home() {
@@ -29,7 +32,7 @@ setup_user_home() {
 }
 
 # ============================================
-# 런타임 requirements 설치 (DEV/PRD 공통 — vLLM 의존성)
+# 런타임 requirements 설치 (vLLM 의존성 보강용)
 # ============================================
 if [ -n "${EXTRA_REQUIREMENTS:-}" ]; then
     if [ -f "${EXTRA_REQUIREMENTS}" ]; then
@@ -41,50 +44,37 @@ if [ -n "${EXTRA_REQUIREMENTS:-}" ]; then
 fi
 
 # ============================================
-# PRD: SSH 사용자/Claude 셋업 모두 스킵 → root로 vLLM 서비스 운영
+# 일반 사용자 생성 (root는 이미 있으므로 스킵)
 # ============================================
-if [ "$MODE" = "PRD" ]; then
-    echo "==> MODE=PRD: SSH 사용자/Claude 셋업 스킵 (vLLM 서비스 전용)"
-    exec "$@"
+if [ "$USERNAME" != "root" ]; then
+    if ! id "$USERNAME" &>/dev/null; then
+        existing_user=$(getent passwd "$CONTAINER_UID" | cut -d: -f1 || true)
+        [ -n "$existing_user" ] && userdel -r "$existing_user" 2>/dev/null || true
+        existing_group=$(getent group "$CONTAINER_GID" | cut -d: -f1 || true)
+        [ -n "$existing_group" ] && groupdel "$existing_group" 2>/dev/null || true
+
+        groupadd -g "$CONTAINER_GID" "$USERNAME" 2>/dev/null || true
+        useradd -m -s /bin/bash -u "$CONTAINER_UID" -g "$CONTAINER_GID" "$USERNAME"
+        echo "${USERNAME}:${PASSWORD}" | chpasswd
+        usermod -aG sudo "$USERNAME"
+
+        setup_user_home "/home/${USERNAME}"
+    fi
+
+    # 홈 디렉토리 초기화 (bind mount 시 빈 디렉토리 복원)
+    HOME_DIR="/home/$USERNAME"
+    if [ -d "$HOME_DIR" ] && [ -z "$(ls -A "$HOME_DIR" 2>/dev/null)" ]; then
+        cp -a /etc/skel/. "$HOME_DIR/" 2>/dev/null || true
+        setup_user_home "$HOME_DIR"
+    elif [ -d "$HOME_DIR" ] && [ "$(stat -c %u "$HOME_DIR")" != "$CONTAINER_UID" ]; then
+        chown -R "${USERNAME}:${USERNAME}" "$HOME_DIR"
+    fi
+
+    chown -R "${USERNAME}:${USERNAME}" /usr/local/nvm
 fi
 
 # ============================================
-# DEV: 런타임 사용자 생성 + SSH 셋업
-# ============================================
-if ! id "$USERNAME" &>/dev/null; then
-    # 기존 UID/GID 충돌 제거
-    existing_user=$(getent passwd "$CONTAINER_UID" | cut -d: -f1 || true)
-    [ -n "$existing_user" ] && userdel -r "$existing_user" 2>/dev/null || true
-    existing_group=$(getent group "$CONTAINER_GID" | cut -d: -f1 || true)
-    [ -n "$existing_group" ] && groupdel "$existing_group" 2>/dev/null || true
-
-    groupadd -g "$CONTAINER_GID" "$USERNAME" 2>/dev/null || true
-    useradd -m -s /bin/bash -u "$CONTAINER_UID" -g "$CONTAINER_GID" "$USERNAME"
-    echo "${USERNAME}:${PASSWORD}" | chpasswd
-    usermod -aG sudo "$USERNAME"
-
-    setup_user_home "/home/${USERNAME}"
-fi
-
-# ============================================
-# 홈 디렉토리 초기화 (bind mount 시 빈 디렉토리 복원)
-# ============================================
-HOME_DIR="/home/$USERNAME"
-if [ -d "$HOME_DIR" ] && [ -z "$(ls -A "$HOME_DIR" 2>/dev/null)" ]; then
-    # 빈 bind mount -> 기본 파일 복사
-    cp -a /etc/skel/. "$HOME_DIR/" 2>/dev/null || true
-    setup_user_home "$HOME_DIR"
-elif [ -d "$HOME_DIR" ] && [ "$(stat -c %u "$HOME_DIR")" != "$CONTAINER_UID" ]; then
-    chown -R "${USERNAME}:${USERNAME}" "$HOME_DIR"
-fi
-
-# nvm 소유권 (사용자가 npm global 패키지 설치 가능하도록)
-chown -R "${USERNAME}:${USERNAME}" /usr/local/nvm
-
-# ============================================
-# Docker 환경변수를 SSH 세션에서도 사용할 수 있도록
-# (대화형 + 비대화형 SSH 모두 적용)
-# ※ Claude Code 설치 체크보다 먼저 생성해야 su - 에서 PATH 참조 가능
+# Docker 환경변수 (SSH/code-server 셸 공통)
 # ============================================
 {
     echo 'export NVM_DIR=/usr/local/nvm'
@@ -96,12 +86,54 @@ chown -R "${USERNAME}:${USERNAME}" /usr/local/nvm
     true
 } > /etc/profile.d/docker-env.sh
 
+# 비로그인 bash 셸에서도 env 적용 (code-server 통합 터미널 대응)
+if ! grep -q 'docker-env.sh' /etc/bash.bashrc 2>/dev/null; then
+    echo '[ -f /etc/profile.d/docker-env.sh ] && . /etc/profile.d/docker-env.sh' >> /etc/bash.bashrc
+fi
+
 # ============================================
-# Claude Code 설치 (사용자별, 홈 bind mount 시 persist)
+# 사용자 홈 디렉토리 동적 탐지
+# (root: /root, 일반: /home/<user>)
 # ============================================
-if [ ! -f "/home/${USERNAME}/.local/bin/claude" ]; then
-    echo "==> Claude Code 설치: ${USERNAME}"
-    su - "$USERNAME" -c "curl -fsSL https://claude.ai/install.sh | bash" || echo "⚠️ Claude Code 설치 실패 (네트워크 문제일 수 있음)" >&2
+USER_HOME=$(getent passwd "$USERNAME" | cut -d: -f6)
+if [ -z "$USER_HOME" ] || [ ! -d "$USER_HOME" ]; then
+    echo "❌ 사용자 '${USERNAME}' 홈 디렉토리를 찾을 수 없습니다." >&2
+    exit 1
+fi
+
+# ============================================
+# Claude Code 설치 (폐쇄망이면 실패해도 진행)
+# ============================================
+if [ ! -f "${USER_HOME}/.local/bin/claude" ]; then
+    echo "==> Claude Code 설치 시도: ${USERNAME} (home: ${USER_HOME})"
+    su - "$USERNAME" -c "curl -fsSL https://claude.ai/install.sh | bash" \
+        || echo "⚠️ Claude Code 설치 실패 (폐쇄망이거나 네트워크 문제) — 무시하고 진행" >&2
+fi
+
+# ============================================
+# code-server 설정 + 백그라운드 실행 (root/일반 공통)
+# - 인증 패스워드는 SSH 패스워드(PASSWORD)와 동일
+# - 확장은 이미지에 포함된 /opt/code-server-extensions 사용
+# - telemetry 차단 (폐쇄망 대응)
+# ============================================
+mkdir -p "${USER_HOME}/.config/code-server"
+cat > "${USER_HOME}/.config/code-server/config.yaml" <<EOF
+bind-addr: 0.0.0.0:${CODE_SERVER_PORT}
+auth: password
+password: ${PASSWORD}
+cert: false
+extensions-dir: /opt/code-server-extensions
+disable-telemetry: true
+disable-update-check: true
+EOF
+# 일반 사용자일 때만 소유권 이전 (root는 이미 root 소유)
+if [ "$USERNAME" != "root" ]; then
+    chown -R "${USERNAME}:${USERNAME}" "${USER_HOME}/.config"
+fi
+
+if ! pgrep -u "$USERNAME" -f "code-server" >/dev/null 2>&1; then
+    echo "==> code-server 실행 (user: ${USERNAME}, home: ${USER_HOME}, port: ${CODE_SERVER_PORT})"
+    su - "$USERNAME" -c "nohup code-server /workspace > ${USER_HOME}/.code-server.log 2>&1 &"
 fi
 
 exec "$@"
