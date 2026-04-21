@@ -54,6 +54,7 @@ aws ssm start-session \
 ```bash
 chmod +x ~/aws/user.sh
 
+# 개발 사용자 (동명 OS 계정 + SSH + code-server)
 sudo ~/aws/user.sh up hjjo --password 1106 --gpus all
 sudo ~/aws/user.sh up jin --password 1234 --gpus all
 sudo ~/aws/user.sh up song --password 1234 --gpus 2,3
@@ -62,14 +63,19 @@ sudo ~/aws/user.sh up cho --password 1234 --gpus 0
 sudo ~/aws/user.sh up jeon --password 1234 --gpus 2,3
 sudo ~/aws/user.sh up min --password 1234 --gpus 3
 
+# 운영계 root 컨테이너 (--root): 내부 OS=root, SSH 불가, code-server 전용
+# 홈은 컨테이너별 /volume/root-homes/<name> 에 독립 보존 → 여러 개 병렬 운영 가능
+sudo ~/aws/user.sh up prd-job   --root --password aiteam12! --gpus all
+sudo ~/aws/user.sh up prod-batch --root --password aiteam12! --gpus 2,3
+
 sudo ~/aws/user.sh list
 
 sudo ~/aws/user.sh down hjjo
 sudo ~/aws/user.sh down jin
 sudo ~/aws/user.sh down song
-sudo ~/aws/user.sh down mail
+sudo ~/aws/user.sh down prod-api
 ```
-포트 자동 할당: 사용자별 10포트씩 (첫 사용자 5010(SSH) + 5011–5019, 두 번째 5020 + 5021–5029, …)
+포트 자동 할당: 컨테이너별 10포트씩 (첫 컨테이너 5010(SSH) + 5011–5019, 두 번째 5020 + 5021–5029, …)
 
 ## 8. VS Code 확장 추가 (폐쇄망용)
 1. 인터넷 되는 PC에서 Marketplace → `.vsix` 다운로드
@@ -84,6 +90,7 @@ docker compose up -d
 - 사용자 생성/홈 셋업 스킵, `/root` 홈 기준으로 code-server 동반 기동
 - `/root` 는 호스트 `/volume/root` 에 영속화 (bash history, code-server 설정 보존)
 - SSH 접속 불가 → **6번 SSM 포트 포워딩으로만 접속**
+- **단일 운영계 슬롯 전용**. 여러 root 컨테이너를 병렬로 돌리려면 `user.sh up <name> --root` (7번) 사용 → 홈은 `/volume/root-homes/<name>` 에 컨테이너별 독립 보존
 
 ## 10. 코드 변경 반영
 ```bash
