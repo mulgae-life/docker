@@ -115,12 +115,14 @@ fi
 # - 인증 패스워드는 SSH 패스워드(PASSWORD)와 동일
 # - 확장은 이미지에 포함된 /opt/code-server-extensions 사용
 # - telemetry 차단 (폐쇄망 대응)
+# - YAML single-quote 이스케이프: !, :, #, 공백 등 특수문자 안전 처리
 # ============================================
+YAML_PASSWORD="${PASSWORD//\'/\'\'}"
 mkdir -p "${USER_HOME}/.config/code-server"
 cat > "${USER_HOME}/.config/code-server/config.yaml" <<EOF
 bind-addr: 0.0.0.0:${CODE_SERVER_PORT}
 auth: password
-password: ${PASSWORD}
+password: '${YAML_PASSWORD}'
 cert: false
 extensions-dir: /opt/code-server-extensions
 disable-telemetry: true
@@ -131,9 +133,22 @@ if [ "$USERNAME" != "root" ]; then
     chown -R "${USERNAME}:${USERNAME}" "${USER_HOME}/.config"
 fi
 
-if ! pgrep -u "$USERNAME" -f "code-server" >/dev/null 2>&1; then
-    echo "==> code-server 실행 (user: ${USERNAME}, home: ${USER_HOME}, port: ${CODE_SERVER_PORT})"
-    su - "$USERNAME" -c "nohup code-server /workspace > ${USER_HOME}/.code-server.log 2>&1 &"
-fi
+# code-server 시작 + 자동 복구 루프
+# root 운영계는 SSH 접속이 불가하므로 code-server 크래시 시 복구 경로가 없음
+# → 백그라운드 watchdog 으로 30초마다 프로세스 체크 후 재기동
+start_code_server() {
+    if ! pgrep -u "$USERNAME" -f "code-server" >/dev/null 2>&1; then
+        echo "==> code-server 실행 (user: ${USERNAME}, home: ${USER_HOME}, port: ${CODE_SERVER_PORT})"
+        su - "$USERNAME" -c "nohup code-server /workspace > ${USER_HOME}/.code-server.log 2>&1 &"
+    fi
+}
+start_code_server
+
+(
+    while true; do
+        sleep 30
+        start_code_server
+    done
+) &
 
 exec "$@"
