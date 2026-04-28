@@ -22,8 +22,8 @@ USERNAME="${USERNAME:-}"
 PASSWORD="${PASSWORD:-}"
 VOLUME_PATH="${VOLUME_PATH:-/volume}"
 SSH_PORT="${SSH_PORT:-5555}"
-CONTAINER_UID="${CONTAINER_UID:-1001}"
-CONTAINER_GID="${CONTAINER_GID:-1001}"
+CONTAINER_UID="${CONTAINER_UID:-2000}"
+CONTAINER_GID="${CONTAINER_GID:-2000}"
 MODE="${MODE:-dev}"
 
 # EBS 볼륨 디바이스 경로 (lsblk로 확인 후 설정)
@@ -54,22 +54,28 @@ mount_ebs_volume() {
     local device="$1"
     local mount_point="$2"
 
+    # VOLUME_DEVICE 필수 (README §4에서 ✅로 명시). 비어있으면 fail-fast
+    # — 비어있을 때 로컬 디렉토리로 폴백하면 사용자가 EBS가 마운트된 줄 알고
+    #   루트 디스크에 데이터를 쌓다가 인스턴스 종료 시 모두 손실
     if [ -z "$device" ]; then
-        log "  ⚠️ ${mount_point}: VOLUME_DEVICE 미설정. 로컬 디렉토리로 대체합니다."
-        log "     데이터가 루트 디스크에 저장되므로, EBS 사용 시 .env의 VOLUME_DEVICE를 설정하세요."
-        mkdir -p "$mount_point"
-        return
+        error_exit "VOLUME_DEVICE 미설정. .env에 lsblk로 확인한 추가 EBS 경로를 입력하세요 (예: /dev/nvme1n1)."
     fi
 
     if [ ! -b "$device" ]; then
-        log "  ⚠️ ${device} 블록 디바이스가 존재하지 않습니다. lsblk 확인 필요."
-        mkdir -p "$mount_point"
-        return
+        error_exit "${device} 블록 디바이스가 존재하지 않습니다. lsblk 확인 후 .env 수정 필요."
+    fi
+
+    # device가 우리 mount_point가 아닌 다른 곳에 이미 마운트되어 있으면 거부
+    # — 루트 파티션(/dev/nvme0n1p1 등)을 실수로 넣으면 mkfs로 디스크 파괴 위험
+    local existing_mount
+    existing_mount=$(findmnt -S "$device" -no TARGET 2>/dev/null | head -1 || true)
+    if [ -n "$existing_mount" ] && [ "$existing_mount" != "$mount_point" ]; then
+        error_exit "${device}은(는) 이미 ${existing_mount}에 마운트되어 있습니다 (루트 디바이스일 가능성). lsblk로 확인 후 추가 EBS만 지정하세요."
     fi
 
     mkdir -p "$mount_point"
 
-    # 이미 마운트되어 있으면 건너뜀
+    # 이미 mount_point에 마운트되어 있으면 건너뜀 (재실행 시)
     if mountpoint -q "$mount_point" 2>/dev/null; then
         log "  ${mount_point}: 이미 마운트됨. 건너뜀."
         return
@@ -117,18 +123,30 @@ phase1() {
     if [ -n "$USERNAME" ]; then
         log "[1/9] 사용자 생성: $USERNAME"
         if id "$USERNAME" &>/dev/null; then
-            log "  사용자 $USERNAME 이미 존재. 건너뜀."
+            # 기존 사용자가 있으면 .env CONTAINER_UID/GID와 일치하는지 검증
+            # — 호스트 사용자 UID와 컨테이너 UID가 다르면 EBS 디렉토리 chown은 호스트 UID로 되는데
+            #   컨테이너는 CONTAINER_UID로 동작 → /workspace, /home 쓰기 실패
+            local existing_uid existing_gid
+            existing_uid=$(id -u "$USERNAME")
+            existing_gid=$(id -g "$USERNAME")
+            if [ "$existing_uid" != "$CONTAINER_UID" ]; then
+                error_exit "사용자 ${USERNAME}의 UID(${existing_uid})가 .env CONTAINER_UID(${CONTAINER_UID})와 다릅니다. .env 값을 ${existing_uid}로 맞추거나 사용자를 재생성하세요."
+            fi
+            if [ "$existing_gid" != "$CONTAINER_GID" ]; then
+                error_exit "사용자 ${USERNAME}의 GID(${existing_gid})가 .env CONTAINER_GID(${CONTAINER_GID})와 다릅니다. .env 값을 ${existing_gid}로 맞추거나 사용자를 재생성하세요."
+            fi
+            log "  사용자 $USERNAME 이미 존재 (UID=${existing_uid}, GID=${existing_gid}). 건너뜀."
         else
             # UID/GID 충돌 시 fail-fast
             # (자동 변경은 /tmp /var/log 등 다른 위치의 기존 사용자 파일 소유권 어긋남 위험 → 명시적 중단)
             local existing_uid_user existing_gid_group
             existing_uid_user=$(getent passwd "$CONTAINER_UID" | cut -d: -f1 || true)
             if [ -n "$existing_uid_user" ] && [ "$existing_uid_user" != "$USERNAME" ]; then
-                error_exit "UID ${CONTAINER_UID}이(가) ${existing_uid_user}에 의해 점유됨. .env의 CONTAINER_UID를 다른 값(예: 1001)으로 변경하세요."
+                error_exit "UID ${CONTAINER_UID}이(가) ${existing_uid_user}에 의해 점유됨. .env의 CONTAINER_UID를 다른 값(예: 2000)으로 변경하세요."
             fi
             existing_gid_group=$(getent group "$CONTAINER_GID" | cut -d: -f1 || true)
             if [ -n "$existing_gid_group" ] && [ "$existing_gid_group" != "$USERNAME" ]; then
-                error_exit "GID ${CONTAINER_GID}이(가) ${existing_gid_group}에 의해 점유됨. .env의 CONTAINER_GID를 다른 값(예: 1001)으로 변경하세요."
+                error_exit "GID ${CONTAINER_GID}이(가) ${existing_gid_group}에 의해 점유됨. .env의 CONTAINER_GID를 다른 값(예: 2000)으로 변경하세요."
             fi
             groupadd -g "$CONTAINER_GID" "$USERNAME" 2>/dev/null || true
             useradd -m -s /bin/bash -u "$CONTAINER_UID" -g "$CONTAINER_GID" "$USERNAME"
@@ -190,13 +208,17 @@ JAIL
     mkdir -p "${VOLUME_PATH}/data"
     mkdir -p "${VOLUME_PATH}/models"
     mkdir -p "${VOLUME_PATH}/homes"
+    # /models, /data는 컨테이너의 CONTAINER_UID 사용자가 쓸 수 있어야 함
+    # (메인 컨테이너 / user.sh 컨테이너 모두 공유 → 컨테이너 UID 기준으로 chown)
+    chown "$CONTAINER_UID":"$CONTAINER_GID" "${VOLUME_PATH}/data"
+    chown "$CONTAINER_UID":"$CONTAINER_GID" "${VOLUME_PATH}/models"
     if [ -n "$USERNAME" ]; then
         chown "$USERNAME":"$USERNAME" "$VOLUME_PATH"
         mkdir -p "${VOLUME_PATH}/workspace/${USERNAME}"
         mkdir -p "${VOLUME_PATH}/homes/${USERNAME}"
         chown -R "$USERNAME":"$USERNAME" "${VOLUME_PATH}/workspace/${USERNAME}"
         chown -R "$USERNAME":"$USERNAME" "${VOLUME_PATH}/homes/${USERNAME}"
-        log "  ${VOLUME_PATH}/{workspace,homes}/${USERNAME} 생성 완료"
+        log "  ${VOLUME_PATH}/{workspace,homes}/${USERNAME} + {data,models} 생성/소유권 설정 완료"
     fi
 
     # --- 시스템 업데이트 + 커널 패키지 ---
@@ -328,17 +350,19 @@ phase2() {
 
     # --- NVIDIA Container Toolkit ---
     log "[2/4] NVIDIA Container Toolkit 설치"
-    if command -v nvidia-ctk &>/dev/null; then
-        log "  Container Toolkit 이미 설치됨. 건너뜀."
-    else
+    if ! command -v nvidia-ctk &>/dev/null; then
         curl -fsSL https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | \
             tee /etc/yum.repos.d/nvidia-container-toolkit.repo
         dnf clean expire-cache
         dnf install -y nvidia-container-toolkit
-        nvidia-ctk runtime configure --runtime=docker
-        systemctl restart docker
         log "  Container Toolkit 설치 완료"
+    else
+        log "  Container Toolkit 이미 설치됨."
     fi
+    # runtime configure는 멱등 명령이라 매번 실행
+    # — 이미 설치돼 있어도 docker daemon에 nvidia runtime 등록이 빠진 케이스 보장
+    nvidia-ctk runtime configure --runtime=docker
+    systemctl restart docker
 
     # --- Fabric Manager (NVSwitch GPU 자동 감지) ---
     log "[3/4] Fabric Manager 확인"
@@ -375,11 +399,13 @@ phase2() {
     fi
 
     # --- Docker GPU 테스트 ---
+    # GPU Docker 환경 구축이 본 스크립트의 목적이므로 실패 시 fail-fast
+    # (성공 메시지로 넘어가면 사용자가 정상 종료로 오해 → 실제로는 컨테이너에서 GPU 못 봄)
     log "[4/4] Docker GPU 연동 테스트"
     if docker run --rm --gpus all "$CUDA_TEST_IMAGE" nvidia-smi &>/dev/null; then
         log "  ✅ Docker GPU 연동 정상"
     else
-        log "  ⚠️ Docker GPU 테스트 실패. docker 재시작 후 재시도 필요"
+        error_exit "Docker GPU 테스트 실패. nvidia-container-toolkit 또는 docker 데몬 설정 확인 필요. (재시도: systemctl restart docker && docker run --rm --gpus all ${CUDA_TEST_IMAGE} nvidia-smi)"
     fi
 
     # Phase 2 완료 — 명시 정리 후 EXIT trap 해제 (실패 시는 trap이 자동 정리)

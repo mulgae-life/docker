@@ -41,8 +41,8 @@ HF_TOKEN="${HF_TOKEN:-}"
 EXTRA_REQUIREMENTS="${EXTRA_REQUIREMENTS:-}"
 SHM_SIZE="${SHM_SIZE:-16g}"
 LLM_MEMORY="${LLM_MEMORY:-48g}"
-CONTAINER_UID="${CONTAINER_UID:-1001}"
-CONTAINER_GID="${CONTAINER_GID:-1001}"
+CONTAINER_UID="${CONTAINER_UID:-2000}"
+CONTAINER_GID="${CONTAINER_GID:-2000}"
 MODE="${MODE:-dev}"
 
 usage() {
@@ -262,12 +262,16 @@ cmd_up() {
     fi
     echo "   GPU:          ${gpus}"
 
-    # 포트 바인딩: --root 는 compose 와 동일한 3개 별도 매핑, 일반은 range 매핑
-    local -a port_opts=(-p "${ssh_port}:5555")
+    # 포트 바인딩
+    # — 일반: SSH(5555) + 서비스 range
+    # — --root: SSH 미바인딩 (Dockerfile sshd가 PermitRootLogin no라 접속 불가, 포트만 점유) +
+    #           서비스 포트 + code-server 포트 (compose llm-root와 동일한 체계)
+    local -a port_opts=()
     if $as_root; then
         port_opts+=(-p "${extra_ports_spec}:${extra_ports_spec}")
         port_opts+=(-p "${extra_start}:${extra_start}")
     else
+        port_opts+=(-p "${ssh_port}:5555")
         port_opts+=(-p "${extra_start}-${extra_end}:${extra_start}-${extra_end}")
     fi
 
@@ -408,8 +412,8 @@ cmd_rebuild() {
 
         old_password="${old_password:-changeme}"
         old_gpus="${old_gpus:-all}"
-        old_uid="${old_uid:-1001}"
-        old_gid="${old_gid:-1001}"
+        old_uid="${old_uid:-2000}"
+        old_gid="${old_gid:-2000}"
         old_mode="${old_mode:-${MODE:-dev}}"
         old_ssh_port="${old_ssh_port:-}"
         old_as_root="${old_as_root:-false}"
