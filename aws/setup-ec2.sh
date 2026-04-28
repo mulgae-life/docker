@@ -308,8 +308,11 @@ JAIL
 # Phase 2: Container Toolkit + Fabric Manager
 # ============================================
 phase2() {
-    # Phase 2 실패 시 systemd 서비스 + phase 파일 정리 (리부트 루프 방지)
-    trap 'cleanup_phase2_service; rm -f "$PHASE_FILE"' ERR
+    # Phase 2 종료 시 (성공/실패 무관) systemd 서비스 + phase 파일 정리 (리부트 루프 방지).
+    # EXIT trap 사용 이유: ERR trap은 if-조건 실패/||-체인/exit N 일부 케이스에서 미발동 가능 →
+    # 정리가 누락되면 phase 파일이 남아 재부팅 시 phase2 재실행 루프 위험. EXIT은 정상 종료/exit/
+    # signal 모두 커버. 정상 종료 시는 명시 정리 후 trap을 해제해 완료 메시지 순서를 유지.
+    trap 'cleanup_phase2_service; rm -f "$PHASE_FILE"' EXIT
 
     log "========== Phase 2 시작 =========="
 
@@ -379,10 +382,10 @@ phase2() {
         log "  ⚠️ Docker GPU 테스트 실패. docker 재시작 후 재시도 필요"
     fi
 
-    # Phase 2 완료 — ERR trap 해제 후 정리
-    trap - ERR
+    # Phase 2 완료 — 명시 정리 후 EXIT trap 해제 (실패 시는 trap이 자동 정리)
     cleanup_phase2_service
     rm -f "$PHASE_FILE"
+    trap - EXIT
 
     log ""
     log "============================================"
