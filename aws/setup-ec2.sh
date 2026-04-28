@@ -22,8 +22,8 @@ USERNAME="${USERNAME:-}"
 PASSWORD="${PASSWORD:-}"
 VOLUME_PATH="${VOLUME_PATH:-/volume}"
 SSH_PORT="${SSH_PORT:-5555}"
-CONTAINER_UID="${CONTAINER_UID:-1000}"
-CONTAINER_GID="${CONTAINER_GID:-1000}"
+CONTAINER_UID="${CONTAINER_UID:-1001}"
+CONTAINER_GID="${CONTAINER_GID:-1001}"
 MODE="${MODE:-dev}"
 
 # EBS 볼륨 디바이스 경로 (lsblk로 확인 후 설정)
@@ -119,21 +119,16 @@ phase1() {
         if id "$USERNAME" &>/dev/null; then
             log "  사용자 $USERNAME 이미 존재. 건너뜀."
         else
-            # UID/GID 충돌 확인 (ec2-user 등이 CONTAINER_UID/GID를 점유할 수 있음)
-            # 주의: 초기 세팅 전용. 운영 중인 서버에서는 기존 사용자 파일 소유권이 변경될 수 있음
-            local existing_uid_user
+            # UID/GID 충돌 시 fail-fast
+            # (자동 변경은 /tmp /var/log 등 다른 위치의 기존 사용자 파일 소유권 어긋남 위험 → 명시적 중단)
+            local existing_uid_user existing_gid_group
             existing_uid_user=$(getent passwd "$CONTAINER_UID" | cut -d: -f1 || true)
-            if [ -n "$existing_uid_user" ]; then
-                local new_uid=$(( CONTAINER_UID + 5000 ))
-                log "  UID ${CONTAINER_UID}를 ${existing_uid_user}이(가) 사용 중 → UID ${new_uid}로 변경"
-                usermod -u "$new_uid" "$existing_uid_user"
+            if [ -n "$existing_uid_user" ] && [ "$existing_uid_user" != "$USERNAME" ]; then
+                error_exit "UID ${CONTAINER_UID}이(가) ${existing_uid_user}에 의해 점유됨. .env의 CONTAINER_UID를 다른 값(예: 1001)으로 변경하세요."
             fi
-            local existing_gid_group
             existing_gid_group=$(getent group "$CONTAINER_GID" | cut -d: -f1 || true)
-            if [ -n "$existing_gid_group" ]; then
-                local new_gid=$(( CONTAINER_GID + 5000 ))
-                log "  GID ${CONTAINER_GID}를 ${existing_gid_group}이(가) 사용 중 → GID ${new_gid}로 변경"
-                groupmod -g "$new_gid" "$existing_gid_group"
+            if [ -n "$existing_gid_group" ] && [ "$existing_gid_group" != "$USERNAME" ]; then
+                error_exit "GID ${CONTAINER_GID}이(가) ${existing_gid_group}에 의해 점유됨. .env의 CONTAINER_GID를 다른 값(예: 1001)으로 변경하세요."
             fi
             groupadd -g "$CONTAINER_GID" "$USERNAME" 2>/dev/null || true
             useradd -m -s /bin/bash -u "$CONTAINER_UID" -g "$CONTAINER_GID" "$USERNAME"
@@ -404,8 +399,7 @@ phase2() {
     log ""
     log "  다음 단계:"
     log "    cd $(dirname "$SCRIPT_PATH")"
-    log "    cp .env.example .env  # 설정 수정"
-    log "    docker compose up -d llm"
+    log "    docker compose build && docker compose up -d"
     log ""
     log "  로그: $LOG_FILE"
     log "============================================"

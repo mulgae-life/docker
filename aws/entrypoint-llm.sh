@@ -5,13 +5,12 @@ set -euo pipefail
 # 런타임 초기화
 # - USERNAME=root: 운영계 모드 (사용자 생성 스킵, root 홈 /root 사용)
 # - USERNAME=<일반>: 개발 모드 (사용자 생성 + 홈 셋업)
-# - code-server 와 Claude 설치는 양쪽 모두 공통 수행
 # ============================================
 USERNAME="${USERNAME:-user}"
 PASSWORD="${PASSWORD:-changeme}"
-CONTAINER_UID="${CONTAINER_UID:-1000}"
-CONTAINER_GID="${CONTAINER_GID:-1000}"
-CODE_SERVER_PORT="${CODE_SERVER_PORT:-7777}"
+CONTAINER_UID="${CONTAINER_UID:-1001}"
+CONTAINER_GID="${CONTAINER_GID:-1001}"
+CODE_SERVER_PORT="${CODE_SERVER_PORT:-5500}"
 MODE="${MODE:-dev}"
 
 # 홈 디렉토리 기본 설정

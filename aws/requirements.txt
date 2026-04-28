@@ -1,5 +1,5 @@
 # 챗봇 서비스 의존성
-# 베이스: vllm/vllm-openai:v0.19.0 (torch, fastapi, pydantic 등 포함)
+# 베이스: vllm/vllm-openai:v0.19.1 (torch, fastapi, pydantic 등 포함)
 #
 # 설치: pip install -r requirements.txt && pip install --no-deps "transformers>=5.5.0"
 # ※ transformers는 --no-deps 필수 (vLLM 핀 의존성 보호)

@@ -40,9 +40,9 @@ VOLUME_PATH="${VOLUME_PATH:-/volume}"
 HF_TOKEN="${HF_TOKEN:-}"
 EXTRA_REQUIREMENTS="${EXTRA_REQUIREMENTS:-}"
 SHM_SIZE="${SHM_SIZE:-16g}"
-LLM_MEMORY="${LLM_MEMORY:-360g}"
-CONTAINER_UID="${CONTAINER_UID:-1000}"
-CONTAINER_GID="${CONTAINER_GID:-1000}"
+LLM_MEMORY="${LLM_MEMORY:-48g}"
+CONTAINER_UID="${CONTAINER_UID:-1001}"
+CONTAINER_GID="${CONTAINER_GID:-1001}"
 MODE="${MODE:-dev}"
 
 usage() {
@@ -189,7 +189,7 @@ cmd_up() {
     local ssh_port extra_start extra_end extra_ports_spec
     if $as_root; then
         ssh_port="${LLM_SSH_PORT:-5000}"
-        extra_start="${LLM_CODE_SERVER_PORT:-7777}"
+        extra_start="${LLM_CODE_SERVER_PORT:-5500}"
         extra_end="$extra_start"
         extra_ports_spec="${LLM_EXTRA_PORTS:-5001-5009}"
     else
@@ -408,8 +408,8 @@ cmd_rebuild() {
 
         old_password="${old_password:-changeme}"
         old_gpus="${old_gpus:-all}"
-        old_uid="${old_uid:-1000}"
-        old_gid="${old_gid:-1000}"
+        old_uid="${old_uid:-1001}"
+        old_gid="${old_gid:-1001}"
         old_mode="${old_mode:-${MODE:-dev}}"
         old_ssh_port="${old_ssh_port:-}"
         old_as_root="${old_as_root:-false}"
