@@ -249,7 +249,7 @@ sudo ~/aws/user.sh rebuild              # 환경변수 갱신 반영
 |------|-------------|
 | `setup-ec2.sh: VOLUME_DEVICE 미설정` 에러 | `.env`에 추가 EBS 경로 누락. `lsblk`로 `MOUNTPOINTS` 비어있는 disk 확인(예: `/dev/nvme1n1`) 후 입력 |
 | `setup-ec2.sh: 이미 X에 마운트됨` 에러 | 루트 디바이스를 잘못 지정. `lsblk`로 `/`나 `/boot/efi`가 안 붙은 추가 EBS만 사용 |
-| `setup-ec2.sh: 사용자 UID/GID 불일치` 에러 | 호스트 기존 사용자 UID와 `.env CONTAINER_UID`가 다름. 에러 메시지의 기존 UID 값으로 `.env` 수정하거나 사용자 재생성 |
+| `setup-ec2.sh: 사용자 UID/GID 불일치` 에러 | 호스트 기존 사용자 UID와 `.env CONTAINER_UID`가 다름 (예: 구버전 1001로 셋업된 EC2에 신버전 2000 적용). **데이터 보존 권장**: `.env`의 `CONTAINER_UID`/`GID`를 에러 메시지의 기존 UID 값으로 맞춘 후 재실행 → `/volume` 데이터 그대로 유지 |
 | `setup-ec2.sh: Docker GPU 테스트 실패` 에러 | `systemctl restart docker` 후 `docker run --rm --gpus all nvidia/cuda:12.8.1-base-ubuntu24.04 nvidia-smi` 수동 재실행. 정상이면 `sudo ./setup-ec2.sh --phase2` 재시도 |
 | `nvidia-smi` 실패 | Phase 2 미완료. `tail -f /var/log/ec2-setup.log` 확인 후 `sudo systemctl status ec2-setup-phase2.service` |
 | code-server 접속 시 패스워드 거부 | `.env` `PASSWORD` 변경 후 `docker compose up -d --force-recreate` |
