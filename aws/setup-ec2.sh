@@ -65,12 +65,16 @@ mount_ebs_volume() {
         error_exit "${device} 블록 디바이스가 존재하지 않습니다. lsblk 확인 후 .env 수정 필요."
     fi
 
-    # device가 우리 mount_point가 아닌 다른 곳에 이미 마운트되어 있으면 거부
-    # — 루트 파티션(/dev/nvme0n1p1 등)을 실수로 넣으면 mkfs로 디스크 파괴 위험
-    local existing_mount
-    existing_mount=$(findmnt -S "$device" -no TARGET 2>/dev/null | head -1 || true)
-    if [ -n "$existing_mount" ] && [ "$existing_mount" != "$mount_point" ]; then
-        error_exit "${device}은(는) 이미 ${existing_mount}에 마운트되어 있습니다 (루트 디바이스일 가능성). lsblk로 확인 후 추가 EBS만 지정하세요."
+    # device 자체 + 자식 파티션의 모든 마운트포인트 검사 (mount_point 외에 하나라도 있으면 거부)
+    # — findmnt -S 만으로는 "디스크 전체 경로(/dev/nvme0n1)" 입력을 못 잡음:
+    #   디바이스 자체에 마운트가 없고 자식(/dev/nvme0n1p1)이 / 에 붙어 있으면 검사 통과 → mkfs로 시스템 파괴
+    # — lsblk -no MOUNTPOINTS는 디바이스 + 자식 파티션의 마운트포인트를 줄별로 출력 (디스크 전체 케이스도 포착)
+    local existing_mounts
+    existing_mounts=$(lsblk -no MOUNTPOINTS "$device" 2>/dev/null | grep -v '^$' | grep -v "^${mount_point}$" || true)
+    if [ -n "$existing_mounts" ]; then
+        error_exit "${device} 또는 자식 파티션이 다음 위치에 이미 마운트되어 있습니다 (루트/시스템 디스크 가능성):
+$(echo "$existing_mounts" | sed 's/^/    /')
+lsblk로 확인 후 추가 EBS 디바이스(예: /dev/nvme1n1)만 지정하세요."
     fi
 
     mkdir -p "$mount_point"
@@ -85,6 +89,25 @@ mount_ebs_volume() {
     local fs_type
     fs_type=$(blkid -o value -s TYPE "$device" 2>/dev/null || true)
     if [ -z "$fs_type" ]; then
+        # mkfs 직전 가드: 디스크 자체에는 fs가 없어도 자식 파티션이 데이터를 보유 중일 수 있음.
+        # — 예: 기존 데이터 EBS가 /dev/nvme1n1p1 형태인데 .env에 /dev/nvme1n1을 지정 →
+        #   blkid TYPE는 비어있고(디스크 본체에 fs 없음) 자식이 미마운트면 위 마운트 검사도 통과 →
+        #   mkfs로 디스크 전체 포맷 시 nvme1n1p1의 데이터 전부 파괴.
+        # — device가 disk(전체)일 때만 자식 파티션 검사. 파티션 경로(/dev/nvme1n1p1)를 직접 지정한
+        #   경우 lsblk가 자기 자신을 part로 출력하여 오탐 → 미포맷 파티션 신규 사용 케이스가 막힘.
+        local device_type
+        device_type=$(lsblk -ndo TYPE "$device" 2>/dev/null || true)
+        if [ "$device_type" = "disk" ]; then
+            local child_parts
+            child_parts=$(lsblk -nro NAME,TYPE "$device" 2>/dev/null | awk '$2 == "part" {print $1}')
+            if [ -n "$child_parts" ]; then
+                local first_part
+                first_part=$(echo "$child_parts" | head -1)
+                error_exit "${device}에 기존 파티션이 존재합니다:
+$(echo "$child_parts" | sed 's/^/    /')
+디스크 전체 포맷은 자식 파티션의 데이터를 파괴합니다. 파티션 경로를 직접 지정하거나(예: /dev/${first_part}) 새 EBS를 사용하세요."
+            fi
+        fi
         log "  ${device} → xfs 포맷 중..."
         mkfs -t xfs -f "$device"
     else
@@ -122,7 +145,13 @@ phase1() {
     # --- 사용자 생성 ---
     if [ -n "$USERNAME" ]; then
         log "[1/9] 사용자 생성: $USERNAME"
-        if id "$USERNAME" &>/dev/null; then
+        if [ "$USERNAME" = "root" ]; then
+            # USERNAME=root (운영계): 호스트 root는 이미 존재(UID=0)하고 변경 불가.
+            # .env CONTAINER_UID는 컨테이너 내부의 공유 UID 정책으로만 사용되므로
+            # 호스트 root와 일치 검증을 하면 prd 기본값(CONTAINER_UID=2000)에서 즉시 실패.
+            # → 호스트 사용자 생성/검증 단계는 통째로 스킵.
+            log "  USERNAME=root (운영계). 호스트 root는 이미 존재. 사용자 생성/검증 건너뜀."
+        elif id "$USERNAME" &>/dev/null; then
             # 기존 사용자가 있으면 .env CONTAINER_UID/GID와 일치하는지 검증
             # — 호스트 사용자 UID와 컨테이너 UID가 다르면 EBS 디렉토리 chown은 호스트 UID로 되는데
             #   컨테이너는 CONTAINER_UID로 동작 → /workspace, /home 쓰기 실패

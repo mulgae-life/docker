@@ -17,7 +17,8 @@ MODE="${MODE:-dev}"
 setup_user_home() {
     local home_dir="$1"
     su - "$USERNAME" -c "git config --global --add safe.directory /workspace && git config --global core.quotePath false" || true
-    echo "set -g mouse on" > "$home_dir/.tmux.conf"
+    # .tmux.conf는 부재 시에만 생성 — 컨테이너 재진입(빈 홈 복원 케이스 등) 시 사용자 커스텀 설정 보존
+    [ -f "$home_dir/.tmux.conf" ] || echo "set -g mouse on" > "$home_dir/.tmux.conf"
     # CUDA + pip 사용자 패키지 PATH (중복 추가 방지)
     if ! grep -q '/usr/local/cuda/bin' "$home_dir/.bashrc" 2>/dev/null; then
         echo 'export PATH="/usr/local/cuda/bin:$HOME/.local/bin:$PATH"' >> "$home_dir/.bashrc"

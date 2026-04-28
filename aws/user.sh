@@ -45,6 +45,14 @@ CONTAINER_UID="${CONTAINER_UID:-2000}"
 CONTAINER_GID="${CONTAINER_GID:-2000}"
 MODE="${MODE:-dev}"
 
+# 공유 디렉토리(/models, /data) 소유권용 글로벌 UID/GID — 시작 시점에 .env 값으로 한번만 캡처.
+# rebuild가 cmd_up을 호출할 때 root 컨테이너의 컨테이너별 CONTAINER_UID=0을 인라인 환경변수로
+# 주입(L437)하므로, cmd_up 안에서 보이는 CONTAINER_UID는 컨테이너 home용임.
+# 공유 디렉토리는 모든 컨테이너가 함께 쓰므로 글로벌 .env 값으로 chown해야 root 컨테이너 rebuild가
+# 일반 사용자(2000)의 쓰기 권한을 깨지 않음.
+SHARED_UID="${CONTAINER_UID}"
+SHARED_GID="${CONTAINER_GID}"
+
 usage() {
     echo "사용법:"
     echo "  $0 up <name> [--root] [--password <pw>] [--gpus <gpus>]"
@@ -233,9 +241,11 @@ cmd_up() {
     mkdir -p "${VOLUME_PATH}/data"
     chown "${home_uid}:${home_gid}" "${VOLUME_PATH}/workspace/${username}"
     chown "${home_uid}:${home_gid}" "$home_host"
-    # models/data 는 공유 디렉토리 → 기본 CONTAINER_UID 소유 유지 (root 모드도 읽기/쓰기 가능)
-    chown "${CONTAINER_UID}:${CONTAINER_GID}" "${VOLUME_PATH}/models"
-    chown "${CONTAINER_UID}:${CONTAINER_GID}" "${VOLUME_PATH}/data"
+    # models/data 는 공유 디렉토리 → 글로벌 SHARED_UID/GID 소유 유지 (스크립트 시작 시점 .env 값).
+    # rebuild가 root 컨테이너의 CONTAINER_UID=0을 cmd_up에 주입해도 공유 디렉토리 chown은 영향받지 않음
+    # — root 컨테이너는 권한이 0이라 어차피 모든 디렉토리에 쓸 수 있고, 일반 사용자(2000) 쓰기 권한이 보존됨.
+    chown "${SHARED_UID}:${SHARED_GID}" "${VOLUME_PATH}/models"
+    chown "${SHARED_UID}:${SHARED_GID}" "${VOLUME_PATH}/data"
 
     # GPU 옵션 (--gpus로 직접 제어, NVIDIA_VISIBLE_DEVICES 환경변수 미사용)
     # Docker --gpus 파서는 CSV 방식: 쉼표가 필드 구분자.
