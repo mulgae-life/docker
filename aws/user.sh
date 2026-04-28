@@ -43,6 +43,7 @@ SHM_SIZE="${SHM_SIZE:-16g}"
 LLM_MEMORY="${LLM_MEMORY:-360g}"
 CONTAINER_UID="${CONTAINER_UID:-1000}"
 CONTAINER_GID="${CONTAINER_GID:-1000}"
+MODE="${MODE:-dev}"
 
 usage() {
     echo "사용법:"
@@ -293,6 +294,7 @@ cmd_up() {
         -e "EXTRA_REQUIREMENTS=${EXTRA_REQUIREMENTS}" \
         -e "ASSIGNED_GPUS=${gpus}" \
         -e "CODE_SERVER_PORT=${extra_start}" \
+        -e "MODE=${MODE}" \
         "${gpu_opts[@]}" \
         "$IMAGE_NAME"
 
@@ -394,6 +396,7 @@ cmd_rebuild() {
         fi
         old_uid=$(echo "$env_json" | jq -r '.[] | select(startswith("CONTAINER_UID=")) | sub("^CONTAINER_UID=";"")')
         old_gid=$(echo "$env_json" | jq -r '.[] | select(startswith("CONTAINER_GID=")) | sub("^CONTAINER_GID=";"")')
+        old_mode=$(echo "$env_json" | jq -r '.[] | select(startswith("MODE=")) | sub("^MODE=";"")')
 
         # 기존 SSH 포트 보존
         old_ssh_port=$(docker inspect \
@@ -407,10 +410,11 @@ cmd_rebuild() {
         old_gpus="${old_gpus:-all}"
         old_uid="${old_uid:-1000}"
         old_gid="${old_gid:-1000}"
+        old_mode="${old_mode:-${MODE:-dev}}"
         old_ssh_port="${old_ssh_port:-}"
         old_as_root="${old_as_root:-false}"
 
-        echo "🔄 재생성: ${cname} (GPU: ${old_gpus}, SSH: ${old_ssh_port:-auto}, root: ${old_as_root})"
+        echo "🔄 재생성: ${cname} (MODE: ${old_mode}, GPU: ${old_gpus}, SSH: ${old_ssh_port:-auto}, root: ${old_as_root})"
 
         # 기존 컨테이너 제거
         docker stop "$cname" 2>/dev/null || true
@@ -426,7 +430,7 @@ cmd_rebuild() {
             [ -n "$old_ssh_port" ] && port_opts=(--ssh-port "$old_ssh_port")
         fi
 
-        CONTAINER_UID="$old_uid" CONTAINER_GID="$old_gid" \
+        MODE="$old_mode" CONTAINER_UID="$old_uid" CONTAINER_GID="$old_gid" \
             cmd_up "$uname" "${root_opts[@]}" --password "$old_password" --gpus "$old_gpus" "${port_opts[@]}"
     done <<< "$containers"
 

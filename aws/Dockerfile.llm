@@ -1,6 +1,11 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
+# 환경 모드: dev (개발) | prd (운영)
+# - dev: nvm + Node + codex 빌드 (Claude Code/codex 사용)
+# - prd: 위 항목 스킵 → 이미지 슬림화
+ARG MODE=dev
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 # ============================================
@@ -31,16 +36,20 @@ ENV LANG=ko_KR.UTF-8
 ENV LC_ALL=ko_KR.UTF-8
 
 # ============================================
-# nvm + Node.js LTS (sudo 없이 npm 사용)
+# nvm + Node.js LTS + codex (dev 전용)
+# - prd: 빌드 스킵 → 이미지 슬림화 (Claude Code/codex 미사용)
 # ============================================
 ENV NVM_DIR=/usr/local/nvm
-RUN mkdir -p $NVM_DIR \
-    && curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash \
-    && . $NVM_DIR/nvm.sh \
-    && nvm install --lts \
-    && nvm alias default lts/* \
-    && ln -sf $(ls -td $NVM_DIR/versions/node/v* | head -1) $NVM_DIR/versions/node/default \
-    && npm install -g @openai/codex
+RUN if [ "$MODE" = "dev" ]; then \
+        mkdir -p $NVM_DIR \
+        && curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash \
+        && . $NVM_DIR/nvm.sh \
+        && nvm install --lts \
+        && nvm alias default lts/* \
+        && ln -sf $(ls -td $NVM_DIR/versions/node/v* | head -1) $NVM_DIR/versions/node/default \
+        && npm install -g @openai/codex; \
+    fi
+# PATH는 dev/prd 공통 (prd 이미지엔 이 디렉토리가 없지만 셸이 비존재 경로를 무시하므로 무해)
 ENV PATH=$NVM_DIR/versions/node/default/bin:$PATH
 
 # ============================================

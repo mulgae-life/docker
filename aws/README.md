@@ -1,128 +1,256 @@
 # AWS EC2 GPU 서버 (vLLM + 다중 사용자)
 
-## 0. 로컬 → S3 업로드 (최초/코드 변경 시)
+Amazon Linux 2023 + NVIDIA GPU EC2에 vLLM 기반 LLM 환경을 1회 셋업으로 띄우는 Docker 인프라 템플릿.
+
+**제공 기능**
+- vLLM 베이스 컨테이너 + SSH + 브라우저 IDE(code-server)
+- 다중 사용자 컨테이너 자동 관리 (`user.sh`, 포트/홈 자동 할당)
+- 폐쇄망 대응 (SSM 포트 포워딩, VS Code 확장 사이드로드)
+- 한 인스턴스 = 한 모드 (`MODE=dev` 또는 `MODE=prd`)
+
+---
+
+## 1. 사전 준비
+
+| 항목 | 내용 |
+|------|------|
+| EC2 인스턴스 | NVIDIA GPU 탑재 (g6e/p4/p5 등) |
+| OS | Amazon Linux 2023 |
+| 추가 EBS | 데이터/모델 저장용 1개 (`lsblk`로 디바이스 경로 확인, 예: `/dev/nvme1n1`) |
+| 권한 | `sudo` 가능한 OS 계정 |
+| AWS CLI | EC2 호스트에서 S3 접근 가능 (IAM Role 또는 `aws configure`) |
+| (선택) | HuggingFace 토큰 (게이트 모델 사용 시) |
+
+---
+
+## 2. 모드 선택: dev vs prd
+
+| 항목 | `MODE=dev` | `MODE=prd` |
+|------|:----------:|:----------:|
+| 용도 | 개발/실험 | 챗봇/서빙 |
+| Claude Code 자동 설치 | ✅ | ❌ |
+| nvm + Node + codex 빌드 | ✅ | ❌ |
+| 이미지 슬림화 | ❌ | ✅ |
+| 기본 `USERNAME` | `user` | `root` |
+| 기본 `LLM_MEMORY` | `360g` | `48g` |
+| 기본 `EXTRA_REQUIREMENTS` | (없음) | `/data/requirements.txt` |
+| 기본 이미지 태그 | `llm-dev` | `llm-prd` |
+
+> 인스턴스 단위로 모드를 결정합니다. 한 인스턴스에 두 모드를 공존시키지 않습니다.
+
+---
+
+## 3. 빠른 시작
+
+### 3-1. 로컬 → S3 (코드 변경 시)
 ```bash
 cd /workspace/docker/aws
 aws s3 sync . s3://hgi-ai-res/hjjo/aws/
 ```
 
-## 1. EC2 → S3 다운로드
+### 3-2. EC2 인스턴스 최초 셋업
 ```bash
-cd ~
-aws s3 sync s3://hgi-ai-res/hjjo/aws/ ~/aws/
-```
-
-## 2. 초기 세팅 (최초 1회, 리부트 포함)
-```bash
+# (1) 코드 다운로드
+mkdir -p ~/aws && aws s3 sync s3://hgi-ai-res/hjjo/aws/ ~/aws/
 cd ~/aws
-cp .env.example .env      # 값 수정 (USERNAME, PASSWORD, VOLUME_DEVICE 등)
-chmod +x setup-ec2.sh
+
+# (2) 환경 모드 선택 → .env 생성
+cp .env.dev.example .env       # 개발 EC2
+# 또는
+cp .env.prd.example .env       # 운영 EC2
+
+vim .env                       # USERNAME, PASSWORD, VOLUME_DEVICE, HF_TOKEN 등 입력
+
+# (3) 호스트 셋업 (Phase 1 → 자동 reboot → Phase 2 자동 실행)
+chmod +x setup-ec2.sh user.sh
 sudo ./setup-ec2.sh
-# Phase 1 → 자동 리부트 → Phase 2 자동 실행
-```
+tail -f /var/log/ec2-setup.log    # 진행 확인 (다른 터미널)
 
-## 3. Phase 2 진행 확인
-```bash
-tail -f /var/log/ec2-setup.log
-```
-
-## 4. 이미지 빌드 + 메인 컨테이너 실행
-```bash
-cd ~/aws
+# (4) 컨테이너 빌드 + 기동
 docker compose build
 docker compose up -d
-```
-
-## 5. SSH 접속
-```bash
-ssh -p 5000 <user>@<host>
-```
-
-## 6. code-server (브라우저 VS Code) — 폐쇄망/내부망
-로컬 PC에서 SSM 포트 포워딩:
-```bash
-aws ssm start-session \
-  --target i-<INSTANCE_ID> \
-  --document-name AWS-StartPortForwardingSession \
-  --parameters '{"portNumber":["7777"],"localPortNumber":["8443"]}'
-```
-브라우저 `http://localhost:8443` 접속 (비밀번호 = `.env`의 `PASSWORD`).
-- 메인 컨테이너: `portNumber` = `LLM_CODE_SERVER_PORT` 값 (기본 7777)
-- user.sh 사용자 컨테이너: `portNumber` = 각 사용자 포트 범위의 첫 포트 (5011/5021/5031/…)
-
-## 7. 추가 사용자 관리
-```bash
-chmod +x ~/aws/user.sh
-
-# 개발 사용자 (동명 OS 계정 + SSH + code-server)
-sudo ~/aws/user.sh up hjjo --password 1106 --gpus all
-sudo ~/aws/user.sh up jin --password 1234 --gpus all
-sudo ~/aws/user.sh up song --password 1234 --gpus 2,3
-sudo ~/aws/user.sh up mail-agent --password 1234 --gpus 2,3
-sudo ~/aws/user.sh up cho --password 1234 --gpus 0
-sudo ~/aws/user.sh up jeon --password 1234 --gpus 2,3
-sudo ~/aws/user.sh up min --password 1234 --gpus 3
-
-# 운영계 root 컨테이너 (--root): 내부 OS=root, SSH 불가, code-server 전용
-# 포트는 .env 의 LLM_SSH_PORT / LLM_EXTRA_PORTS / LLM_CODE_SERVER_PORT 사용 (compose llm 과 동일)
-# → compose llm 이나 기존 --root 가 올라가 있으면 포트 충돌. .env 를 수정하고 교체 실행
-# 홈은 컨테이너별 /volume/root-homes/<name> 에 독립 보존
-sudo ~/aws/user.sh up prd-job --root --password aiteam12! --gpus all
-
-sudo ~/aws/user.sh list
-
-sudo ~/aws/user.sh down hjjo
-sudo ~/aws/user.sh down jin
-sudo ~/aws/user.sh down song
-sudo ~/aws/user.sh down prod-api
-```
-포트 자동 할당: 컨테이너별 10포트씩 (첫 컨테이너 5010(SSH) + 5011–5019, 두 번째 5020 + 5021–5029, …)
-
-## 8. VS Code 확장 추가 (폐쇄망용)
-1. 인터넷 되는 PC에서 Marketplace → `.vsix` 다운로드
-2. `~/aws/vsix/` 폴더에 `.vsix` 파일 넣기
-3. `docker compose build --no-cache` (빌드 타임에 자동 설치)
-
-## 9. 운영계 모드 (root 컨테이너, 폐쇄망)
-```bash
-# .env 에서 USERNAME=root 로 변경
-docker compose up -d
-```
-- 사용자 생성/홈 셋업 스킵, `/root` 홈 기준으로 code-server 동반 기동
-- `/root` 는 호스트 `/volume/root` 에 영속화 (bash history, code-server 설정 보존)
-- SSH 접속 불가 → **6번 SSM 포트 포워딩으로만 접속**
-- **단일 운영계 슬롯**. `user.sh --root` (7번) 도 동일한 `.env` 포트(`LLM_SSH_PORT`/`LLM_EXTRA_PORTS`/`LLM_CODE_SERVER_PORT`)를 쓰므로 compose `llm-root` 와 동시 운용 불가. 이름만 바꿔 운영계를 재배포하려면 `user.sh --root` 사용 → 홈은 `/volume/root-homes/<name>` 에 컨테이너별 독립 보존
-
-## 10. 코드 변경 반영
-```bash
-# (로컬에서 0번 S3 업로드 먼저)
-aws s3 sync s3://hgi-ai-res/hjjo/aws/ ~/aws/
-chmod +x ~/aws/setup-ec2.sh ~/aws/user.sh
-
-cd ~/aws
-docker compose build --no-cache && docker compose up -d
-sudo ~/aws/user.sh rebuild          # 전체 사용자 컨테이너 재생성
-sudo ~/aws/user.sh rebuild hjjo     # 특정 사용자만
+docker compose logs -f llm        # 로그 확인
 ```
 
 ---
 
-## 참고: SSH config (`~/.ssh/config`)
+## 4. `.env` 주요 키
+
+| 키 | 설명 | 필수 |
+|----|------|:----:|
+| `MODE` | `dev` \| `prd` (모드 분기 트리거) | ✅ |
+| `USERNAME` | OS 계정명 (prd는 `root`) | ✅ |
+| `PASSWORD` | SSH + code-server 패스워드 | ✅ |
+| `VOLUME_DEVICE` | EBS 디바이스 경로 (`lsblk`) | ✅ |
+| `VOLUME_PATH` | EBS 마운트 경로 (기본 `/volume`) | — |
+| `HF_TOKEN` | HuggingFace 토큰 | 게이트 모델 시 |
+| `LLM_GPUS` | `all` 또는 `0,1` 등 | ✅ |
+| `LLM_MEMORY` | 컨테이너 메모리 한도 | ✅ |
+| `LLM_SSH_PORT` | 호스트 SSH 매핑 포트 (기본 5000) | 충돌 시 |
+| `LLM_EXTRA_PORTS` | 서비스용 추가 포트 (단일/range) | — |
+| `LLM_CODE_SERVER_PORT` | code-server 포트 (기본 7777) | 충돌 시 |
+| `EXTRA_REQUIREMENTS` | 컨테이너 내 pip 추가 설치 경로 | 선택 |
+| `VLLM_IMAGE` | vLLM 베이스 이미지 (버전 업그레이드 시 변경) | — |
+
+---
+
+## 5. `setup-ec2.sh`가 하는 일
+
+| Phase 1 (재부팅 전) | Phase 2 (재부팅 후 자동) |
+|---------------------|--------------------------|
+| OS 사용자 + sudo 권한 | NVIDIA Container Toolkit |
+| SSH + fail2ban (포트 5555) | Fabric Manager (H100/H200/A100/B100/B200 자동 감지) |
+| EBS 포맷 + 마운트 + fstab 등록 | Docker GPU 동작 검증 |
+| `/volume/{workspace,homes,models,data}` 생성 | |
+| Docker + Compose V2 + Buildx | |
+| NVIDIA 오픈 드라이버 (`nvidia-open`) | |
+| Claude Code 호스트 설치 (dev만) | |
+
+> Phase 1 끝나면 자동 `reboot`. Phase 2는 `systemd` 서비스로 자동 실행. 실패 시 서비스가 자동 정리됩니다(리부트 루프 방지).
+
+---
+
+## 6. 다중 사용자 컨테이너 (`user.sh`)
+
+`user.sh`로 사용자별 독립 컨테이너를 생성합니다. 포트는 자동 할당 (10포트씩).
+
+```bash
+# 일반 개발 사용자 (SSH + code-server, 동명 OS 계정 자동 생성)
+sudo ~/aws/user.sh up jin    --password 1234 --gpus 2,3
+sudo ~/aws/user.sh up song   --password 1234 --gpus 0,1
+sudo ~/aws/user.sh up cho    --password 1234 --gpus 0
+
+# 운영 root 컨테이너 (SSH 불가, code-server 전용)
+sudo ~/aws/user.sh up prd-job --root --password aiteam12 --gpus all
+
+sudo ~/aws/user.sh list                  # 컨테이너 목록
+sudo ~/aws/user.sh down jin              # 중지 + 제거 (데이터는 /volume 보존)
+sudo ~/aws/user.sh rebuild               # 이미지 변경 후 전체 재생성
+sudo ~/aws/user.sh rebuild jin           # 특정 사용자만
+```
+
+### 포트 자동 할당 규칙
+
+| 컨테이너 | SSH 포트 | 추가 포트 |
+|----------|:--------:|:---------:|
+| 메인 (`docker compose`) | 5000 | 5001-5009 |
+| `user.sh` 첫 사용자 | 5010 | 5011-5019 |
+| `user.sh` 두 번째 | 5020 | 5021-5029 |
+| ... | ... | ... |
+| `user.sh` 49번째 | 5490 | 5491-5499 |
+
+---
+
+## 7. 접속
+
+### 7-1. SSH
+```bash
+ssh -p <PORT> <user>@<host>     # PORT = LLM_SSH_PORT 또는 user.sh 할당 포트
+```
+
+`~/.ssh/config` 예시:
 ```
 Host AWS-main
     HostName <host>
     Port 5000
     User <user>
 
-Host AWS-hjjo
-    HostName <host>
-    Port 5010
-    User hjjo
-    # 추가 포트: 5011-5019
-
 Host AWS-jin
     HostName <host>
-    Port 5020
+    Port 5010
     User jin
-    # 추가 포트: 5021-5029
 ```
+
+### 7-2. code-server (브라우저 IDE)
+
+폐쇄망 EC2는 SSM 포트 포워딩으로 접속:
+
+```bash
+aws ssm start-session \
+  --target i-<INSTANCE_ID> \
+  --document-name AWS-StartPortForwardingSession \
+  --parameters '{"portNumber":["7777"],"localPortNumber":["8443"]}'
+```
+
+브라우저에서 `http://localhost:8443` (패스워드 = `.env`의 `PASSWORD`).
+
+| 컨테이너 | code-server 포트 |
+|----------|:----------------:|
+| 메인 | `LLM_CODE_SERVER_PORT` (기본 7777) |
+| `user.sh` 사용자 | 각 포트 범위의 첫 포트 (5011 / 5021 / …) |
+
+---
+
+## 8. 운영 환경 (prd) 별도 안내
+
+```bash
+cp .env.prd.example .env       # MODE=prd, USERNAME=root 기본
+vim .env                       # PASSWORD, HF_TOKEN, EXTRA_REQUIREMENTS 등
+sudo ./setup-ec2.sh
+docker compose up -d
+```
+
+- **이미지 슬림화**: nvm/Node/codex 빌드 안 됨, Claude Code 미설치
+- **`USERNAME=root`**: OS 사용자 생성 스킵, `/root` 홈 사용
+- **`/root` 영속화**: 호스트 `/volume/root`에 마운트 (bash history, code-server 설정 보존)
+- **SSH 접속 불가** → SSM 포트 포워딩으로 code-server 접근만 가능 (§7-2)
+- **단일 운영계 슬롯**: `user.sh --root`도 동일한 `.env` 포트(`LLM_SSH_PORT`/`LLM_EXTRA_PORTS`/`LLM_CODE_SERVER_PORT`)를 사용 → compose `llm-root`와 동시 운용 불가. 여러 운영 컨테이너가 필요하면 `.env` 포트를 변경하고 `user.sh --root`로 별도 기동 (홈은 `/volume/root-homes/<name>`에 컨테이너별 독립 보존)
+
+---
+
+## 9. 유지보수
+
+### 9-1. 코드 변경 반영
+```bash
+# (1) 로컬 → S3
+cd /workspace/docker/aws
+aws s3 sync . s3://hgi-ai-res/hjjo/aws/
+
+# (2) EC2 → 다운로드 + 재빌드
+cd ~/aws
+aws s3 sync s3://hgi-ai-res/hjjo/aws/ ~/aws/
+chmod +x setup-ec2.sh user.sh
+docker compose build --no-cache && docker compose up -d
+sudo ~/aws/user.sh rebuild              # 사용자 컨테이너 일괄 갱신
+```
+
+### 9-2. `.env`만 수정한 경우 (이미지 재빌드 불필요)
+```bash
+docker compose up -d --force-recreate
+sudo ~/aws/user.sh rebuild              # 환경변수 갱신 반영
+```
+
+### 9-3. VS Code 확장 추가 (폐쇄망)
+1. 외부 PC에서 Marketplace → `.vsix` 다운로드
+2. `~/aws/vsix/` 폴더에 `.vsix` 파일 넣기
+3. `docker compose build --no-cache` (빌드 타임에 자동 설치, `/opt/code-server-extensions`에 영속)
+
+---
+
+## 10. 디렉토리 구조 (`/volume`)
+
+```
+/volume/
+├── workspace/<user>     # 사용자별 작업 공간 (컨테이너 /workspace)
+├── homes/<user>         # 사용자 홈 (컨테이너 /home/<user>)
+├── root-homes/<name>    # user.sh --root 컨테이너 홈
+├── root                 # 메인 운영계 root 홈 (USERNAME=root 일 때)
+├── models               # 모델 저장소
+└── data                 # 데이터
+```
+
+> 컨테이너를 `down`/`rm`해도 `/volume`은 보존됩니다.
+
+---
+
+## 11. 트러블슈팅
+
+| 증상 | 원인 / 해결 |
+|------|-------------|
+| `nvidia-smi` 실패 | Phase 2 미완료. `tail -f /var/log/ec2-setup.log` 확인 후 `sudo systemctl status ec2-setup-phase2.service` |
+| code-server 접속 시 패스워드 거부 | `.env` `PASSWORD` 변경 후 `docker compose up -d --force-recreate` |
+| `user.sh up` 시 포트 범위 초과 | 사용자 컨테이너가 49개 도달. 미사용 사용자 `down`으로 정리 |
+| Claude Code 설치 실패 (폐쇄망) | dev 모드에서만 시도, 실패해도 컨테이너는 정상 기동. 수동 설치: `curl -fsSL https://claude.ai/install.sh \| bash` |
+| 컨테이너 healthcheck unhealthy | code-server가 죽음. `docker logs llm-<user>` 확인 후 `docker exec <ctn> su - <user> -c 'code-server /workspace &'` 수동 재기동 |
+| Fabric Manager 자동 설치 실패 | NVSwitch GPU(H100/H200 등)에서 발생 가능. 로그의 안내대로 수동 설치: `dnf module install -y nvidia-driver:<branch>-open/fm` |
+| 빌드 시 `transformers` 충돌 | `requirements.txt` 마지막에 `transformers`를 `--no-deps`로 설치하므로 vLLM 핀과 충돌 안 함 (의도된 설계) |

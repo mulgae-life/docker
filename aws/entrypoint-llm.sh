@@ -12,6 +12,7 @@ PASSWORD="${PASSWORD:-changeme}"
 CONTAINER_UID="${CONTAINER_UID:-1000}"
 CONTAINER_GID="${CONTAINER_GID:-1000}"
 CODE_SERVER_PORT="${CODE_SERVER_PORT:-7777}"
+MODE="${MODE:-dev}"
 
 # 홈 디렉토리 기본 설정
 setup_user_home() {
@@ -23,8 +24,8 @@ setup_user_home() {
         echo 'export PATH="/usr/local/cuda/bin:$HOME/.local/bin:$PATH"' >> "$home_dir/.bashrc"
         echo 'export LD_LIBRARY_PATH="/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"' >> "$home_dir/.bashrc"
     fi
-    # nvm 설정 (sudo 없이 npm 사용)
-    if ! grep -q 'NVM_DIR' "$home_dir/.bashrc" 2>/dev/null; then
+    # nvm 설정 (sudo 없이 npm 사용) — dev 모드에서만
+    if [ "$MODE" = "dev" ] && ! grep -q 'NVM_DIR' "$home_dir/.bashrc" 2>/dev/null; then
         echo 'export NVM_DIR=/usr/local/nvm' >> "$home_dir/.bashrc"
         echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"' >> "$home_dir/.bashrc"
     fi
@@ -70,17 +71,21 @@ if [ "$USERNAME" != "root" ]; then
         chown -R "${USERNAME}:${USERNAME}" "$HOME_DIR"
     fi
 
-    chown -R "${USERNAME}:${USERNAME}" /usr/local/nvm
+    if [ "$MODE" = "dev" ] && [ -d /usr/local/nvm ]; then
+        chown -R "${USERNAME}:${USERNAME}" /usr/local/nvm
+    fi
 fi
 
 # ============================================
 # Docker 환경변수 (SSH/code-server 셸 공통)
 # ============================================
 {
-    echo 'export NVM_DIR=/usr/local/nvm'
-    echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
     echo 'export PATH="/usr/local/cuda/bin:$HOME/.local/bin:$PATH"'
     echo 'export LD_LIBRARY_PATH="/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"'
+    if [ "$MODE" = "dev" ]; then
+        echo 'export NVM_DIR=/usr/local/nvm'
+        echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"'
+    fi
     [ -n "${HF_TOKEN:-}" ] && echo "export HF_TOKEN=\"$HF_TOKEN\""
     [ -n "${ASSIGNED_GPUS:-}" ] && echo "export NVIDIA_VISIBLE_DEVICES=\"$ASSIGNED_GPUS\""
     true
@@ -104,7 +109,7 @@ fi
 # ============================================
 # Claude Code 설치 (폐쇄망이면 실패해도 진행)
 # ============================================
-if [ ! -f "${USER_HOME}/.local/bin/claude" ]; then
+if [ "$MODE" = "dev" ] && [ ! -f "${USER_HOME}/.local/bin/claude" ]; then
     echo "==> Claude Code 설치 시도: ${USERNAME} (home: ${USER_HOME})"
     # timeout 필수: 폐쇄망 방화벽이 TCP SYN을 drop하면 기본 curl은 수 분간 재전송 대기 → 컨테이너 기동이 hang 걸린 것처럼 보임
     # pipefail 필수: curl 실패를 bash(빈 입력으로 0 종료)가 가려서 실패 로그가 안 찍히는 문제 방지

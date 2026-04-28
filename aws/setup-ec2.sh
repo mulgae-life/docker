@@ -24,6 +24,7 @@ VOLUME_PATH="${VOLUME_PATH:-/volume}"
 SSH_PORT="${SSH_PORT:-5555}"
 CONTAINER_UID="${CONTAINER_UID:-1000}"
 CONTAINER_GID="${CONTAINER_GID:-1000}"
+MODE="${MODE:-dev}"
 
 # EBS 볼륨 디바이스 경로 (lsblk로 확인 후 설정)
 VOLUME_DEVICE="${VOLUME_DEVICE:-}"         # 예: /dev/nvme1n1
@@ -261,9 +262,11 @@ JAIL
         log "  Docker Buildx $(docker buildx version 2>/dev/null | head -1 || echo 'installed') 설치 완료"
     fi
 
-    # --- Claude Code ---
+    # --- Claude Code (dev 전용 호스트 도구) ---
     log "[8/9] Claude Code 설치"
-    if [ -n "$USERNAME" ]; then
+    if [ "$MODE" != "dev" ]; then
+        log "  MODE=${MODE}: 운영 모드 → Claude Code 호스트 설치 건너뜀."
+    elif [ -n "$USERNAME" ]; then
         if [ -f "/home/${USERNAME}/.local/bin/claude" ]; then
             log "  Claude Code 이미 설치됨. 건너뜀."
         else

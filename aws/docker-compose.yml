@@ -8,6 +8,7 @@ services:
       dockerfile: Dockerfile.llm
       args:
         BASE_IMAGE: "${VLLM_IMAGE:?VLLM_IMAGE를 .env에 설정해주세요 (예: vllm/vllm-openai:v0.19.0)}"
+        MODE: "${MODE:-dev}"
     image: ${LLM_IMAGE_NAME:-llm-dev}
     container_name: llm-${USERNAME:-user}
     hostname: llm-${USERNAME:-user}
@@ -29,6 +30,7 @@ services:
       # root 모드 전용 홈 보존 (일반 모드에선 사용 안 됨, 빈 폴더만 생성)
       - ${VOLUME_PATH:-/volume}/root:/root
     environment:
+      - MODE=${MODE:-dev}
       - USERNAME=${USERNAME:-user}
       - PASSWORD=${PASSWORD:-changeme}
       - CONTAINER_UID=${CONTAINER_UID:-1000}
