@@ -1,0 +1,66 @@
+# ═══════════════════════════════════════════════════════
+# Qwen3-ASR-1.7B (vLLM transcription serve)
+# ═══════════════════════════════════════════════════════
+#
+# 대상 GPU: L40S 46GB × 1 (단독)
+# 엔드포인트: POST /v1/audio/transcriptions (OpenAI 호환)
+#
+# 사용법:
+#   ./start.sh                                              # 전체 STT 클러스터 기동
+#   python ../vllm/vllm_server_launcher.py \                 # 직접 실행
+#       -c configs/qwen3_asr.yaml -g 0 --port 7170
+#
+# ※ 이 config는 vllm/vllm_server_launcher.py 가 그대로 소비한다.
+#    `gpus` / `download_dir` 키는 런처가 처리하고 vllm serve로는 전달되지 않는다.
+# ═══════════════════════════════════════════════════════
+
+
+# ── 모델 ──────────────────────────────────────────────
+# HF ID. 런처가 download_dir과 조합하여 로컬 경로로 자동 해석한다.
+# 미존재 시 snapshot_download로 자동 다운로드.
+model: Qwen/Qwen3-ASR-1.7B
+
+# STT/오디오 모델 전용 저장 루트 (LLM과 분리하여 디스크 관리 단순화)
+download_dir: /models/STT
+
+
+# ── 작업 유형 ─────────────────────────────────────────
+# vLLM은 모델 config로 task를 자동 감지하지만, ASR 계열은 transcription 명시가 안전.
+# transcription: /v1/audio/transcriptions 엔드포인트 활성화
+task: transcription
+
+
+# ── 서버 ──────────────────────────────────────────────
+host: 0.0.0.0
+port: 7170                       # STT 인스턴스 base. Whisper는 :7171
+uvicorn_log_level: info
+
+
+# ── GPU / 메모리 ──────────────────────────────────────
+# 단일 GPU 단독 사용 (TP 없음). start.sh가 -g 인자로 CUDA_VISIBLE_DEVICES 설정.
+gpus: [0]
+tensor_parallel_size: 1
+
+# Qwen3-ASR-1.7B BF16 기준 가중치 ~4GB.
+# L40S 46GB × 0.5 = ~23GB → 가중치+KV cache 충분, 다른 프로세스/Whisper 비교 테스트용 여유 확보.
+gpu_memory_utilization: 0.50
+
+
+# ── 추론 ──────────────────────────────────────────────
+# ASR은 LLM 대비 짧은 컨텍스트. 보수적 8192.
+# 실측 후 모델카드의 권장값으로 조정.
+max_model_len: 8192
+
+# 동시 처리 시퀀스 수.
+max_num_seqs: 8
+
+# 활성화 dtype: 모델 config 자동 (BF16).
+dtype: auto
+
+# 재현 가능한 추론.
+seed: 42
+
+
+# ── 로깅 ──────────────────────────────────────────────
+enable_log_requests: false
+disable_log_stats: false

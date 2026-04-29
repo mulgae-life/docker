@@ -3,6 +3,7 @@
 LLM 서빙 프레임워크 운영 구성 모음. 서버 인프라(EC2/Docker)와 분리된, **서빙 레이어 전용** 디렉토리.
 
 > 인프라(EC2 + Docker)는 [`../aws/`](../aws/), 컨테이너 환경은 [`../my-docker-server/`](../my-docker-server/) 참조.
+> 코드/모델 이관(로컬 → S3 → EC2 → 컨테이너) 절차는 [`DEPLOY_GUIDE.md`](DEPLOY_GUIDE.md) 참조.
 
 ## 📦 구성
 
@@ -10,7 +11,7 @@ LLM 서빙 프레임워크 운영 구성 모음. 서버 인프라(EC2/Docker)와
 |-----------|:----:|------|
 | [`vllm/`](vllm/) | ✅ 운영 | vLLM 서버 + 멀티 GPU 게이트웨이 (한 인스턴스에서 다중 모델 라우팅, OpenAI 호환) |
 | `sglang/` | 🔜 예정 | SGLang 기반 서빙 |
-| `stt/` | 🔜 예정 | STT 전용 최적 서빙 (Whisper 등) |
+| [`stt/`](stt/) | 🧪 PoC | Qwen3-ASR-1.7B + Whisper-large-v3 동시 서빙 (transcription endpoint) — 한국어 비교용 |
 
 ## 🎯 vLLM (현재 운영 중)
 

@@ -1,0 +1,54 @@
+# ═══════════════════════════════════════════════════════
+# Whisper-large-v3 (vLLM transcription serve) — Baseline
+# ═══════════════════════════════════════════════════════
+#
+# 대상 GPU: L40S 46GB × 1 (단독)
+# 엔드포인트: POST /v1/audio/transcriptions (OpenAI 호환)
+#
+# 역할: Qwen3-ASR-1.7B 한국어 정확도 비교 baseline
+# 모델 크기: 1.55B params (Qwen3-ASR-1.7B와 비슷한 무게대)
+#
+# 참고: vLLM은 Whisper에 대해 transcription 엔드포인트를 정식 지원한다.
+#       (https://docs.vllm.ai/en/v0.7.0/getting_started/examples/whisper.html)
+# ═══════════════════════════════════════════════════════
+
+
+# ── 모델 ──────────────────────────────────────────────
+model: openai/whisper-large-v3
+download_dir: /models/STT
+
+
+# ── 작업 유형 ─────────────────────────────────────────
+task: transcription
+
+
+# ── 서버 ──────────────────────────────────────────────
+host: 0.0.0.0
+port: 7171                       # Qwen3-ASR(:7170) 다음 포트
+uvicorn_log_level: info
+
+
+# ── GPU / 메모리 ──────────────────────────────────────
+# Qwen3-ASR과 다른 GPU에 단독 배치하여 한국어 정확도/지연 동시 측정 가능.
+gpus: [1]
+tensor_parallel_size: 1
+
+# Whisper-large-v3 가중치 ~3GB (BF16). KV cache는 audio decoder 컨텍스트(448 tokens)로 매우 작음.
+# 0.5로 두어도 모델+KV+오버헤드 여유 충분.
+gpu_memory_utilization: 0.50
+
+
+# ── 추론 ──────────────────────────────────────────────
+# Whisper는 30초 audio chunk + decoder context 448 token이 모델 사양.
+# vLLM이 모델 config(`max_target_positions`)로 자동 감지하므로 max_model_len 미지정.
+
+# 동시 처리 시퀀스 수.
+max_num_seqs: 8
+
+dtype: auto
+seed: 42
+
+
+# ── 로깅 ──────────────────────────────────────────────
+enable_log_requests: false
+disable_log_stats: false

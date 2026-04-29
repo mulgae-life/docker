@@ -9,3 +9,5 @@
 # llm-serving 운영 산출물
 llm-serving/vllm/logs/
 llm-serving/vllm/image.png
+llm-serving/stt/logs/
+llm-serving/stt/samples/
