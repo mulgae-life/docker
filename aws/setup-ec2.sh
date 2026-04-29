@@ -49,16 +49,20 @@ check_root() {
     fi
 }
 
-# EBS 볼륨을 포맷 + 마운트 + fstab 등록
+# EBS 볼륨을 포맷 + 마운트 + fstab 등록 (디바이스 미지정 시 mount_point 디렉토리만 생성)
 mount_ebs_volume() {
     local device="$1"
     local mount_point="$2"
 
-    # VOLUME_DEVICE 필수 (README §4에서 ✅로 명시). 비어있으면 fail-fast
-    # — 비어있을 때 로컬 디렉토리로 폴백하면 사용자가 EBS가 마운트된 줄 알고
-    #   루트 디스크에 데이터를 쌓다가 인스턴스 종료 시 모두 손실
+    # VOLUME_DEVICE 미설정 → 루트 디스크에 디렉토리만 생성 (운영계 폴백)
+    # — 추가 EBS 없이 루트 디스크만으로 동작하는 케이스. /volume이 일반 디렉토리가 됨.
+    # — 운영계 전제: 모델/데이터는 S3에서 재동기화하므로 인스턴스 종료 시 손실 허용.
+    # — 영속 데이터가 필요한 환경(개발 EC2 등)에서는 .env에 추가 EBS 디바이스 명시 권장.
     if [ -z "$device" ]; then
-        error_exit "VOLUME_DEVICE 미설정. .env에 lsblk로 확인한 추가 EBS 경로를 입력하세요 (예: /dev/nvme1n1)."
+        log "  ℹ️  VOLUME_DEVICE 미설정 → 루트 디스크에 ${mount_point} 디렉토리만 생성 (mkfs/mount/fstab 건너뜀)"
+        log "  ⚠️  인스턴스 종료(terminate) 시 ${mount_point} 데이터도 함께 삭제됩니다. 영속 데이터는 S3 백업 필수."
+        mkdir -p "$mount_point"
+        return
     fi
 
     if [ ! -b "$device" ]; then
@@ -222,8 +226,8 @@ JAIL
     fi
     log "  SSH 포트 ${SSH_PORT}, 비밀번호 인증 활성화 완료"
 
-    # --- EBS 볼륨 마운트 ---
-    log "[3/9] EBS 볼륨 마운트"
+    # --- EBS 볼륨 마운트 (또는 /volume 디렉토리 생성) ---
+    log "[3/9] EBS 볼륨 마운트 (또는 ${VOLUME_PATH} 디렉토리 생성)"
     if [ -n "$VOLUME_DEVICE" ]; then
         log "  사용 가능한 블록 디바이스:"
         lsblk -o NAME,SIZE,TYPE,MOUNTPOINT | tee -a "$LOG_FILE"
