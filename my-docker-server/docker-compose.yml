@@ -6,8 +6,8 @@ services:
       args:
         USERNAME: ${USERNAME}
         PASSWORD: ${PASSWORD}
-        UID: ${UID:-1000}
-        GID: ${GID:-1000}
+        UID: ${UID:-2000}
+        GID: ${GID:-2000}
     image: cfd-gpu
     container_name: cfd
     hostname: cfd
@@ -38,8 +38,8 @@ services:
       args:
         USERNAME: ${USERNAME}
         PASSWORD: ${PASSWORD}
-        UID: ${UID:-1000}
-        GID: ${GID:-1000}
+        UID: ${UID:-2000}
+        GID: ${GID:-2000}
     image: dev-fullstack
     container_name: dev-fullstack
     hostname: dev-fullstack

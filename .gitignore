@@ -1,1 +1,11 @@
 .env
+
+.vllm_serve_*
+
+.claude/scratch
+
+.archive/
+
+# llm-serving 운영 산출물
+llm-serving/vllm/logs/
+llm-serving/vllm/image.png

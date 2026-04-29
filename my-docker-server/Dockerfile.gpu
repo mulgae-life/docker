@@ -1,4 +1,4 @@
-FROM ubuntu:24.04
+FROM nvidia/cuda:12.6.3-devel-ubuntu24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -6,15 +6,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 # 시스템 패키지
 # ============================================
 RUN apt update && apt install -y \
-    openssh-server sudo git curl wget unzip \
-    build-essential ca-certificates \
-    vim nano tmux htop jq \
-    fzf ripgrep \
+    openssh-server sudo nano curl wget git \
+    build-essential cmake \
+    python3.12 python3-pip \
+    htop tmux jq \
     bubblewrap \
-    postgresql-client \
-    net-tools iputils-ping dnsutils \
     locales tzdata \
-    python3 python3-pip python3-venv \
     && ln -sf /usr/bin/python3 /usr/bin/python \
     && ln -sf /usr/bin/pip3 /usr/bin/pip \
     && rm -rf /var/lib/apt/lists/*
@@ -42,59 +39,19 @@ RUN mkdir -p $NVM_DIR \
 ENV PATH=$NVM_DIR/versions/node/default/bin:$PATH
 
 # ============================================
-# Playwright 의존성 + Chromium + 한글폰트
-# ============================================
-RUN apt update && apt install -y \
-    libnss3 libatk1.0-0 libatk-bridge2.0-0 \
-    libcups2 libdrm2 libxkbcommon0 libxcomposite1 \
-    libxdamage1 libxrandr2 libgbm1 libasound2t64 \
-    libpango-1.0-0 libcairo2 \
-    fonts-nanum fonts-noto-cjk \
-    && rm -rf /var/lib/apt/lists/*
-
-# ============================================
-# Supabase CLI (직접 설치)
-# ============================================
-RUN curl -fsSL https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz | tar -xz -C /usr/local/bin
-
-# ============================================
 # Python 패키지
 # ============================================
-RUN pip install --no-cache-dir --ignore-installed \
-    openai anthropic \
-    langchain-core langchain-openai langchain-anthropic \
-    langchain-google-genai langchain-ollama \
-    chromadb kiwipiepy \
-    fastapi uvicorn pydantic-settings \
-    sse-starlette sqlmodel jinja2 python-multipart \
-    playwright beautifulsoup4 lxml \
-    requests httpx aiohttp \
-    PyPDF2 python-docx openpyxl markdown nh3 PyYAML \
-    pandas \
-    supabase python-dotenv \
-    fastmcp notion-client \
-    pytest black ruff \
-    pydantic
-
-# Playwright 브라우저 설치
-RUN playwright install chromium
-
-# ============================================
-# GitHub CLI
-# ============================================
-RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-    && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-    && apt update && apt install -y gh \
-    && rm -rf /var/lib/apt/lists/*
+RUN pip install --no-cache-dir \
+    numpy numba cupy-cuda12x \
+    matplotlib pytest ipython nvitop
 
 # ============================================
 # 사용자 생성 + 설정
 # ============================================
 ARG USERNAME=user
 ARG PASSWORD=changeme
-ARG UID=1000
-ARG GID=1000
+ARG UID=2000
+ARG GID=2000
 RUN existing_user=$(getent passwd ${UID} | cut -d: -f1 || true); \
     [ -n "$existing_user" ] && userdel -r "$existing_user" || true; \
     existing_group=$(getent group ${GID} | cut -d: -f1 || true); \
@@ -108,6 +65,8 @@ RUN existing_user=$(getent passwd ${UID} | cut -d: -f1 || true); \
     && chown ${USERNAME}:${USERNAME} /home/${USERNAME}/.tmux.conf \
     && echo 'export NVM_DIR=/usr/local/nvm' >> /home/${USERNAME}/.bashrc \
     && echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"' >> /home/${USERNAME}/.bashrc \
+    && echo 'export PATH=/usr/local/cuda/bin:$PATH' >> /home/${USERNAME}/.bashrc \
+    && echo 'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH' >> /home/${USERNAME}/.bashrc \
     && echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/${USERNAME}/.bashrc \
     && chown -R ${USERNAME}:${USERNAME} /usr/local/nvm
 
@@ -135,7 +94,7 @@ RUN chown -R ${USERNAME}:${USERNAME} /workspace
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 
-EXPOSE 22 5011-5019
+EXPOSE 22 5001-5009
 
 ENTRYPOINT ["entrypoint.sh"]
 CMD ["/usr/sbin/sshd", "-D"]
