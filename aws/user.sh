@@ -186,6 +186,13 @@ cmd_up() {
     [ -n "$forced_service_port" ] && validate_port_spec "$forced_service_port"
     [ -n "$forced_code_port" ] && validate_port_spec "$forced_code_port"
 
+    # --service-port / --code-port 는 --root 다중 운용 전용
+    # — 일반 모드(자동 포트 할당)에서 사용하면 silent 무시되어 오해 소지 → fail-fast로 차단
+    if ! $as_root && { [ -n "$forced_service_port" ] || [ -n "$forced_code_port" ]; }; then
+        echo "❌ --service-port / --code-port 는 --root 모드 전용입니다."
+        usage
+    fi
+
     if [ "$password" = "changeme" ]; then
         echo "⚠️ 기본 비밀번호(changeme)를 사용합니다. --password로 변경을 권장합니다."
     fi
