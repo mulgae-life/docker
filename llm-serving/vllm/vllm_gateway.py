@@ -134,15 +134,25 @@ class GatewayConfig(BaseModel):
 
 
 def load_config(path: str) -> GatewayConfig:
-    """게이트웨이 YAML + vllm_config.yaml을 읽어 GatewayConfig로 파싱한다.
+    """게이트웨이 YAML을 읽어 GatewayConfig로 파싱한다.
 
-    vllm_config.yaml에서 port(base_port)를 읽어
-    backend_count만큼 base_port + index로 백엔드를 자동 구성한다.
+    백엔드 결정 우선순위:
+      1) yaml에 backends 리스트가 명시되면 그걸 그대로 사용 (이질 모델 라우팅)
+      2) 없으면 vllm_config.yaml의 port를 base_port로, backend_count만큼
+         base_port + index로 자동 생성 (단일 모델 + DP replica)
     """
     with open(path, encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
 
-    # vllm_config.yaml에서 base_port 읽기
+    # 1) yaml에 backends 명시 → 그대로 사용
+    if raw.get("backends"):
+        logger.info(
+            "backends 명시됨: %s",
+            [f"{b.get('host', '127.0.0.1')}:{b['port']}" for b in raw["backends"]],
+        )
+        return GatewayConfig(**raw)
+
+    # 2) vllm_config.yaml에서 base_port 읽어 자동 생성
     config_dir = os.path.dirname(os.path.abspath(path))
     vllm_config_rel = raw.get("vllm_config", "vllm_config.yaml")
     vllm_config_path = os.path.join(config_dir, vllm_config_rel)
@@ -156,7 +166,6 @@ def load_config(path: str) -> GatewayConfig:
     else:
         logger.warning("vllm_config 없음: %s (base_port=%d 사용)", vllm_config_path, base_port)
 
-    # backend_count만큼 백엔드 자동 생성
     count = raw.get("backend_count", 1)
     raw["backends"] = [{"host": "127.0.0.1", "port": base_port + i} for i in range(count)]
 

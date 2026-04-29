@@ -1230,6 +1230,47 @@ kill -9 <좀비 PID들>
 | [vllm #40124](https://github.com/vllm-project/vllm/issues/40124) | TurboQuant KV + Hybrid MoE가 Ampere(SM 80-86)에서 실패 | **L40S(Ada Lovelace, SM 89) 무영향** — GPU 교체 시에만 주의 |
 | 자체 Bug 2026-04-18 | `Encoder cache miss` assertion | `async_scheduling: false` + `max_num_seqs` 상한. 상세는 [bugfix/2026-04-18_vllm_multimodal_encoder_cache.md](bugfix/2026-04-18_vllm_multimodal_encoder_cache.md) |
 
+### 9.7 운영 환경 튜닝 백로그
+
+#### Gemma 4 26B-A4B (E=128, N=352, fp8_w8a8) fused MoE config 부재
+
+기동 로그에 다음 WARNING이 출력된다.
+
+```
+WARNING fused_moe.py:1090
+Using default MoE config. Performance might be sub-optimal!
+Config file not found at .../configs/E=128,N=352,device_name=NVIDIA_<GPU>,dtype=fp8_w8a8.json
+```
+
+**상태**: vLLM 0.19.1 동봉 311개 사전 튜닝 JSON 중 26B-A4B + fp8_w8a8 매칭은 H100_80GB_HBM3 한 종 뿐. L40S(개발)와 RTX PRO 6000 Blackwell(운영 예정) 모두 매칭 JSON 없음 → default fallback 동작.
+
+**영향**: 정확도/안정성에는 영향 없음. MoE GEMM throughput 잠재 손실 (조합에 따라 10~30%).
+
+**대응 (운영 이전 후)**:
+
+```bash
+# 1) vLLM 소스 클론 (튜닝 스크립트는 pip 패키지에 미포함)
+git clone https://github.com/vllm-project/vllm.git /tmp/vllm
+cd /tmp/vllm
+
+# 2) 운영 GPU(RTX PRO 6000)에서 튜닝 실행 (vLLM 잠시 내려야 함)
+python benchmarks/kernels/benchmark_moe.py \
+  --model google/gemma-4-26B-A4B-it \
+  --tp-size <운영 TP 크기> \
+  --dtype fp8_w8a8 \
+  --tune
+
+# 3) 산출물을 vLLM이 읽는 경로에 배치
+cp E=128,N=352,device_name=NVIDIA_RTX_PRO_6000_Blackwell_Workstation_Edition,dtype=fp8_w8a8.json \
+   ~/.local/lib/python3.12/site-packages/vllm/model_executor/layers/fused_moe/configs/
+
+# 4) vLLM 재기동 → WARNING 사라지고 튜닝 config 적용
+```
+
+**선택 사항**: 산출 JSON을 vLLM 본가 `vllm/model_executor/layers/fused_moe/configs/`에 PR. RTX PRO 6000 Blackwell 변종은 이미 코어팀이 다른 모델용으로 동봉 시작한 GPU라 머지 가능성 높음.
+
+**트리거**: 운영 환경 셋업 완료 후. 개발 환경 L40S에서는 의미 없음 (운영 환경 아님).
+
 ---
 
 ## 10. QA 테스트

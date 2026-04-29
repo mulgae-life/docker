@@ -983,7 +983,7 @@ def parse_args():
               python test_vllm_server.py --base-url http://gpu-server:5015
         """),
     )
-    p.add_argument("--base-url", default="http://localhost:5015", help="vLLM 서버 URL (기본: http://localhost:5015)")
+    p.add_argument("--base-url", default="http://localhost:5016", help="vLLM 서버 URL (기본: http://localhost:5015)")
     p.add_argument("--model", default=None, help="모델명 (미지정 시 vllm_config.yaml에서 자동 추출)")
     p.add_argument("--category", nargs="*", choices=list(CATEGORIES.keys()), help="실행할 카테고리 (미지정 시 전체)")
     p.add_argument("--list", action="store_true", help="카테고리 목록 출력")

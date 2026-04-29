@@ -24,7 +24,7 @@
 # 폐쇄망에서는 반드시 런처를 사용하거나 오프라인 환경변수를 설정할 것.
 #   런처: 자동 오프라인 모드 + download_dir 경로 조합
 #   네이티브: HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 vllm serve --config ...
-model: google/gemma-4-26B-A4B-it # Qwen/Qwen3.6-27B-FP8 # Qwen/Qwen3.6-35B-A3B-FP8 # google/gemma-4-26B-A4B-it # google/gemma-4-31B-it # Qwen/Qwen3.5-27B-FP8
+model: Qwen/Qwen3.6-35B-A3B-FP8 # Qwen/Qwen3.6-27B-FP8 # Qwen/Qwen3.6-35B-A3B-FP8 # google/gemma-4-26B-A4B-it # google/gemma-4-31B-it # Qwen/Qwen3.5-27B-FP8
 
 # 모델 로컬 저장 루트 디렉토리.
 # {download_dir}/{model} 경로에서 모델을 찾음.
@@ -68,7 +68,7 @@ host: 0.0.0.0
 # 게이트웨이(vllm_gateway.py)가 :5015에서 대기하므로,
 # vLLM 인스턴스는 내부 포트를 사용한다.
 # chatbot-poc .env의 HF_BASE_URL은 게이트웨이 포트(:5015)를 가리켜야 함.
-port: 7070
+port: 7071
 
 # Uvicorn (HTTP 서버) 로그 레벨.
 # debug | info | warning | error | critical
@@ -87,13 +87,13 @@ uvicorn_log_level: info
 #   gpus: [0, 1]       + tp: 2 → 1 인스턴스 TP (GPU 0,1 :7070)
 #   gpus: [0, 1, 2, 3] + tp: 2 → 2 인스턴스 (GPU 0,1 :7070, GPU 2,3 :7071)
 #   gpus: [0, 1, 2, 3] + tp: 4 → 1 인스턴스 (GPU 0,1,2,3 :7070)
-gpus: [0,1]
-tensor_parallel_size: 2
+gpus: [1]
+tensor_parallel_size: 1
 
 # vLLM이 사용할 GPU 메모리 비율 (0.0~1.0).
 # L40S 46GB × 0.95 = ~43.7GB 사용 가능.
 # 나머지는 PyTorch/CUDA 오버헤드용으로 예약됨.
-gpu_memory_utilization: 0.95 # 0.7 가능
+gpu_memory_utilization: 0.92 # 0.7 가능
 
 
 # ── 추론 ──────────────────────────────────────────────
@@ -113,14 +113,14 @@ max_model_len: 65536 # 12288, 65536, 262144, 170000
 # 멀티모달 모델에서는 encoder cache 용량에 맞춰 제한 필요.
 # max_num_batched_tokens=98304 기준 이미지 1장 ≈ 16384 tokens → 약 5~6장 수용.
 # encoder cache 초과 시 eviction race로 assertion 크래시 발생 가능.
-max_num_seqs: 5
+max_num_seqs: 2
 
 # 한 번에 배치 처리할 최대 토큰 수.
 # 2의 배수 권장. max_model_len보다 작아도 됨 (chunked prefill이 자동 분할).
 # 멀티모달 모델에서는 encoder_cache_size와 동일값으로 복제됨 (scheduler.py:235).
 # 이미지 1장 ≈ 16384 encoder tokens 기준 98304 → 약 6장 캐시 수용.
 # 동시 요청 N장 처리를 위해서는 (N × 이미지 토큰) + 여유 마진으로 산정.
-max_num_batched_tokens: 98304 # 8192, 16384, 32768, 98304, 163840
+max_num_batched_tokens: 16384 # 8192, 16384, 32768, 81920, 98304, 163840
 
 # 재현 가능한 추론을 위한 전역 시드.
 seed: 42
@@ -165,7 +165,7 @@ enable_prefix_caching: true
 #   fp8_e4m3: 지수4+가수3 — 정밀도 높고 범위 좁음 (±448). KV 캐시/추론용 권장.
 #   fp8_e5m2: 지수5+가수2 — 정밀도 낮고 범위 넓음 (±57344). 학습(gradient)용.
 #   KV 캐시에는 fp8_e4m3 일택 (추론은 정밀도가 중요).
-kv_cache_dtype: fp8_e4m3
+kv_cache_dtype: auto
 
 # 텍스트 전용 모드.
 # Gemma 4는 멀티모달 모델이지만, 현재 chatbot-poc는 텍스트 입력만 사용한다.
@@ -228,15 +228,15 @@ mm_processor_cache_type: shm
 #
 # Gemma 4로 교체 시 아래 두 블록을 한꺼번에 활성화하면 된다.
 #
-mm_processor_kwargs:
-  max_soft_tokens: 1120
+# mm_processor_kwargs:
+#   max_soft_tokens: 1120
 #
 # 프롬프트당 멀티모달 입력 상한. 이 키는 모델 독립적인 vLLM 공용 파라미터이며
 # 전 VL 모델(Qwen3-VL/Gemma 4/InternVL 등)에서 동일하게 동작한다.
 # 상한을 낮추면 encoder cache/예약 메모리를 절약한다.
 # Gemma 4 챗봇 워크로드 권장 시작점: image=4, audio=0, video=0.
 limit_mm_per_prompt:
-  image: 6
+  image: 2
 #   audio: 0
 #   video: 0
 
@@ -302,7 +302,7 @@ enable_auto_tool_choice: true
 #   gemma4      — Gemma 4 전용 tool call 파서 (권장)
 # Qwen3.5 사용 시:
 #   qwen3_xml   — 범용 XML 포맷
-tool_call_parser: gemma4
+tool_call_parser: qwen3_xml
 
 
 # ── Thinking Mode (reasoning 분리) ───────────────────────
@@ -327,7 +327,7 @@ tool_call_parser: gemma4
 #   nemotron_v3  — NVIDIA Nemotron
 #   olmo3        — AI2 OLMo 3
 #   ernie45      — Baidu Ernie 4.5
-reasoning_parser: gemma4
+reasoning_parser: qwen3
 
 
 # ── HF 토큰 ──────────────────────────────────────────

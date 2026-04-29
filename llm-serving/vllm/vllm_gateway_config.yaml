@@ -6,36 +6,32 @@
 # 로드밸런싱, 헬스체크, 웜업 기능을 제공한다.
 #
 # 사용법:
-#   python vllm_gateway.py
-#   python vllm_gateway.py --config vllm_gateway_config.yaml
+#   python vllm_gateway.py --config vllm_gateway_config.yaml          # Qwen용 (:5016)
+#   python vllm_gateway.py --config vllm_gateway_config_gemma.yaml    # Gemma용 (:5015)
 #
-# 구조:
-#   클라이언트 → Gateway(:5015) → vLLM(:7070, :7071, ...)
+# 구조 (이질 모델 라우팅):
+#   클라이언트 → Gateway(:5015) → vLLM(:7070)  Gemma
+#   클라이언트 → Gateway(:5016) → vLLM(:7071)  Qwen
 #
 # ═══════════════════════════════════════════════════════
 
 
-# ── vLLM 설정 참조 ──────────────────────────────────
-# vllm_config.yaml 경로 (상대 경로 가능).
-# 여기서 host와 port(base_port)를 읽어 백엔드 URL을 자동 구성한다.
-# → 포트를 vllm_config.yaml 한 곳에서만 관리.
-vllm_config: "vllm_config.yaml"
-
 # ── 게이트웨이 서버 ──────────────────────────────────
 gateway:
   host: "0.0.0.0"
-  port: 5015                # 클라이언트가 접근하는 포트 (방화벽 오픈 대상)
+  port: 5016                    # 클라이언트가 접근하는 포트 (방화벽 오픈 대상)
   log_level: "info"             # uvicorn 로그 레벨
 
 # ── 백엔드 vLLM 인스턴스 ─────────────────────────────
-# 게이트웨이가 감시할 최대 인스턴스 수.
-# 포트는 vllm_config.yaml의 port를 base_port로 자동 할당:
-#   :7070, :7071, :7072, ... (base_port + index)
+# 백엔드 결정 방식 (vllm_gateway.py:load_config 우선순위):
+#   1) backends 리스트 명시 → 그대로 사용 (이질 모델 라우팅)
+#   2) 미명시 시 vllm_config.yaml의 port를 base_port로 backend_count만큼 자동 생성
+#      (단일 모델 + DP replica)
 #
-# 실제로 띄운 인스턴스만 헬스체크를 통과하여 라우팅 풀에 등록된다.
-# 넉넉하게 잡아두면 런처만 띄우면 자동 투입, 죽으면 자동 제외.
-# 게이트웨이 재시작 없이 인스턴스를 자유롭게 추가/제거할 수 있다.
-backend_count: 8
+# 본 파일은 Qwen 전용 게이트웨이(:5016 → :7071)이므로 backends 명시.
+# Gemma용은 vllm_gateway_config_gemma.yaml 참조.
+backends:
+  - {host: "127.0.0.1", port: 7071}    # Qwen3.6-35B-A3B-FP8 (GPU 1)
 
 # ── 헬스체크 ─────────────────────────────────────────
 # 백그라운드에서 주기적으로 각 백엔드의 /health를 확인.
