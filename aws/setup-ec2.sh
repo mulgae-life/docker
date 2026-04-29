@@ -318,12 +318,27 @@ JAIL
         chmod +x /usr/libexec/docker/cli-plugins/docker-compose
         log "  Docker Compose $(docker compose version --short) 설치 완료"
     fi
+    # Buildx는 단순 존재 여부가 아니라 최소 버전(>= 0.17.0)까지 검사한다.
+    # 사유: AL2023의 dnf docker 패키지는 구버전 buildx(< 0.17.0)를 함께 설치하는데,
+    # 최신 docker compose v2.27+ 는 buildx 0.17.0+ 를 요구하므로 빌드가 실패한다.
+    local buildx_required="0.17.0"
+    local buildx_target="0.21.2"
+    local buildx_install="true"
     if docker buildx version &>/dev/null; then
-        log "  Docker Buildx 이미 설치됨. 건너뜀."
-    else
+        local buildx_current
+        buildx_current=$(docker buildx version 2>/dev/null | grep -oE 'v?[0-9]+\.[0-9]+\.[0-9]+' | head -1 | tr -d 'v')
+        if [ -n "$buildx_current" ] \
+            && [ "$(printf '%s\n%s\n' "$buildx_current" "$buildx_required" | sort -V | head -1)" = "$buildx_required" ]; then
+            log "  Docker Buildx v${buildx_current} (>= ${buildx_required}) 이미 설치됨. 건너뜀."
+            buildx_install="false"
+        else
+            log "  Docker Buildx v${buildx_current:-?} 감지 — Compose가 요구하는 ${buildx_required} 미만. v${buildx_target}로 재설치."
+        fi
+    fi
+    if [ "$buildx_install" = "true" ]; then
         local buildx_arch="amd64"
         [ "$(uname -m)" = "aarch64" ] && buildx_arch="arm64"
-        curl -fsSL "https://github.com/docker/buildx/releases/download/v0.21.2/buildx-v0.21.2.linux-${buildx_arch}" \
+        curl -fsSL "https://github.com/docker/buildx/releases/download/v${buildx_target}/buildx-v${buildx_target}.linux-${buildx_arch}" \
             -o /usr/libexec/docker/cli-plugins/docker-buildx
         chmod +x /usr/libexec/docker/cli-plugins/docker-buildx
         log "  Docker Buildx $(docker buildx version 2>/dev/null | head -1 || echo 'installed') 설치 완료"
