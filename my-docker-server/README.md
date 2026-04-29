@@ -80,7 +80,9 @@ GID=2000             # 호스트 사용자의 GID (id -g 로 확인)
 | 경로 | 타입 | 호스트 위치 | 설명 |
 |------|------|-----------|------|
 | `/workspace` | bind mount | `/workspace` | 코드/프로젝트 (호스트와 공유) |
-| `/home/<USERNAME>` | bind mount | `/opt/docker-homes/<컨테이너>/<USERNAME>` | 사용자 홈 (재빌드 시에도 유지) |
+| `/home/<USERNAME>` | bind mount | `/opt/docker-homes/<서비스>/<USERNAME>` | 사용자 홈 (재빌드 시에도 유지) |
+
+> `<서비스>`는 `docker-compose.yml`의 서비스 이름(`cfd` 또는 `dev`)이며, 컨테이너 이름(`dev-fullstack` 등)과 다릅니다.
 
 홈 디렉토리가 호스트에 영속화되므로, 재빌드해도 다음 항목이 보존됩니다:
 - Claude Code / Codex 로그인 및 대화기록
