@@ -232,22 +232,39 @@ JAIL
 
     # --- 작업/데이터 디렉토리 설정 ---
     log "[4/9] 작업/데이터 디렉토리 설정"
-    chmod 775 "$VOLUME_PATH"
-    mkdir -p "${VOLUME_PATH}/workspace"
-    mkdir -p "${VOLUME_PATH}/data"
-    mkdir -p "${VOLUME_PATH}/models"
-    mkdir -p "${VOLUME_PATH}/homes"
-    # /models, /data는 컨테이너의 CONTAINER_UID 사용자가 쓸 수 있어야 함
-    # (메인 컨테이너 / user.sh 컨테이너 모두 공유 → 컨테이너 UID 기준으로 chown)
-    chown "$CONTAINER_UID":"$CONTAINER_GID" "${VOLUME_PATH}/data"
-    chown "$CONTAINER_UID":"$CONTAINER_GID" "${VOLUME_PATH}/models"
-    if [ -n "$USERNAME" ]; then
-        chown "$USERNAME":"$USERNAME" "$VOLUME_PATH"
-        mkdir -p "${VOLUME_PATH}/workspace/${USERNAME}"
-        mkdir -p "${VOLUME_PATH}/homes/${USERNAME}"
-        chown -R "$USERNAME":"$USERNAME" "${VOLUME_PATH}/workspace/${USERNAME}"
-        chown -R "$USERNAME":"$USERNAME" "${VOLUME_PATH}/homes/${USERNAME}"
+    # /volume 자체는 root:root + 0775로 통일
+    # - 컨테이너는 /volume을 직접 마운트하지 않음 (/workspace, /data, /models, /home로만 접근)
+    # - setup-ec2.sh, user.sh는 sudo 전제 → root 소유여도 mkdir 가능
+    # - USERNAME 값에 의존하지 않으므로 운영(root) ↔ 개발(user) 모드 전환 시 일관성 유지
+    chown root:root "$VOLUME_PATH"
+    chmod 0775 "$VOLUME_PATH"
+
+    # 표준 하위 디렉토리 일괄 생성
+    # - root-homes는 user.sh --root 컨테이너용. 첫 호출 시 mkdir 멱등이지만 미리 만들어 일관성 ↑
+    mkdir -p \
+        "${VOLUME_PATH}/workspace" \
+        "${VOLUME_PATH}/data" \
+        "${VOLUME_PATH}/models" \
+        "${VOLUME_PATH}/homes" \
+        "${VOLUME_PATH}/root-homes"
+
+    # /models, /data는 모든 컨테이너 공유 → CONTAINER_UID 소유로 통일
+    # (일반 사용자 컨테이너는 CONTAINER_UID로 동작, root 컨테이너는 권한 0이라 어차피 모두 쓰기 가능)
+    chown "$CONTAINER_UID":"$CONTAINER_GID" "${VOLUME_PATH}/data" "${VOLUME_PATH}/models"
+
+    # 사용자별 디렉토리는 호스트 사용자 소유로 (컨테이너 UID와 동일하면 권한 일치)
+    # - USERNAME=root: /volume/root는 compose 마운트가 첫 기동 시 자동 생성 → 별도 작업 불필요
+    # - 일반 사용자: workspace/<user>, homes/<user> 미리 생성 + chown
+    if [ -n "$USERNAME" ] && [ "$USERNAME" != "root" ]; then
+        mkdir -p "${VOLUME_PATH}/workspace/${USERNAME}" "${VOLUME_PATH}/homes/${USERNAME}"
+        chown -R "$USERNAME":"$USERNAME" \
+            "${VOLUME_PATH}/workspace/${USERNAME}" \
+            "${VOLUME_PATH}/homes/${USERNAME}"
         log "  ${VOLUME_PATH}/{workspace,homes}/${USERNAME} + {data,models} 생성/소유권 설정 완료"
+    elif [ "$USERNAME" = "root" ]; then
+        log "  ${VOLUME_PATH}/{data,models,root-homes} 생성/소유권 설정 완료 (root 모드)"
+    else
+        log "  ${VOLUME_PATH}/{data,models,root-homes} 생성/소유권 설정 완료 (USERNAME 미설정)"
     fi
 
     # --- 시스템 업데이트 + 커널 패키지 ---

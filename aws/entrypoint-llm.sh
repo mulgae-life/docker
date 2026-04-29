@@ -62,13 +62,20 @@ if [ "$USERNAME" != "root" ]; then
         setup_user_home "/home/${USERNAME}"
     fi
 
-    # 홈 디렉토리 초기화 (bind mount 시 빈 디렉토리 복원)
+    # 홈 디렉토리 초기화 (bind mount 시 빈 디렉토리/UID 불일치 모두 처리)
+    # - 빈 홈: /etc/skel 복원 (bind mount 첫 기동)
+    # - UID 불일치: 호스트에서 다른 UID로 만들어진 홈 디렉토리 보정
+    # - 두 케이스 모두 setup_user_home 호출 → bashrc/tmux/git 설정 일관성 보장
+    #   (setup_user_home은 idempotent: grep -q / [ -f ] 가드로 중복 추가 방지)
     HOME_DIR="/home/$USERNAME"
-    if [ -d "$HOME_DIR" ] && [ -z "$(ls -A "$HOME_DIR" 2>/dev/null)" ]; then
-        cp -a /etc/skel/. "$HOME_DIR/" 2>/dev/null || true
+    if [ -d "$HOME_DIR" ]; then
+        if [ -z "$(ls -A "$HOME_DIR" 2>/dev/null)" ]; then
+            cp -a /etc/skel/. "$HOME_DIR/" 2>/dev/null || true
+        fi
+        if [ "$(stat -c %u "$HOME_DIR")" != "$CONTAINER_UID" ]; then
+            chown -R "${USERNAME}:${USERNAME}" "$HOME_DIR"
+        fi
         setup_user_home "$HOME_DIR"
-    elif [ -d "$HOME_DIR" ] && [ "$(stat -c %u "$HOME_DIR")" != "$CONTAINER_UID" ]; then
-        chown -R "${USERNAME}:${USERNAME}" "$HOME_DIR"
     fi
 
     if [ "$MODE" = "dev" ] && [ -d /usr/local/nvm ]; then

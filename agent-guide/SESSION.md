@@ -26,15 +26,14 @@ last-updated: 2026-04-29
 |---------|------|------|
 | P1 | `llm-serving/sglang/` 디렉토리 골격 (운영 가이드 + 런처 + 설정 + 테스트) | Todo |
 | P2 | `llm-serving/stt/` 디렉토리 골격 (Whisper 등 STT 전용 서빙) | Todo |
-| P2 | `aws/` 추가 안전성·정합성 보강 (최근 흐름 연속) | In progress |
+| P2 | **RTX PRO 6000 Blackwell 운영 이전 후 fused MoE 튜닝**: `benchmark_moe.py`로 `E=128,N=352,device_name=NVIDIA_RTX_PRO_6000_Blackwell_Workstation_Edition,dtype=fp8_w8a8.json` 생성 → site-packages `vllm/model_executor/layers/fused_moe/configs/`에 배치 → 가능하면 vLLM 본가 PR. 트리거: 운영 환경 셋업 완료 시점 | Todo |
 | P3 | `agent-guide/` MCP 도구 섹션 채우기 (필요 시) | Todo |
 
 ---
 
 ## 기타 이슈
 
-- `llm-serving/vllm/vllm_config.yaml`에 unstaged 로컬 변경이 있음 (작업 외 변경, 사용자 직접 처리 예정)
-- `agent-guide/` 자체는 untracked 상태 — 첫 커밋 필요
+- `llm-serving/vllm/{VLLM_OPS_GUIDE.md, start.sh, vllm_config.yaml}`에 unstaged 로컬 변경 (작업 외 변경, 사용자 직접 처리 예정)
 
 ---
 
@@ -68,9 +67,34 @@ last-updated: 2026-04-29
 |------|--------|
 | `b3159e9` | refactor: 레포 구조 재편 (my-docker-server / aws / llm-serving) |
 | `60d148a` | docs: README 호스트 경로 표기 명확화 + .gitignore EOF newline |
-
-> `60d148a`는 `origin/main`에 push 대기 중 (사용자 직접 push 예정).
+| `d80e3bb` | docs: agent-guide 3종 초기화 (GUIDE / PROJECT / SESSION) |
 
 #### 현재 상태
 - 레포 구조 재편 + 문서 정합성 확보 완료
 - 다음: SGLang/STT 서빙 디렉토리 골격, aws 후속 보강
+
+---
+
+### 2026-04-29 (추가 세션)
+
+#### 세션 목표
+- `aws/` P2 안전성·정합성 보강 4건 일괄 적용
+- 내부망 운영 정책 문서화
+
+#### 변경 파일
+| 파일 | 변경 유형 | 요약 |
+|------|----------|------|
+| `aws/entrypoint-llm.sh` | 수정 | 빈 홈/UID 불일치 분기 통합 → 두 케이스 모두 `setup_user_home` 호출 (P2.5) |
+| `aws/setup-ec2.sh` | 수정 | `/volume`을 `root:root` + `0775`로 통일, `root-homes` 사전 생성, USERNAME 분기 3종 명시 (P2.7) |
+| `aws/requirements.txt` | 수정 | `pytest>=9.0.0` → `pytest>=8.0` 보수화 (P2.8) |
+| `aws/README.md` | 수정 | §1 내부망 표기 박스 + §9-2 rebuild 한계(`down→up` 사이클) 안내 (P2.6) |
+| `aws/ssh-config-sample` | 수정 | 호스트 IP 갱신 (`3.35.12.44` → `3.38.195.121`) |
+
+#### 결정 사항
+- **내부망 운영 정책**: HF_TOKEN/IP/PASSWORD 등 시크릿 노출 검토 적용 안 함. 정합성·안정성·운영 편의성에 집중. memory `project_internal_network.md`에 영구 저장
+- `/volume` 자체 소유권은 컨테이너 동작에 무관(직접 마운트 없음) → 정합성 차원에서 `root:root` 통일
+- `user.sh rebuild`는 `PASSWORD/GPU/MODE` 보존이 의도된 설계 → 코드 변경 대신 README 명시로 해결
+
+#### 현재 상태
+- aws P2 4건 + 부가 1건 모두 적용 + 셸 문법 검증 + 정합성 cross-check 통과
+- 추가 검증 필요(EC2 환경): `docker compose build` 의존성 / `setup-ec2.sh` 재실행 멱등성
