@@ -125,6 +125,10 @@ sudo ~/aws/user.sh up cho    --password 1234 --gpus 0
 # 운영 root 컨테이너 (SSH 불가, code-server 전용)
 sudo ~/aws/user.sh up prd-job --root --password aiteam12 --gpus all
 
+# 다중 root 컨테이너 (서비스별 분리 — 한 EC2에서 동시 운영)
+sudo ~/aws/user.sh up service-a --root --service-port 5031 --code-port 5510 --gpus 0,1
+sudo ~/aws/user.sh up service-b --root --service-port 5015 --code-port 5520 --gpus 2,3
+
 sudo ~/aws/user.sh list                  # 컨테이너 목록
 sudo ~/aws/user.sh down jin              # 중지 + 제거 (데이터는 /volume 보존)
 sudo ~/aws/user.sh rebuild               # 이미지 변경 후 전체 재생성
@@ -196,7 +200,7 @@ docker compose up -d
 - **`USERNAME=root`**: OS 사용자 생성 스킵, `/root` 홈 사용
 - **`/root` 영속화**: 호스트 `/volume/root`에 마운트 (bash history, code-server 설정 보존)
 - **SSH 접속 불가** → SSM 포트 포워딩으로 code-server 접근만 가능 (§7-2)
-- **단일 운영계 슬롯**: `user.sh --root`도 동일한 `.env` 포트(`LLM_SSH_PORT`/`LLM_EXTRA_PORTS`/`LLM_CODE_SERVER_PORT`)를 사용 → compose `llm-root`와 동시 운용 불가. 여러 운영 컨테이너가 필요하면 `.env` 포트를 변경하고 `user.sh --root`로 별도 기동 (홈은 `/volume/root-homes/<name>`에 컨테이너별 독립 보존)
+- **다중 운영계 슬롯**: `user.sh --root`는 `--service-port`/`--code-port` 인자로 컨테이너별 호스트 포트를 분리할 수 있어 한 EC2에서 다수 동시 운용 가능. 인자 미지정 시 `.env`(`LLM_EXTRA_PORTS`/`LLM_CODE_SERVER_PORT`) 폴백이라 compose `llm-root`와 같은 포트가 되어 충돌하므로, **다중 운용 시 인자 명시 필수**. 홈은 `/volume/root-homes/<name>`에 컨테이너별 독립 보존, `rebuild` 시 라벨에 저장된 포트가 그대로 복원됨.
 
 ---
 
