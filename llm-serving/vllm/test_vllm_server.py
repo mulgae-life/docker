@@ -986,7 +986,7 @@ def parse_args():
     p.add_argument("--base-url", default="http://localhost:5016", help="vLLM 서버 URL (기본: http://localhost:5015)")
     p.add_argument(
         "--model", default=None,
-        help="모델명 (미지정 시 base-url 포트 → gateways/<port>.yaml → instances/<name>.yaml의 served_model_name 자동 추출)",
+        help="모델명 (미지정 시 자동 추출: 1) base-url의 /v1/models API → 2) 로컬 gateways/<port>.yaml + instances/<name>.yaml fallback)",
     )
     p.add_argument("--category", nargs="*", choices=list(CATEGORIES.keys()), help="실행할 카테고리 (미지정 시 전체)")
     p.add_argument("--list", action="store_true", help="카테고리 목록 출력")
@@ -995,9 +995,26 @@ def parse_args():
     return p.parse_args()
 
 
+def _resolve_model_from_api(base_url: str, timeout: float = 5.0) -> str:
+    """OpenAI 호환 /v1/models 엔드포인트로 모델명을 조회한다.
+    원격 서버에서도 yaml 사본 없이 동작. 게이트웨이가 listen 중이고
+    backend가 살아있을 때만 응답."""
+    url = f"{base_url.rstrip('/')}/v1/models"
+    req = urllib.request.Request(url, headers={"Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        payload = json.loads(resp.read().decode("utf-8"))
+    data = payload.get("data") or []
+    if not data:
+        raise RuntimeError(f"{url}: data 비어있음")
+    model_id = data[0].get("id")
+    if not model_id:
+        raise RuntimeError(f"{url}: 첫 모델의 id 누락")
+    return model_id
+
+
 def _resolve_model_from_config(base_url: str) -> str:
-    """base_url의 포트로 gateways/<port>.yaml을 찾고, 매칭되는 instances/<name>.yaml의
-    served_model_name을 반환한다. LB 시나리오에서는 첫 매칭 인스턴스를 사용한다."""
+    """로컬 fallback: base_url 포트 → gateways/<port>.yaml → 매칭 instances/<name>.yaml의
+    served_model_name. 원격에서 같은 레포 사본을 들고 있을 때 / 게이트웨이가 다운일 때 유용."""
     import glob
     import yaml
     from urllib.parse import urlparse
@@ -1005,16 +1022,12 @@ def _resolve_model_from_config(base_url: str) -> str:
     parsed = urlparse(base_url)
     port = parsed.port
     if port is None:
-        raise RuntimeError(
-            f"--base-url에서 포트를 추출할 수 없습니다: {base_url}. --model을 직접 지정하세요."
-        )
+        raise RuntimeError(f"--base-url에서 포트를 추출할 수 없습니다: {base_url}")
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
     gw_yaml = os.path.join(base_dir, "gateways", f"{port}.yaml")
     if not os.path.isfile(gw_yaml):
-        raise RuntimeError(
-            f"게이트웨이 설정 없음: {gw_yaml}. --model을 직접 지정하세요."
-        )
+        raise RuntimeError(f"게이트웨이 설정 없음: {gw_yaml}")
 
     with open(gw_yaml, encoding="utf-8") as f:
         gw = yaml.safe_load(f) or {}
@@ -1036,9 +1049,24 @@ def _resolve_model_from_config(base_url: str) -> str:
         return model.split("/")[-1] if "/" in model else model
 
     raise RuntimeError(
-        f"게이트웨이 :{gateway_port}와 매칭되는 인스턴스가 없습니다: {instances_dir}. "
-        "--model을 직접 지정하세요."
+        f"게이트웨이 :{gateway_port}와 매칭되는 인스턴스 yaml이 {instances_dir}에 없습니다."
     )
+
+
+def _resolve_model_auto(base_url: str) -> str:
+    """모델명 자동 추출: /v1/models API 우선 → 로컬 yaml fallback.
+    원격 서버여도 게이트웨이만 살아있으면 동작. 두 경로 모두 실패 시 명확한 에러."""
+    try:
+        return _resolve_model_from_api(base_url)
+    except Exception as api_err:
+        try:
+            return _resolve_model_from_config(base_url)
+        except Exception as cfg_err:
+            raise RuntimeError(
+                "모델명 자동 추출 실패. --model을 직접 지정하세요.\n"
+                f"  /v1/models 시도: {api_err}\n"
+                f"  로컬 yaml fallback: {cfg_err}"
+            ) from cfg_err
 
 
 def main():
@@ -1051,7 +1079,7 @@ def main():
             print(f"  {key:<12} {desc}")
         return
 
-    model = args.model or _resolve_model_from_config(args.base_url)
+    model = args.model or _resolve_model_auto(args.base_url)
 
     ctx = TestContext(
         base_url=args.base_url.rstrip("/"),

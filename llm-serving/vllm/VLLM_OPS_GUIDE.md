@@ -71,12 +71,16 @@ curl http://3.38.195.121:5016/v1/chat/completions \
 cd /workspace/llm-serving/vllm
 
 ./start.sh up                # 전체 인스턴스 + 게이트웨이 기동
-./start.sh up gemma          # 단일 인스턴스 (instances/gemma.yaml)
+./start.sh up gemma          # 인스턴스 단독 (instances/gemma.yaml)
+./start.sh up 5016           # 게이트웨이 단독 (gateways/5016.yaml)
 ./start.sh status            # 상태 확인
 ./start.sh down              # 전체 중지
-./start.sh down gemma        # 단일 인스턴스 중지
+./start.sh down gemma        # 인스턴스 단독 중지
+./start.sh down 5016         # 게이트웨이 단독 중지
 ./start.sh restart [name]    # 재시작 (인자 없으면 전체)
 ```
+
+`[name]` 인자는 자동 라우팅됩니다: `instances/<name>.yaml`이 존재하면 인스턴스 명령, `gateways/<name>.yaml`이 존재하면 게이트웨이 명령. 둘 다 없으면 즉시 에러로 후보 목록 출력.
 
 `start.sh`는 `instances/*.yaml`과 `gateways/*.yaml`을 자동 순회합니다. 게이트웨이는 인스턴스 yaml의 `gateway_port` 메타 키로 backends를 자동 매칭(`discover_from`)하므로, 인스턴스 추가 시 yaml 한 파일만 추가하면 됩니다.
 
@@ -160,12 +164,23 @@ chatbot-poc (.env)
 cd /workspace/llm-serving/vllm
 
 ./start.sh up                # 전체 인스턴스 + 게이트웨이 기동
-./start.sh up <name>         # 단일 인스턴스 기동 (instances/<name>.yaml). 게이트웨이는 미터치
+./start.sh up <name>         # 단독 기동 (자동 라우팅 — 아래 표 참조)
 ./start.sh down              # 게이트웨이 → 인스턴스 순 중지
-./start.sh down <name>       # 단일 인스턴스 중지
+./start.sh down <name>       # 단독 중지
 ./start.sh status            # 상태 확인
 ./start.sh restart [name]    # 재시작 (인자 없으면 전체)
 ```
+
+**`[name]` 자동 라우팅 규칙**
+
+| `[name]` 형태 | 매칭 yaml | 동작 |
+|--------------|-----------|------|
+| 모델명 (예: `gemma`, `qwen`) | `instances/<name>.yaml` | 인스턴스만 처리, 게이트웨이 미터치 |
+| 포트 숫자 (예: `5015`, `5016`) | `gateways/<name>.yaml` | 게이트웨이만 처리, 인스턴스 미터치 |
+| (생략) | 전체 | 인스턴스 + 게이트웨이 모두 |
+| 매칭 없음 | — | 즉시 에러 + 인스턴스/게이트웨이 후보 목록 출력 |
+
+> 인스턴스 yaml은 모델명, 게이트웨이 yaml은 포트 숫자로 명명되어 충돌 가능성이 없습니다. 만일 충돌하면(`instances/X.yaml`과 `gateways/X.yaml` 동명) 에러로 멈춥니다.
 
 ### 3.2 GPU 배치 규칙
 
@@ -1358,10 +1373,13 @@ cp E=128,N=352,device_name=NVIDIA_RTX_PRO_6000_Blackwell_Workstation_Edition,dty
 ```bash
 cd /workspace/chatbot-poc/scripts/vllm
 
-# 전체 테스트 (모델명은 인스턴스 yaml에서 자동 추출)
+# 전체 테스트 (모델명 자동 추출 — 아래 우선순위)
 python test_vllm_server.py
 
-# 커스텀 서버·모델
+# 원격 서버 — 로컬 yaml 사본 없어도 동작 (게이트웨이가 listen 중이면)
+python test_vllm_server.py --base-url http://gpu-server:5015
+
+# 모델명 명시
 python test_vllm_server.py --base-url http://gpu-server:5015 --model MyModel
 
 # 특정 카테고리만
@@ -1373,6 +1391,17 @@ python test_vllm_server.py --list
 # 상세 출력
 python test_vllm_server.py -v
 ```
+
+**모델명 자동 추출 우선순위**
+
+| 순위 | 경로 | 사용 조건 |
+|------|------|----------|
+| 1 | `--model <name>` 인자 | 사용자 직접 지정 (최우선) |
+| 2 | `{base_url}/v1/models` API 첫 결과 (timeout 5s) | 게이트웨이가 listen + backend ready |
+| 3 | 로컬 `gateways/<port>.yaml` → `instances/<name>.yaml`의 `served_model_name` | 같은 레포 사본 보유 시 fallback |
+| 실패 | 두 사유 합쳐 RuntimeError | 위 모두 실패 시 — `--model`을 직접 지정 |
+
+> 원격 서버 테스트 시 로컬에 yaml 사본이 없어도 2번 경로(`/v1/models`)가 응답하면 정상 동작합니다.
 
 ### 10.2 테스트 카테고리
 

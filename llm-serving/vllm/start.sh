@@ -9,14 +9,20 @@
 # 게이트웨이는 instances/*.yaml 중 gateway_port == 자기 포트인 것을
 # 자동으로 backends에 등록한다(vllm_gateway.py의 discover_from).
 #
-# 사용법:
+# 사용법 ([name]은 인스턴스/게이트웨이 yaml 파일명에서 자동 감지):
 #   ./start.sh up                # 전체 인스턴스 + 모든 게이트웨이 기동
-#   ./start.sh up gemma          # 단일 인스턴스만 기동 (instances/gemma.yaml)
-#   ./start.sh up qwen           # 단일 인스턴스만 기동 (instances/qwen.yaml)
+#   ./start.sh up gemma          # instances/gemma.yaml 단독 기동 (게이트웨이 미터치)
+#   ./start.sh up 5015           # gateways/5015.yaml 단독 기동 (인스턴스 미터치)
 #   ./start.sh down              # 전체 중지 (게이트웨이 → 인스턴스 순)
-#   ./start.sh down gemma        # 단일 인스턴스만 중지
+#   ./start.sh down qwen         # instances/qwen.yaml 단독 중지
+#   ./start.sh down 5016         # gateways/5016.yaml 단독 중지
 #   ./start.sh status            # 상태 확인
-#   ./start.sh restart [name]    # 재시작
+#   ./start.sh restart [name]    # 재시작 ([name] 동일 자동 감지)
+#
+# 라우팅 규칙:
+#   [name]이 instances/<name>.yaml로 존재 → 인스턴스 명령
+#   [name]이 gateways/<name>.yaml로 존재 → 게이트웨이 명령
+#   둘 다 없으면 즉시 에러
 #
 # 하위 호환:
 #   ./start.sh start = up,  ./start.sh stop = down
@@ -92,22 +98,36 @@ get_pid() {
 }
 
 list_instance_yamls() {
-    # 단일 인자(name) 주어지면 그것만, 아니면 전체 *.yaml
-    local target="${1:-}"
-    if [ -n "$target" ]; then
-        local path="$INSTANCES_DIR/${target}.yaml"
-        if [ ! -f "$path" ]; then
-            echo "ERROR: 인스턴스 yaml 없음: $path" >&2
-            return 1
-        fi
-        echo "$path"
-    else
-        ls "$INSTANCES_DIR"/*.yaml 2>/dev/null | sort
-    fi
+    ls "$INSTANCES_DIR"/*.yaml 2>/dev/null | sort
 }
 
 list_gateway_yamls() {
     ls "$GATEWAYS_DIR"/*.yaml 2>/dev/null | sort
+}
+
+# [name]을 instances/ 또는 gateways/로 라우팅. 결과: "all" | "instance" | "gateway"
+# 매칭 실패 시 stderr 에러 메시지 + return 1.
+detect_target_kind() {
+    local target="$1"
+    if [ -z "$target" ]; then
+        echo "all"; return 0
+    fi
+    local inst_path="$INSTANCES_DIR/${target}.yaml"
+    local gw_path="$GATEWAYS_DIR/${target}.yaml"
+    if [ -f "$inst_path" ] && [ -f "$gw_path" ]; then
+        echo "ERROR: '$target'이 instances/와 gateways/ 양쪽에 존재합니다. 파일명 충돌." >&2
+        return 1
+    fi
+    if [ -f "$inst_path" ]; then
+        echo "instance"; return 0
+    fi
+    if [ -f "$gw_path" ]; then
+        echo "gateway"; return 0
+    fi
+    echo "ERROR: '$target' — instances/${target}.yaml 또는 gateways/${target}.yaml 없음" >&2
+    echo "  인스턴스: $(ls "$INSTANCES_DIR"/*.yaml 2>/dev/null | xargs -n1 basename | sed 's/\.yaml$//' | tr '\n' ' ')" >&2
+    echo "  게이트웨이: $(ls "$GATEWAYS_DIR"/*.yaml 2>/dev/null | xargs -n1 basename | sed 's/\.yaml$//' | tr '\n' ' ')" >&2
+    return 1
 }
 
 # ── 명령 구현 ─────────────────────────────────────────
@@ -199,56 +219,71 @@ stop_gateway() {
 
 cmd_up() {
     local target="${1:-}"
-    echo "═══ vLLM 클러스터 시작 ═══"
-    if [ -n "$target" ]; then
-        echo "  대상: 인스턴스 '$target' 단일 (게이트웨이는 별도)"
-    fi
-    echo ""
+    local kind
+    kind=$(detect_target_kind "$target") || exit 1
 
-    # 1) 인스턴스 기동
-    while IFS= read -r yaml_path; do
-        [ -z "$yaml_path" ] && continue
-        start_instance "$yaml_path"
-    done < <(list_instance_yamls "$target")
-
-    # 2) 단일 인스턴스 모드면 게이트웨이는 건드리지 않음 (이미 떠있는 게이트웨이가 자동 감지)
-    if [ -n "$target" ]; then
-        echo ""
-        echo "단일 인스턴스 모드 — 게이트웨이는 기존 상태 유지 (HealthChecker가 자동 감지)"
-        return
-    fi
-
-    # 3) 전체 모드: 게이트웨이도 모두 기동
-    echo ""
-    while IFS= read -r yaml_path; do
-        [ -z "$yaml_path" ] && continue
-        start_gateway "$yaml_path"
-    done < <(list_gateway_yamls)
-
-    echo ""
-    echo "상태 확인: ./start.sh status"
+    case "$kind" in
+        instance)
+            echo "═══ 인스턴스 단독 기동: $target (게이트웨이 미터치) ═══"
+            echo ""
+            start_instance "$INSTANCES_DIR/${target}.yaml"
+            echo ""
+            echo "게이트웨이는 기존 상태 유지 (HealthChecker가 자동 감지)"
+            ;;
+        gateway)
+            echo "═══ 게이트웨이 단독 기동: $target (인스턴스 미터치) ═══"
+            echo ""
+            start_gateway "$GATEWAYS_DIR/${target}.yaml"
+            ;;
+        all)
+            echo "═══ vLLM 클러스터 전체 시작 ═══"
+            echo ""
+            while IFS= read -r yaml_path; do
+                [ -z "$yaml_path" ] && continue
+                start_instance "$yaml_path"
+            done < <(list_instance_yamls)
+            echo ""
+            while IFS= read -r yaml_path; do
+                [ -z "$yaml_path" ] && continue
+                start_gateway "$yaml_path"
+            done < <(list_gateway_yamls)
+            echo ""
+            echo "상태 확인: ./start.sh status"
+            ;;
+    esac
 }
 
 cmd_down() {
     local target="${1:-}"
-    echo "═══ vLLM 클러스터 중지 ═══"
-    echo ""
+    local kind
+    kind=$(detect_target_kind "$target") || exit 1
 
-    # 1) 게이트웨이 먼저 중지 (전체 모드만)
-    if [ -z "$target" ]; then
-        while IFS= read -r yaml_path; do
-            [ -z "$yaml_path" ] && continue
-            stop_gateway "$yaml_path"
-        done < <(list_gateway_yamls)
-        echo ""
-    fi
-
-    # 2) 인스턴스 중지
-    while IFS= read -r yaml_path; do
-        [ -z "$yaml_path" ] && continue
-        stop_instance "$yaml_path"
-    done < <(list_instance_yamls "$target")
-
+    case "$kind" in
+        instance)
+            echo "═══ 인스턴스 단독 중지: $target (게이트웨이 미터치) ═══"
+            echo ""
+            stop_instance "$INSTANCES_DIR/${target}.yaml"
+            ;;
+        gateway)
+            echo "═══ 게이트웨이 단독 중지: $target (인스턴스 미터치) ═══"
+            echo ""
+            stop_gateway "$GATEWAYS_DIR/${target}.yaml"
+            ;;
+        all)
+            echo "═══ vLLM 클러스터 전체 중지 ═══"
+            echo ""
+            # 게이트웨이 먼저 → 인스턴스 (트래픽 차단 후 모델 종료)
+            while IFS= read -r yaml_path; do
+                [ -z "$yaml_path" ] && continue
+                stop_gateway "$yaml_path"
+            done < <(list_gateway_yamls)
+            echo ""
+            while IFS= read -r yaml_path; do
+                [ -z "$yaml_path" ] && continue
+                stop_instance "$yaml_path"
+            done < <(list_instance_yamls)
+            ;;
+    esac
     echo ""
     echo "완료"
 }
@@ -297,10 +332,13 @@ cmd_restart() {
     cmd_up "$target"
 }
 
-case "${1:-up}" in
-    up|start)     shift || true; cmd_up "${1:-}" ;;
-    down|stop)    shift || true; cmd_down "${1:-}" ;;
-    status)       cmd_status ;;
-    restart)      shift || true; cmd_restart "${1:-}" ;;
-    *)            echo "사용법: $0 {up|down|status|restart} [name]"; exit 1 ;;
-esac
+# source 시에는 함수만 정의되도록 main 가드. 직접 실행(./start.sh, bash start.sh)일 때만 case 분기 실행.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    case "${1:-up}" in
+        up|start)     shift || true; cmd_up "${1:-}" ;;
+        down|stop)    shift || true; cmd_down "${1:-}" ;;
+        status)       cmd_status ;;
+        restart)      shift || true; cmd_restart "${1:-}" ;;
+        *)            echo "사용법: $0 {up|down|status|restart} [name]"; exit 1 ;;
+    esac
+fi
