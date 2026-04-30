@@ -1,0 +1,70 @@
+# ═══════════════════════════════════════════════════════
+# vLLM Gateway — :5016
+# ═══════════════════════════════════════════════════════
+#
+# 백엔드 자동 디스커버리:
+#   discover_from 디렉토리(../instances)의 *.yaml 중
+#   gateway_port == 자기 포트(여기선 5016) 인 인스턴스를 자동으로
+#   backends에 등록한다. 매칭 결과는 게이트웨이 기동 로그에서 확인 가능.
+#
+# 게이트웨이 추가 시 본 파일을 복사하여 아래 값만 바꾼다:
+#   파일명(<port>.yaml), 헤더의 포트 표기, gateway.port
+# 인스턴스 측에서 gateway_port를 일치시키면 자동 매칭된다.
+#
+# LB 시나리오 (같은 게이트웨이 아래 vLLM 여러 대):
+#   instances/ 디렉토리에 같은 gateway_port를 갖는 yaml을 추가하면
+#   게이트웨이 재기동 시 자동으로 backends에 포함되어 LB된다.
+#
+# 사용법:
+#   python vllm_gateway.py -c gateways/5016.yaml
+# ═══════════════════════════════════════════════════════
+
+
+# ── 게이트웨이 서버 ──────────────────────────────────
+gateway:
+  host: "0.0.0.0"
+  port: 5016                    # 클라이언트가 접근하는 포트 (방화벽 오픈 대상)
+  log_level: "info"
+
+# ── 백엔드 디스커버리 ────────────────────────────────
+# 이 yaml 파일 기준 상대 경로. instances/*.yaml 중
+# gateway_port == 자기 게이트웨이 포트인 항목만 backends로 등록한다.
+# (수동 오버라이드가 필요하면 backends: 리스트를 직접 명시 — 그쪽이 우선)
+discover_from: "../instances"
+
+# ── 헬스체크 ─────────────────────────────────────────
+health_check:
+  interval_seconds: 10
+  timeout_seconds: 3
+  unhealthy_threshold: 3
+  healthy_threshold: 1
+
+# ── 서버 웜업 (CUDA 예열) ────────────────────────────
+warmup:
+  enabled: true
+  boot_poll:
+    interval_seconds: 5
+    timeout_seconds: 900        # 모델 로딩 시간 포함 상한
+  inference:
+    prompt: "자동차보험 대인배상 담보에 대해 상세히 설명해주세요."
+    max_tokens: 256
+    timeout_seconds: 120
+
+# ── 프리픽스 캐시 웜업 ───────────────────────────────
+prefix_cache_warmup:
+  enabled: true
+  max_tokens: 1
+  timeout_seconds: 60
+  system_prompt: |
+    당신은 한화손해보험의 전문 AI 어시스턴트입니다.
+    보험 상품, 담보, 청구 절차 등에 대해 정확하고 친절하게 답변합니다.
+
+# ── 백엔드 인증 ──────────────────────────────────────
+# vLLM에 --api-key를 설정한 경우, 게이트웨이가 내부 요청에 이 키를 사용한다.
+# backend_api_key: "your-secret-key"
+
+# ── HTTP 클라이언트 ──────────────────────────────────
+http_client:
+  timeout_seconds: 300
+  connect_timeout_seconds: 5
+  max_connections: 100

@@ -2,59 +2,68 @@
 # ═══════════════════════════════════════════════════════
 # vLLM 클러스터 시작/중지/상태 스크립트
 #
-# 모든 설정은 vllm_config.yaml, vllm_gateway_config.yaml에서 관리.
-# 이 스크립트는 config를 읽고 실행만 한다.
+# 디렉토리 규약:
+#   instances/<name>.yaml   — vLLM 인스턴스 1대 정의 (port, gpus, model, gateway_port)
+#   gateways/<port>.yaml    — 게이트웨이 1대 정의 (gateway.port, discover_from)
+#
+# 게이트웨이는 instances/*.yaml 중 gateway_port == 자기 포트인 것을
+# 자동으로 backends에 등록한다(vllm_gateway.py의 discover_from).
 #
 # 사용법:
-#   ./start.sh              # 전체 기동
-#   ./start.sh stop         # 전체 중지
-#   ./start.sh status       # 상태 확인
-#   ./start.sh restart      # 전체 재시작
+#   ./start.sh up                # 전체 인스턴스 + 모든 게이트웨이 기동
+#   ./start.sh up gemma          # 단일 인스턴스만 기동 (instances/gemma.yaml)
+#   ./start.sh up qwen           # 단일 인스턴스만 기동 (instances/qwen.yaml)
+#   ./start.sh down              # 전체 중지 (게이트웨이 → 인스턴스 순)
+#   ./start.sh down gemma        # 단일 인스턴스만 중지
+#   ./start.sh status            # 상태 확인
+#   ./start.sh restart [name]    # 재시작
+#
+# 하위 호환:
+#   ./start.sh start = up,  ./start.sh stop = down
 # ═══════════════════════════════════════════════════════
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+INSTANCES_DIR="$SCRIPT_DIR/instances"
+GATEWAYS_DIR="$SCRIPT_DIR/gateways"
 LOG_DIR="$SCRIPT_DIR/logs"
 mkdir -p "$LOG_DIR"
 
-# ── Config 파싱 ──────────────────────────────────────
-# gpus를 tensor_parallel_size 단위로 그룹핑하여 인스턴스 목록 생성.
-# 예) gpus: [0,1,2,3], tp: 2 → 인스턴스 2개: GPU(0,1):7070, GPU(2,3):7071
-eval "$(python3 - "$SCRIPT_DIR" <<'PYEOF'
-import yaml, sys
-
-d = sys.argv[1]
-vc = yaml.safe_load(open(f"{d}/vllm_config.yaml"))
-gc = yaml.safe_load(open(f"{d}/vllm_gateway_config.yaml"))
-
-gpus = vc.get("gpus", [0])
-tp = vc.get("tensor_parallel_size", 1)
-base_port = vc.get("port", 7070)
-gw_port = gc["gateway"]["port"]
-
-if len(gpus) % tp != 0:
-    print(f'echo "ERROR: gpus({len(gpus)}개)가 tensor_parallel_size({tp})로 나누어지지 않습니다" >&2; exit 1')
-    sys.exit(0)
-
-n = len(gpus) // tp
-print(f"INSTANCE_COUNT={n}")
-print(f"BASE_PORT={base_port}")
-print(f"GATEWAY_PORT={gw_port}")
-for i in range(n):
-    group = gpus[i * tp:(i + 1) * tp]
-    cuda_devs = ",".join(str(g) for g in group)
-    label = "_".join(str(g) for g in group)
-    print(f"INST_GPUS_{i}='{cuda_devs}'")
-    print(f"INST_PORT_{i}={base_port + i}")
-    print(f"INST_LABEL_{i}='{label}'")
+# ── 인스턴스/게이트웨이 yaml 파싱 ────────────────────
+# instances/*.yaml에서 (name, port, gpus_csv, gateway_port) 추출
+# gateways/*.yaml에서 (port) 추출
+parse_instance_yaml() {
+    local yaml_path="$1"
+    python3 - "$yaml_path" <<'PYEOF'
+import sys, yaml, os
+path = sys.argv[1]
+data = yaml.safe_load(open(path)) or {}
+name = os.path.splitext(os.path.basename(path))[0]
+port = data.get("port", "")
+gpus = data.get("gpus", [])
+gpus_csv = ",".join(str(g) for g in gpus)
+gateway_port = data.get("gateway_port", "")
+# 셸 평가용 변수
+print(f"INST_NAME={name}")
+print(f"INST_PORT={port}")
+print(f"INST_GPUS_CSV={gpus_csv}")
+print(f"INST_GATEWAY_PORT={gateway_port}")
 PYEOF
-)"
+}
 
-# Helper: 인스턴스 i의 값 읽기
-inst_gpus()  { eval "echo \$INST_GPUS_$1"; }
-inst_port()  { eval "echo \$INST_PORT_$1"; }
-inst_label() { eval "echo \$INST_LABEL_$1"; }
+parse_gateway_yaml() {
+    local yaml_path="$1"
+    python3 - "$yaml_path" <<'PYEOF'
+import sys, yaml, os
+path = sys.argv[1]
+data = yaml.safe_load(open(path)) or {}
+name = os.path.splitext(os.path.basename(path))[0]
+port = data.get("gateway", {}).get("port", "")
+print(f"GW_NAME={name}")
+print(f"GW_PORT={port}")
+PYEOF
+}
 
 is_running() {
     curl -so /dev/null --connect-timeout 1 "http://127.0.0.1:$1/health" 2>/dev/null
@@ -64,76 +73,156 @@ get_pid() {
     netstat -tlnp 2>/dev/null | awk -v port=":$1" '$4 ~ port {split($7,a,"/"); print a[1]}' || true
 }
 
-cmd_start() {
-    echo "═══ vLLM 클러스터 시작 ═══"
-    echo "  인스턴스: ${INSTANCE_COUNT}개, base_port: $BASE_PORT, gateway: :$GATEWAY_PORT"
-    echo ""
-
-    # vLLM 인스턴스 기동
-    for ((i=0; i<INSTANCE_COUNT; i++)); do
-        gpus=$(inst_gpus $i)
-        port=$(inst_port $i)
-        label=$(inst_label $i)
-
-        if is_running "$port"; then
-            echo "[SKIP]  vLLM GPU $gpus (:$port) — 이미 실행 중"
-            continue
+list_instance_yamls() {
+    # 단일 인자(name) 주어지면 그것만, 아니면 전체 *.yaml
+    local target="${1:-}"
+    if [ -n "$target" ]; then
+        local path="$INSTANCES_DIR/${target}.yaml"
+        if [ ! -f "$path" ]; then
+            echo "ERROR: 인스턴스 yaml 없음: $path" >&2
+            return 1
         fi
-
-        echo "[START] vLLM GPU $gpus (:$port)"
-        # i=0이고 port==BASE_PORT면 config 값과 동일하므로 --port 전달 시
-        # vllm serve가 'Found duplicate keys --port' 경고를 낸다. 중복 방지를 위해
-        # 오버라이드가 필요한 인스턴스(i>0)에만 --port를 전달한다.
-        port_arg=()
-        if (( i > 0 )); then
-            port_arg=(--port "$port")
-        fi
-        nohup python "$SCRIPT_DIR/vllm_server_launcher.py" -g "$gpus" "${port_arg[@]}" \
-            > "$LOG_DIR/vllm_gpu${label}.log" 2>&1 &
-        echo "        PID $!, 로그: logs/vllm_gpu${label}.log"
-    done
-
-    # 게이트웨이 기동
-    echo ""
-    if is_running "$GATEWAY_PORT"; then
-        echo "[SKIP]  Gateway (:$GATEWAY_PORT) — 이미 실행 중"
+        echo "$path"
     else
-        echo "[START] Gateway (:$GATEWAY_PORT)"
-        nohup python "$SCRIPT_DIR/vllm_gateway.py" \
-            > /dev/null 2>&1 &
-        echo "        PID $!, 로그: logs/gateway.log"
+        ls "$INSTANCES_DIR"/*.yaml 2>/dev/null | sort
     fi
+}
+
+list_gateway_yamls() {
+    ls "$GATEWAYS_DIR"/*.yaml 2>/dev/null | sort
+}
+
+# ── 명령 구현 ─────────────────────────────────────────
+
+start_instance() {
+    local yaml_path="$1"
+    eval "$(parse_instance_yaml "$yaml_path")"
+
+    if [ -z "$INST_PORT" ]; then
+        echo "[SKIP]  $INST_NAME — port 키 없음 ($yaml_path)"
+        return
+    fi
+
+    if is_running "$INST_PORT"; then
+        echo "[SKIP]  vLLM $INST_NAME (GPU $INST_GPUS_CSV, :$INST_PORT) — 이미 실행 중"
+        return
+    fi
+
+    echo "[START] vLLM $INST_NAME (GPU $INST_GPUS_CSV, :$INST_PORT, → gateway :$INST_GATEWAY_PORT)"
+    nohup python "$SCRIPT_DIR/vllm_server_launcher.py" \
+        -c "$yaml_path" \
+        -g "$INST_GPUS_CSV" \
+        > "$LOG_DIR/vllm_${INST_NAME}.log" 2>&1 &
+    echo "        PID $!, 로그: logs/vllm_${INST_NAME}.log"
+}
+
+stop_instance() {
+    local yaml_path="$1"
+    eval "$(parse_instance_yaml "$yaml_path")"
+
+    if [ -z "$INST_PORT" ]; then
+        return
+    fi
+
+    local pid
+    pid=$(get_pid "$INST_PORT")
+    if [ -n "$pid" ]; then
+        echo "[STOP]  vLLM $INST_NAME (:$INST_PORT) PID $pid"
+        kill "$pid" 2>/dev/null || true
+    else
+        echo "[SKIP]  vLLM $INST_NAME (:$INST_PORT) — 실행 중 아님"
+    fi
+}
+
+start_gateway() {
+    local yaml_path="$1"
+    eval "$(parse_gateway_yaml "$yaml_path")"
+
+    if [ -z "$GW_PORT" ]; then
+        echo "[SKIP]  gateway $GW_NAME — gateway.port 없음"
+        return
+    fi
+
+    if is_running "$GW_PORT"; then
+        echo "[SKIP]  Gateway $GW_NAME (:$GW_PORT) — 이미 실행 중"
+        return
+    fi
+
+    echo "[START] Gateway $GW_NAME (:$GW_PORT)"
+    nohup python "$SCRIPT_DIR/vllm_gateway.py" -c "$yaml_path" \
+        > "$LOG_DIR/gateway_${GW_NAME}.log" 2>&1 &
+    echo "        PID $!, 로그: logs/gateway_${GW_NAME}.log"
+}
+
+stop_gateway() {
+    local yaml_path="$1"
+    eval "$(parse_gateway_yaml "$yaml_path")"
+
+    if [ -z "$GW_PORT" ]; then
+        return
+    fi
+
+    local pid
+    pid=$(get_pid "$GW_PORT")
+    if [ -n "$pid" ]; then
+        echo "[STOP]  Gateway $GW_NAME (:$GW_PORT) PID $pid"
+        kill "$pid" 2>/dev/null || true
+    else
+        echo "[SKIP]  Gateway $GW_NAME (:$GW_PORT) — 실행 중 아님"
+    fi
+}
+
+cmd_up() {
+    local target="${1:-}"
+    echo "═══ vLLM 클러스터 시작 ═══"
+    if [ -n "$target" ]; then
+        echo "  대상: 인스턴스 '$target' 단일 (게이트웨이는 별도)"
+    fi
+    echo ""
+
+    # 1) 인스턴스 기동
+    while IFS= read -r yaml_path; do
+        [ -z "$yaml_path" ] && continue
+        start_instance "$yaml_path"
+    done < <(list_instance_yamls "$target")
+
+    # 2) 단일 인스턴스 모드면 게이트웨이는 건드리지 않음 (이미 떠있는 게이트웨이가 자동 감지)
+    if [ -n "$target" ]; then
+        echo ""
+        echo "단일 인스턴스 모드 — 게이트웨이는 기존 상태 유지 (HealthChecker가 자동 감지)"
+        return
+    fi
+
+    # 3) 전체 모드: 게이트웨이도 모두 기동
+    echo ""
+    while IFS= read -r yaml_path; do
+        [ -z "$yaml_path" ] && continue
+        start_gateway "$yaml_path"
+    done < <(list_gateway_yamls)
 
     echo ""
     echo "상태 확인: ./start.sh status"
-    echo "서버 상태: curl http://localhost:$GATEWAY_PORT/server-status"
 }
 
-cmd_stop() {
+cmd_down() {
+    local target="${1:-}"
     echo "═══ vLLM 클러스터 중지 ═══"
+    echo ""
 
-    # 게이트웨이 먼저 중지
-    local pid
-    pid=$(get_pid "$GATEWAY_PORT")
-    if [ -n "$pid" ]; then
-        echo "[STOP]  Gateway (:$GATEWAY_PORT) PID $pid"
-        kill "$pid" 2>/dev/null || true
-    else
-        echo "[SKIP]  Gateway (:$GATEWAY_PORT) — 실행 중 아님"
+    # 1) 게이트웨이 먼저 중지 (전체 모드만)
+    if [ -z "$target" ]; then
+        while IFS= read -r yaml_path; do
+            [ -z "$yaml_path" ] && continue
+            stop_gateway "$yaml_path"
+        done < <(list_gateway_yamls)
+        echo ""
     fi
 
-    # vLLM 인스턴스 중지
-    for ((i=0; i<INSTANCE_COUNT; i++)); do
-        gpus=$(inst_gpus $i)
-        port=$(inst_port $i)
-        pid=$(get_pid "$port")
-        if [ -n "$pid" ]; then
-            echo "[STOP]  vLLM GPU $gpus (:$port) PID $pid"
-            kill "$pid" 2>/dev/null || true
-        else
-            echo "[SKIP]  vLLM GPU $gpus (:$port) — 실행 중 아님"
-        fi
-    done
+    # 2) 인스턴스 중지
+    while IFS= read -r yaml_path; do
+        [ -z "$yaml_path" ] && continue
+        stop_instance "$yaml_path"
+    done < <(list_instance_yamls "$target")
 
     echo ""
     echo "완료"
@@ -142,28 +231,40 @@ cmd_stop() {
 cmd_status() {
     echo "═══ vLLM 클러스터 상태 ═══"
 
-    for ((i=0; i<INSTANCE_COUNT; i++)); do
-        gpus=$(inst_gpus $i)
-        port=$(inst_port $i)
-        if is_running "$port"; then
-            echo "[UP]   vLLM GPU $gpus (:$port)"
+    while IFS= read -r yaml_path; do
+        [ -z "$yaml_path" ] && continue
+        eval "$(parse_instance_yaml "$yaml_path")"
+        if is_running "$INST_PORT"; then
+            echo "[UP]   vLLM $INST_NAME (GPU $INST_GPUS_CSV, :$INST_PORT, → gw :$INST_GATEWAY_PORT)"
         else
-            echo "[DOWN] vLLM GPU $gpus (:$port)"
+            echo "[DOWN] vLLM $INST_NAME (GPU $INST_GPUS_CSV, :$INST_PORT, → gw :$INST_GATEWAY_PORT)"
         fi
-    done
+    done < <(list_instance_yamls)
 
     echo ""
-    if is_running "$GATEWAY_PORT"; then
-        echo "[UP]   Gateway (:$GATEWAY_PORT)"
-    else
-        echo "[DOWN] Gateway (:$GATEWAY_PORT)"
-    fi
+    while IFS= read -r yaml_path; do
+        [ -z "$yaml_path" ] && continue
+        eval "$(parse_gateway_yaml "$yaml_path")"
+        if is_running "$GW_PORT"; then
+            echo "[UP]   Gateway $GW_NAME (:$GW_PORT)"
+        else
+            echo "[DOWN] Gateway $GW_NAME (:$GW_PORT)"
+        fi
+    done < <(list_gateway_yamls)
 }
 
-case "${1:-start}" in
-    start)   cmd_start ;;
-    stop)    cmd_stop ;;
-    status)  cmd_status ;;
-    restart) cmd_stop; echo ""; sleep 2; cmd_start ;;
-    *)       echo "사용법: $0 {start|stop|status|restart}"; exit 1 ;;
+cmd_restart() {
+    local target="${1:-}"
+    cmd_down "$target"
+    echo ""
+    sleep 2
+    cmd_up "$target"
+}
+
+case "${1:-up}" in
+    up|start)     shift || true; cmd_up "${1:-}" ;;
+    down|stop)    shift || true; cmd_down "${1:-}" ;;
+    status)       cmd_status ;;
+    restart)      shift || true; cmd_restart "${1:-}" ;;
+    *)            echo "사용법: $0 {up|down|status|restart} [name]"; exit 1 ;;
 esac

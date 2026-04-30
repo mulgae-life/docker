@@ -1,0 +1,390 @@
+# ═══════════════════════════════════════════════════════
+# vLLM 인스턴스 설정 (v0.19.0+) — Qwen/Qwen3.6-35B-A3B-FP8
+# ═══════════════════════════════════════════════════════
+#
+# 대상 GPU: L40S 46GB × 1장 (GPU 1)
+#
+# 게이트웨이 페어:
+#   gateways/5016.yaml(:5016) ← 이 인스턴스(:7080)
+#   discover_from 자동 매칭으로 등록됨 (gateway_port == 5016)
+#
+# 사용법:
+#   ./start.sh up qwen                                   # start.sh를 통한 단일 기동
+#   python vllm_server_launcher.py -c instances/qwen.yaml  # 직접 실행
+#
+# chatbot-poc 연동:
+#   .env의 HF_BASE_URL을 게이트웨이 포트로 설정.
+#   예) HF_BASE_URL=http://localhost:5016/v1
+#
+# 인스턴스 추가 시 본 파일을 복사하여 모델/리소스 값만 바꾼다:
+#   헤더 모델명/포트/GPU 표기, gateway_port, model, port, gpus,
+#   gpu_memory_utilization, mm_processor_kwargs,
+#   tool_call_parser, reasoning_parser
+# 주석/섹션 구조는 모든 인스턴스 yaml에서 동일하게 유지한다.
+# ═══════════════════════════════════════════════════════
+
+
+# ── 메타 (vLLM에는 전달되지 않는 게이트웨이 매칭용 키) ──
+#
+# 이 인스턴스가 소속될 게이트웨이 포트.
+# gateways/<port>.yaml의 discover_from이 instances/ 디렉토리를 스캔해
+# 이 메타 키와 자기 게이트웨이 포트가 일치하는 인스턴스만 backends로 등록한다.
+# vllm_server_launcher.py:_LAUNCHER_KEYS가 이 키를 vllm serve 인자에서 제외한다.
+#
+# 같은 gateway_port를 갖는 인스턴스가 여러 개면 LB 라우팅 대상이 된다.
+gateway_port: 5016
+
+
+# ── 모델 ──────────────────────────────────────────────
+#
+# HuggingFace 모델 ID (허깅페이스에서 복사한 그대로 붙여넣기).
+# 런처가 download_dir과 조합하여 로컬 경로를 자동 해석함.
+# 예) "google/gemma-4-31B-it" → /models/LLM/google/gemma-4-31B-it
+# 네이티브 vllm serve는 HF ID를 HF Hub에서 해석하므로,
+# 폐쇄망에서는 반드시 런처를 사용하거나 오프라인 환경변수를 설정할 것.
+#   런처: 자동 오프라인 모드 + download_dir 경로 조합
+#   네이티브: HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 vllm serve --config ...
+model: Qwen/Qwen3.6-35B-A3B-FP8
+
+# 모델 로컬 저장 루트 디렉토리.
+# {download_dir}/{model} 경로에서 모델을 찾음.
+# 예) /models/LLM + google/gemma-4-31B-it → /models/LLM/google/gemma-4-31B-it
+# 런처는 이 경로를 자동 조합하여 절대 경로로 변환 후 vllm serve에 전달.
+# 네이티브 vllm serve에서는 HF 다운로드 캐시 경로로 사용됨.
+download_dir: /models/LLM
+
+# 양자화 방식.
+# fp8: BF16 체크포인트를 로딩 중 FP8로 온더플라이 양자화 (캘리브레이션 불필요).
+#   vLLM 0.19.0+에서는 가중치를 FP8로 직접 할당 후 레이어별 변환 — L40S 1장으로 가능.
+#   L40S(Ada Lovelace)는 FP8 W8A8 공식 지원. 메모리 ~2x 절감, 처리량 ~1.6x 향상.
+# 사전 양자화 체크포인트 사용 시 생략해도 자동 감지되지만 명시해도 무해.
+quantization: fp8
+
+# 활성화(activation) 데이터 타입.
+# auto: 모델 config.json에서 자동 판단 (권장, gemma-4는 BF16).
+# 명시 지정: bfloat16 | float16 | half
+dtype: auto
+
+# API에서 사용할 모델 별칭.
+# 미설정 시 모델 전체 경로가 모델명이 됨.
+# .env의 CHAT_MODEL과 일치시켜야 API 호출 가능.
+# 런처 사용 시 미설정이면 model에서 자동 추출 (google/gemma-4-31B-it → gemma-4-31B-it).
+# served_model_name: [<별칭>]
+
+# 모델 코드에 custom Python이 포함된 경우 실행 허용.
+# HuggingFace Hub의 일부 모델에 필요하지만,
+# Gemma 4, Qwen3.5/3.6 등은 vLLM에 네이티브 지원되어 불필요.
+# 네이티브 미지원 모델 사용 시 활성화.
+# trust_remote_code: true
+
+
+# ── 서버 ──────────────────────────────────────────────
+#
+# API 서버 바인드 주소.
+# 외부 접근 허용 시 0.0.0.0 으로 변경.
+host: 0.0.0.0
+
+# vLLM 인스턴스 포트 (내부).
+# 클라이언트는 게이트웨이 포트(gateway_port)로 접근하므로 이 포트는 내부 라우팅용.
+# 같은 gateway_port를 갖는 다른 인스턴스와 port가 겹치면 게이트웨이 기동 시
+# vllm_gateway.py의 검증 로직이 ValueError로 거부한다.
+# chatbot-poc .env의 HF_BASE_URL은 이 port가 아닌 게이트웨이 포트를 가리켜야 함.
+port: 7080
+
+# Uvicorn (HTTP 서버) 로그 레벨.
+# debug | info | warning | error | critical
+uvicorn_log_level: info
+
+
+# ── GPU / 메모리 ──────────────────────────────────────
+#
+# 사용할 GPU 번호 목록과 텐서 병렬 크기.
+# 본 인스턴스 1대가 점유할 GPU. 멀티 인스턴스 LB는 instances/ 디렉토리에
+# 같은 gateway_port를 가진 yaml을 추가하는 방식으로 확장한다.
+#
+# 예시 (단일 인스턴스):
+#   gpus: [0]          + tp: 1 → GPU 0 단독
+#   gpus: [0, 1]       + tp: 2 → GPU 0,1 텐서 병렬 (TP=2)
+#   gpus: [0, 1, 2, 3] + tp: 4 → GPU 0,1,2,3 텐서 병렬 (TP=4)
+gpus: [1]
+tensor_parallel_size: 1
+
+# vLLM이 사용할 GPU 메모리 비율 (0.0~1.0).
+# L40S 46GB × 0.95 = ~43.7GB 사용 가능.
+# 나머지는 PyTorch/CUDA 오버헤드 + 멀티모달 vision encoder의 transient
+# 활성화 메모리(F.one_hot 등 (1-util) 외부 영역에서 동적 할당)용으로 예약됨.
+# 모델 가중치가 클수록 KV 캐시 여유를 위해 util을 상향, vision encoder 사용량이
+# 클수록 외부 여유를 위해 하향한다.
+# 운영 권장 범위: 0.85 (멀티모달 비중 큼) ~ 0.92 (모델 가중치 큼).
+gpu_memory_utilization: 0.92
+
+
+# ── 추론 ──────────────────────────────────────────────
+#
+# 모델 컨텍스트 길이 (프롬프트 + 출력 합산).
+# 주의: Gemma 4 31B 모델 자체는 256k를 지원하지만,
+# 현재 기본 운영 프로필(L40S 46GB × 1, tensor_parallel_size: 1)에서는
+# KV cache 메모리 부족으로 262144로 기동되지 않는다.
+# 2026-04-03 실측 로그 기준으로 엔진이 추정한 상한은 약 46464였고,
+# 기본값은 안정 기동 우선으로 12288을 유지한다.
+# 긴 컨텍스트 실험이 필요하면 CLI override 또는 별도 실험용 config를 사용한다.
+max_model_len: 65536 # 12288, 65536, 262144, 170000
+
+# 동시 처리 시퀀스 수.
+# 1: 단일 요청 순차 처리 (메모리 절약, 지연 최소).
+# 높이면 처리량(throughput) 증가, 개별 지연(latency) 증가.
+# 멀티모달 모델에서는 encoder cache 용량에 맞춰 제한 필요.
+# max_num_batched_tokens=98304 기준 이미지 1장 ≈ 16384 tokens → 약 5~6장 수용.
+# encoder cache 초과 시 eviction race로 assertion 크래시 발생 가능.
+max_num_seqs: 2
+
+# 한 번에 배치 처리할 최대 토큰 수.
+# 2의 배수 권장. max_model_len보다 작아도 됨 (chunked prefill이 자동 분할).
+# 멀티모달 모델에서는 encoder_cache_size와 동일값으로 복제됨 (scheduler.py:235).
+# 이미지 1장 ≈ 16384 encoder tokens 기준 98304 → 약 6장 캐시 수용.
+# 동시 요청 N장 처리를 위해서는 (N × 이미지 토큰) + 여유 마진으로 산정.
+max_num_batched_tokens: 16384 # 8192, 16384, 32768, 81920, 98304, 163840
+
+# 재현 가능한 추론을 위한 전역 시드.
+seed: 42
+
+
+# ── Thinking 모드 제어 ────────────────────────────────
+#
+# thinking 모드를 지원하는 모델에서 reasoning 토큰 생성을 제어한다.
+#   Gemma 4   : <|think|> 토큰 기반, <|channel>thought...<channel|> 형식
+#   Qwen3.5/3.6: <think>...</think> 형식
+# 챗봇 기본 용도에서는 thinking을 비활성화하여
+# 불필요한 reasoning 토큰 생성을 막고 응답 지연을 줄인다.
+# thinking이 필요한 경우 아래 reasoning_parser 섹션과 함께 활성화.
+default_chat_template_kwargs:
+  enable_thinking: false
+
+
+# ── 샘플링 기본값 ────────────────────────────────────
+#
+# 모델의 generation_config.json이 vLLM 기본 샘플링 파라미터를 덮어씀.
+#   Gemma 4    : temperature: 1.0, top_k: 64, top_p: 0.95
+#   Qwen3.5/3.6: temperature: 0.6, top_k: 20, top_p: 0.95
+# vLLM 기본값(temperature=1.0, top_k=-1, top_p=1.0)을 쓰려면:
+#   vllm serve --generation-config vllm
+# 보통은 모델 권장값을 그대로 쓰고, 필요 시 API 호출에서 개별 오버라이드.
+
+
+# ── 성능 최적화 ───────────────────────────────────────
+#
+# 프리픽스 캐싱 (Automatic Prefix Caching).
+# 반복되는 시스템 프롬프트의 KV 캐시를 재사용하여 TTFT 감소.
+# 챗봇처럼 동일 시스템 프롬프트를 반복 호출하는 경우 필수급.
+enable_prefix_caching: true
+
+# KV 캐시 데이터 타입.
+# auto(기본): 모델 dtype을 따름 (FP8 모델이면 BF16 KV 캐시).
+# fp8_e4m3: KV 캐시도 FP8로 저장 → 메모리 절반으로 2배 용량 확보.
+#   장점: 같은 GPU로 더 긴 컨텍스트 또는 더 많은 동시 요청 처리 가능.
+#   단점: 미세한 정밀도 손실 (대부분의 경우 체감 어려움).
+#   31B FP8 + L40S 기준, KV 캐시 여유분을 2배로 확장 가능.
+# 가능한 값: auto | fp8_e4m3 | fp8_e5m2
+#   fp8_e4m3: 지수4+가수3 — 정밀도 높고 범위 좁음 (±448). KV 캐시/추론용 권장.
+#   fp8_e5m2: 지수5+가수2 — 정밀도 낮고 범위 넓음 (±57344). 학습(gradient)용.
+#   KV 캐시에는 fp8_e4m3 일택 (추론은 정밀도가 중요).
+kv_cache_dtype: auto
+
+# 텍스트 전용 모드.
+# 멀티모달 모델이지만 텍스트 입력만 사용한다면 true로 두면
+# 이미지/오디오 입력 허용량을 모두 0으로 강제하여 멀티모달 프로파일링/예약
+# 메모리를 줄일 수 있다.
+# 추후 이미지/오디오를 쓸 계획이 생기면 false로 되돌리고
+# 필요 시 아래처럼 세부 한도를 직접 설정한다:
+#   limit_mm_per_prompt:
+#     image: 0
+#     audio: 0
+language_model_only: false
+
+
+# ── 멀티모달 최적화 ───────────────────────────────────
+#
+# vision encoder를 TP 쪼갬(기본 "weights") 대신 data-parallel로 처리한다.
+# 각 TP rank가 encoder 전체 가중치를 복제 보유하고 배치를 나눠 처리 →
+# TP split 통신 오버헤드 제거 + encoder는 가중치가 작고 배치 독립적이라
+# DP가 유리. Qwen3.5/3.6 공식 레시피 권장 값.
+# 지원 확인: Qwen3_5MoeForConditionalGeneration은 MRO 상
+# Qwen3VLForConditionalGeneration(qwen3_vl.py:1449)을 상속 →
+# supports_encoder_tp_data=True. 미지원 모델에서는 vLLM이 warning과 함께
+# "weights"로 자동 폴백(model.py:617-624)하므로 설정 자체는 안전.
+mm_encoder_tp_mode: data
+
+# 전처리된 멀티모달 입력을 프로세스 간 shared memory FIFO로 공유한다.
+# 기본 "lru"는 API server + engine core + TP worker 각각이 캐시를 미러링 →
+# IPC 직렬화 비용 + 메모리 중복. "shm"은 공유 메모리로 중복 제거 +
+# zero-copy 전달 → 동시 이미지 요청의 IPC 지연과 메모리 사용 감소.
+# TP=2 + 멀티모달 동시 요청 구성(max_num_seqs=5)에서 이득 큼.
+mm_processor_cache_type: shm
+
+
+# ── 비전 토큰 예산 (모델별 동작 다름) ─────────────────
+#
+# 모델별 비전 인코더 입력 해상도 예산. mm_processor_kwargs로 전달하며
+# vLLM은 모델 HF processor signature를 inspect하여 알 수 없는 키는
+# WARNING 로그 + 자동 드롭으로 처리한다.
+#
+# Gemma 4 비전 인코더는 이미지당 "soft token" 고정 예산 방식으로 가변 해상도를 처리한다.
+# 기본값 280 soft tokens(≈ 645K 픽셀, ~800×800 수준)은 챗봇 썸네일급에 맞춰져 있어
+# 문서/차트/스크린샷 QA 같은 고해상도 이미지에서는 디테일 손실이 크다.
+#
+# 공식 허용값 (gemma4_mm.py:474-485에 하드코딩된 validator):
+#   70   — 썸네일 (~161K px)
+#   140  — 중저해상도 (~323K px)
+#   280  — 기본 (~645K px, ~800×800)
+#   560  — 문서·차트 QA 최소 권장 (~1.3M px, ~1152×1152)  ← 운영 시작점
+#   1120 — OCR·세밀 디테일 (~2.6M px, ~1620×1620)
+#   ※ 이 다섯 값을 벗어난 값이면 Gemma 4는 `sys.exit(1)`로 기동 실패한다.
+#
+# 트레이드오프: 값이 2× 되면 이미지당 KV/prefill 비용도 선형 증가
+#   → max_num_batched_tokens 상향 or max_num_seqs 하향 검토 필요.
+# 요청 단위 override 지원: chat/completions 요청 body에 mm_processor_kwargs 전달 시 덮어씀.
+#
+# 📝 다른 모델(Qwen3-VL 계열 등)에서의 동작 — vLLM 0.19.0 소스 검증 완료:
+#   - `max_soft_tokens` 키는 Gemma4MultiModalProcessor에서만 해석된다.
+#   - Qwen3-VL 등에서는 vllm/multimodal/processing/context.py:260의
+#     `get_allowed_kwarg_only_overrides`가 HF processor signature를 inspect하여
+#     인식 못 하는 키를 **WARNING 로그 + 자동 드롭**으로 처리한다.
+#   - 즉 설정이 남아 있어도 기동 실패나 파서 에러는 나지 않으나,
+#     Qwen3-VL는 자체 `min_pixels` / `max_pixels` / `fps` 등 별도 파라미터 체계를
+#     쓰므로 이 블록은 효과가 없다. 혼란 방지를 위해 Qwen 운영 중에는 빈 dict로 둔다.
+#
+# 모델별 적용:
+#   Gemma 4   : { max_soft_tokens: 70 | 140 | 280 | 560 | 1120 }
+#   Qwen3-VL  : { } (HF processor의 min_pixels / max_pixels / fps 별도 체계 사용)
+mm_processor_kwargs: {}
+
+# 프롬프트당 멀티모달 입력 상한. 이 키는 모델 독립적인 vLLM 공용 파라미터이며
+# 전 VL 모델(Qwen3-VL/Gemma 4/InternVL 등)에서 동일하게 동작한다.
+# 상한을 낮추면 encoder cache/예약 메모리를 절약한다.
+# 챗봇 워크로드 권장 시작점: image=4, audio=0, video=0.
+limit_mm_per_prompt:
+  image: 2
+#   audio: 0
+#   video: 0
+
+
+# ── 멀티모달 안정성 ───────────────────────────────────
+#
+# async scheduling: scheduler step과 model execution을 파이프라인화하여
+# GPU idle 시간을 제거 (TPS 5~15% 향상).
+# 단점: scheduler 장부와 worker encoder cache 상태 사이에 1-step 시차가 생겨
+# 멀티모달 eviction 시 race 발생 → `Encoder cache miss for <hash>` assertion 크래시.
+# 2026-04-18 07:17:51 GPU0_1 인스턴스 크래시 원인(vllm v0.19.0).
+# 멀티모달 사용 시에는 TPS를 포기하고 안정성을 선택한다.
+async_scheduling: false
+
+# NOTE: disable_chunked_mm_input는 Mamba-hybrid 모델에서는 **설정 금지**.
+# 예) Qwen3.6-35B-A3B는 Mamba-hybrid 구조이고, prefix caching이 켜지면 vLLM이
+# 자동으로 mamba_cache_mode='align'을 적용한다(config.py:441 로그 확인).
+# align 모드는 attention block_size를 1056처럼 큰 값으로 확장하기 때문에
+# MM 입력을 block_size 배수로 쪼갤 유연성이 반드시 필요하다.
+# 따라서 vllm/config/vllm.py:1730의 validate_block_size()가
+# `disable_chunked_mm_input=True`를 AssertionError로 거부한다.
+# 결과적으로 이 모델군에서 encoder cache race 방어선은
+#   async_scheduling: false + max_num_seqs ≤ (encoder_cache_size / 이미지 토큰)
+# 두 개로 충분해야 한다. chunked MM 분할은 이 모델의 정상 동작 경로이다.
+# (2026-04-18 재기동 실패 후 제거 — 일반 VL 모델 기준 권장이었으나 Mamba-hybrid 부적합.)
+
+
+# ── 로깅 ──────────────────────────────────────────────
+#
+# 개별 요청 로깅.
+# true: INFO 레벨에서 요청 ID/파라미터, DEBUG에서 프롬프트 내용 출력.
+# false: 요청별 로그 미출력. 운영 환경에서 로그 과다 방지.
+# 디버깅 시 true로 켜면 어떤 요청이 들어오는지 추적 가능.
+enable_log_requests: false
+
+# 처리량/지연 통계 로깅.
+# false: 주기적으로 처리 통계(TPS, 큐 길이, 지연 시간 등) 출력.
+# true: 통계 로깅 비활성화. 로그가 깔끔해지지만 모니터링 불가.
+# 성능 튜닝이나 병목 분석 시에는 false 유지 권장.
+disable_log_stats: false
+
+
+# ── Tool Calling ──────────────────────────────────────────
+#
+# LangChain tool-calling (bind_tools, with_structured_output 등) 연동 시 활성화.
+# vLLM이 모델의 tool call 출력을 OpenAI 호환 JSON으로 자동 파싱.
+# 두 옵션을 함께 활성화해야 동작.
+# tool-calling 미사용 시 false 유지 (불필요한 파싱 오버헤드 방지).
+enable_auto_tool_choice: true
+#
+# tool_call_parser는 enable_auto_tool_choice: true 시에만 유효.
+# 모델이 tool call을 출력하는 형식에 맞는 파서를 선택해야 함.
+#
+# 형식별 분류:
+#   Gemma      — gemma4 (Gemma 4 네이티브, <|tool_call>...<tool_call|> 형식)
+#   XML 형식   — qwen3_xml | qwen3_coder | hermes | ernie45 | seed_oss
+#   JSON 형식  — llama3_json | llama4_json | granite | granite4 | internlm | mistral
+#   Pythonic   — pythonic | llama4_pythonic | olmo3
+#   특수 토큰  — deepseek_v3 | deepseek_v31 | deepseek_v32 | glm45 | kimi_k2 | step3
+#   기타       — jamba | minimax | minimax_m2 | xlam | functiongemma(270M 전용)
+#
+# 모델별 권장:
+#   Gemma 4         — gemma4
+#   Qwen3.5/3.6     — qwen3_xml
+tool_call_parser: qwen3_xml
+
+
+# ── Thinking Mode (reasoning 분리) ───────────────────────
+#
+# thinking 활성화 시 생성되는 reasoning 토큰을
+# OpenAI API의 reasoning_content 필드로 자동 분리.
+# 클라이언트에서 "사고 과정"과 "최종 답변"을 구분하여 표시할 때 사용.
+# 반드시 thinking 활성화와 함께 설정:
+#   default_chat_template_kwargs:
+#     enable_thinking: true
+# thinking이 꺼진 상태에서 설정하면 의미 없음.
+#
+# 모델별 선택:
+#   gemma4       — Gemma 4 (<|channel>thought...<channel|>)
+#   qwen3        — Qwen 3/3.5/3.6 (<think>...</think>)
+#   deepseek_r1  — DeepSeek R1 (<think>...</think>)
+#   deepseek_v3  — DeepSeek V3 (조건부 thinking)
+#   mistral      — Mistral ([THINK]...[/THINK])
+#   granite      — IBM Granite (자연어 마크업)
+#   glm45        — GLM-4.5
+#   kimi_k2      — Kimi K2
+#   nemotron_v3  — NVIDIA Nemotron
+#   olmo3        — AI2 OLMo 3
+#   ernie45      — Baidu Ernie 4.5
+reasoning_parser: qwen3
+
+
+# ── HF 토큰 ──────────────────────────────────────────
+#
+# HuggingFace Gated Repository (접근 승인 필요 모델) 다운로드 시 필요.
+# 예: Meta-Llama 등. Gemma 4는 Apache 2.0 라이선스로 토큰 불필요.
+# 토큰 발급: https://huggingface.co/settings/tokens
+# 환경변수로도 전달 가능: HF_TOKEN=hf_xxx vllm serve ...
+# hf_token: ""
+
+
+# ═══════════════════════════════════════════════════════
+# GPU 메모리 참고 (gpu_memory_utilization=0.95 기준)
+# ═══════════════════════════════════════════════════════
+#
+# L40S 46GB × 1장
+# ┌──────────────────┬──────────┬───────────────┬───────────────────┐
+# │ 모델             │ 가중치   │ KV Cache 가용 │ 권장 max_model_len │
+# ├──────────────────┼──────────┼───────────────┼───────────────────┤
+# │ 31B FP8 (온라인) │ ~29 GB   │ ~14.7 GB      │ 12288             │
+# │ 27B FP8          │ ~27 GB   │ ~16.7 GB      │ 12288~16384       │
+# │ 14B BF16         │ ~28 GB   │ ~15.7 GB      │ 12288~32768       │
+# │ 8B BF16          │ ~16 GB   │ ~27.7 GB      │ 32768~65536       │
+# └──────────────────┴──────────┴───────────────┴───────────────────┘
+#
+# L40S 46GB × 2장 (tensor_parallel_size: 2)
+# ┌──────────────────┬──────────┬───────────────┬───────────────────┐
+# │ 모델             │ 가중치   │ KV Cache 가용 │ 권장 max_model_len │
+# ├──────────────────┼──────────┼───────────────┼───────────────────┤
+# │ 31B FP8 (온라인) │ ~29 GB   │ ~58.4 GB      │ 65536~131072      │
+# │ 27B FP8          │ ~27 GB   │ ~60.4 GB      │ 65536~131072      │
+# └──────────────────┴──────────┴───────────────┴───────────────────┘
+#
+# ═══════════════════════════════════════════════════════

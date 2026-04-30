@@ -4,26 +4,31 @@
 다수의 vLLM 인스턴스 앞단에서 Least-Connection 로드밸런싱,
 주기적 헬스체크, 기동/재기동 시 자동 웜업을 제공한다.
 
-구조:
-    클라이언트 → Gateway(:5015) → vLLM(:7070, :7071, ...)
+구조 (격리 페어 + 자동 디스커버리):
+    클라이언트 → Gateway(:5015) → vLLM(:7070)            [Gemma 페어]
+    클라이언트 → Gateway(:5016) → vLLM(:7071)            [Qwen 페어]
+    (LB 시) Gateway(:5015) → vLLM(:7070, :7072, ...)     [동일 게이트웨이 소속]
 
-포트 관리:
-    vLLM 인스턴스 포트는 vllm_config.yaml에서 단일 관리.
-    게이트웨이가 vllm_config.yaml을 읽어 base_port를 자동 감지하고,
-    다중 인스턴스는 base_port + index로 자동 할당한다.
+자동 디스커버리:
+    gateways/<port>.yaml 의 discover_from 디렉토리(예: ../instances)를 스캔하여
+    각 인스턴스 yaml의 gateway_port == 자기 게이트웨이 포트인 것만
+    backends로 등록한다. 인스턴스를 추가하려면 instances/*.yaml에 한 파일을
+    추가하고 게이트웨이만 재기동하면 된다.
 
 사용법:
-    python vllm_gateway.py
-    python vllm_gateway.py --config vllm_gateway_config.yaml
+    python vllm_gateway.py -c gateways/5015.yaml
+    python vllm_gateway.py -c gateways/5016.yaml
 
     # 백그라운드 실행
-    mkdir -p logs && nohup python vllm_gateway.py > logs/gateway.log 2>&1 &
+    mkdir -p logs && nohup python vllm_gateway.py -c gateways/5015.yaml \
+        > logs/gateway_5015.log 2>&1 &
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import glob
 import json
 import logging
 import logging.handlers
@@ -122,24 +127,83 @@ class HttpClientConfig(BaseModel):
 
 
 class GatewayConfig(BaseModel):
-    vllm_config: str = "vllm_config.yaml"
+    vllm_config: str = "vllm_config.yaml"  # (deprecated) 1세대 fallback 호환
     gateway: GatewayServerConfig = GatewayServerConfig()
-    backend_count: int = 1
-    backend_api_key: str = ""  # vLLM --api-key 설정 시 내부 요청에 사용
-    backends: list[BackendConfig] = []  # load_config에서 자동 생성
+    backend_count: int = 1                 # (deprecated) 1세대 fallback 호환
+    discover_from: str = ""                # 인스턴스 yaml 디렉토리 (gateway_port 매칭)
+    backend_api_key: str = ""              # vLLM --api-key 설정 시 내부 요청에 사용
+    backends: list[BackendConfig] = []     # load_config에서 자동 생성
     health_check: HealthCheckConfig = HealthCheckConfig()
     warmup: WarmupConfig = WarmupConfig()
     prefix_cache_warmup: PrefixCacheWarmupConfig = PrefixCacheWarmupConfig()
     http_client: HttpClientConfig = HttpClientConfig()
 
 
+def _discover_backends(config_path: str, raw: dict) -> list[dict]:
+    """discover_from 디렉토리를 스캔해 gateway_port가 일치하는 인스턴스를 backends로 변환.
+
+    동작:
+      1. discover_from(상대 경로 → 절대 경로)의 *.yaml을 모두 읽는다.
+      2. 각 yaml의 gateway_port가 자기 게이트웨이 포트와 일치하는 것만 채택.
+      3. {host, port}로 변환하여 backends 리스트로 반환.
+      4. 같은 게이트웨이로 묶인 인스턴스 간 vLLM port 중복은 즉시 ValueError.
+
+    그 외 yaml(gateway_port 미설정 / 다른 게이트웨이 소속)은 조용히 스킵.
+    """
+    gateway_port = raw.get("gateway", {}).get("port")
+    if gateway_port is None:
+        raise ValueError("discover_from 사용 시 gateway.port 명시 필수")
+
+    config_dir = os.path.dirname(os.path.abspath(config_path))
+    instance_dir = os.path.normpath(os.path.join(config_dir, raw["discover_from"]))
+    if not os.path.isdir(instance_dir):
+        raise FileNotFoundError(f"discover_from 디렉토리 없음: {instance_dir}")
+
+    matched: list[tuple[str, dict]] = []
+    for yaml_path in sorted(glob.glob(os.path.join(instance_dir, "*.yaml"))):
+        try:
+            with open(yaml_path, encoding="utf-8") as f:
+                inst = yaml.safe_load(f) or {}
+        except yaml.YAMLError as e:
+            logger.warning("yaml 파싱 실패, 스킵: %s (%s)", yaml_path, e)
+            continue
+
+        if inst.get("gateway_port") != gateway_port:
+            continue
+        if "port" not in inst:
+            logger.warning("port 키 없음, 스킵: %s", yaml_path)
+            continue
+        matched.append((yaml_path, inst))
+
+    # vLLM port 중복 검증 (같은 게이트웨이 소속 인스턴스끼리)
+    seen_ports: dict[int, str] = {}
+    backends: list[dict] = []
+    for yaml_path, inst in matched:
+        port = inst["port"]
+        if port in seen_ports:
+            raise ValueError(
+                f"같은 gateway_port({gateway_port})로 묶인 인스턴스끼리 "
+                f"vLLM port {port}가 중복됩니다: "
+                f"{seen_ports[port]} vs {yaml_path}"
+            )
+        seen_ports[port] = yaml_path
+        backends.append({"host": inst.get("host_for_gateway", "127.0.0.1"), "port": port})
+
+    logger.info(
+        "discover_from %s → gateway_port=%d 매칭 %d개: %s",
+        instance_dir, gateway_port, len(backends),
+        [f"{b['host']}:{b['port']}" for b in backends],
+    )
+    return backends
+
+
 def load_config(path: str) -> GatewayConfig:
     """게이트웨이 YAML을 읽어 GatewayConfig로 파싱한다.
 
     백엔드 결정 우선순위:
-      1) yaml에 backends 리스트가 명시되면 그걸 그대로 사용 (이질 모델 라우팅)
-      2) 없으면 vllm_config.yaml의 port를 base_port로, backend_count만큼
-         base_port + index로 자동 생성 (단일 모델 + DP replica)
+      1) yaml에 backends 리스트 명시 → 그대로 사용 (수동 오버라이드 / 이질 라우팅)
+      2) discover_from 명시 → 해당 디렉토리에서 gateway_port 매칭 자동 등록
+      3) (deprecated) vllm_config.yaml + backend_count로 base_port + i 자동 생성
     """
     with open(path, encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
@@ -152,7 +216,16 @@ def load_config(path: str) -> GatewayConfig:
         )
         return GatewayConfig(**raw)
 
-    # 2) vllm_config.yaml에서 base_port 읽어 자동 생성
+    # 2) discover_from 명시 → 디렉토리 스캔
+    if raw.get("discover_from"):
+        raw["backends"] = _discover_backends(path, raw)
+        return GatewayConfig(**raw)
+
+    # 3) (deprecated) vllm_config.yaml + backend_count fallback
+    logger.warning(
+        "discover_from 미설정 — 1세대 fallback 사용 (deprecated). "
+        "gateways/<port>.yaml + instances/*.yaml 구조로 마이그레이션 권장."
+    )
     config_dir = os.path.dirname(os.path.abspath(path))
     vllm_config_rel = raw.get("vllm_config", "vllm_config.yaml")
     vllm_config_path = os.path.join(config_dir, vllm_config_rel)

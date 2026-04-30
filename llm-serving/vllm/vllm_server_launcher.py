@@ -4,19 +4,25 @@
 vllm serve 위에 환경변수 관리 + 모델 자동 다운로드를 추가한 래퍼.
 start.sh에서 호출되며, 직접 실행도 가능.
 
+설정 모델:
+    -c instances/<name>.yaml 형태로 인스턴스 단위 yaml을 받는다.
+    yaml 안의 메타 키(gateway_port, gpus 등)는 _LAUNCHER_KEYS로 필터링되어
+    vllm serve에는 전달되지 않는다.
+
 사용법:
     # start.sh를 통한 실행 (권장)
-    ./start.sh
+    ./start.sh up                       # 전체 인스턴스 + 게이트웨이 기동
+    ./start.sh up gemma                 # 단일 인스턴스 (instances/gemma.yaml)
 
     # 직접 실행
-    python vllm_server_launcher.py -g 0 --port 7070
-    python vllm_server_launcher.py -g 0,1 --port 7070   # TP=2
+    python vllm_server_launcher.py -c instances/gemma.yaml
+    python vllm_server_launcher.py -c instances/qwen.yaml
 
     # 모델 다운로드만
-    python vllm_server_launcher.py --download-only
+    python vllm_server_launcher.py -c instances/qwen.yaml --download-only
 
     # Gated 모델
-    HF_TOKEN=hf_xxx python vllm_server_launcher.py
+    HF_TOKEN=hf_xxx python vllm_server_launcher.py -c instances/<name>.yaml
 """
 import argparse
 import glob
@@ -39,8 +45,10 @@ logger = logging.getLogger("vllm-launcher")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_CONFIG = os.path.join(BASE_DIR, "vllm_config.yaml")
 
-# vllm serve --config에 전달하지 않는 런처 전용 키
-_LAUNCHER_KEYS = {"gpus", "download_dir"}
+# vllm serve --config에 전달하지 않는 런처 전용 키 + 게이트웨이 매칭용 메타 키.
+# gateway_port: gateways/<port>.yaml의 discover_from이 인스턴스 yaml에서 읽는 메타.
+#   vllm serve는 이 키를 알지 못하므로 임시 config에서 제거해야 한다.
+_LAUNCHER_KEYS = {"gpus", "download_dir", "gateway_port"}
 
 
 def parse_args():
