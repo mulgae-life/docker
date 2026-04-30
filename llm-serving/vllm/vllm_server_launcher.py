@@ -45,7 +45,6 @@ logging.basicConfig(
 logger = logging.getLogger("vllm-launcher")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_CONFIG = os.path.join(BASE_DIR, "vllm_config.yaml")
 INSTANCES_DIR = os.path.join(BASE_DIR, "instances")
 RUNTIME_DIR = os.path.join(INSTANCES_DIR, ".runtime")
 
@@ -61,7 +60,11 @@ def parse_args():
         description="vLLM 서버 런처",
         epilog="위 옵션 외 모든 인자는 vllm serve에 그대로 전달됩니다.",
     )
-    p.add_argument("-c", "--config", default=DEFAULT_CONFIG, help="설정 파일 경로")
+    p.add_argument(
+        "-c", "--config",
+        required=True,
+        help="인스턴스 설정 파일 경로 (예: instances/gemma.yaml)",
+    )
     p.add_argument("-g", "--gpu", type=str, help="CUDA_VISIBLE_DEVICES (예: 0 또는 0,1)")
     p.add_argument("-m", "--model", type=str, help="HF 모델 ID (config override)")
     p.add_argument("--online", action="store_true", help="HF 온라인 모드 허용")

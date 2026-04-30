@@ -367,7 +367,7 @@ CLI 인자  >  instances/<name>.yaml  >  vLLM 기본값
 ```
 1) gateways/<port>.yaml의 backends 명시 (수동 오버라이드 — escape hatch)
 2) gateways/<port>.yaml의 discover_from + 인스턴스 yaml의 gateway_port 매칭 (자동)
-3) (deprecated) vllm_config + backend_count 기반 자동 생성 — 호환 유지
+   둘 다 미설정 시 ValueError로 fail-fast.
 ```
 
 ### 5.2 인스턴스 yaml (`instances/<name>.yaml`) 주요 설정

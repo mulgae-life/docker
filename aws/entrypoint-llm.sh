@@ -10,7 +10,6 @@ USERNAME="${USERNAME:-user}"
 PASSWORD="${PASSWORD:-changeme}"
 CONTAINER_UID="${CONTAINER_UID:-2000}"
 CONTAINER_GID="${CONTAINER_GID:-2000}"
-CODE_SERVER_PORT="${CODE_SERVER_PORT:-5500}"
 MODE="${MODE:-dev}"
 
 # 홈 디렉토리 기본 설정
@@ -84,7 +83,7 @@ if [ "$USERNAME" != "root" ]; then
 fi
 
 # ============================================
-# Docker 환경변수 (SSH/code-server 셸 공통)
+# Docker 환경변수 (SSH 셸 공통)
 # ============================================
 {
     echo 'export PATH="/usr/local/cuda/bin:$HOME/.local/bin:$PATH"'
@@ -98,7 +97,7 @@ fi
     true
 } > /etc/profile.d/docker-env.sh
 
-# 비로그인 bash 셸에서도 env 적용 (code-server 통합 터미널 대응)
+# 비로그인 bash 셸에서도 env 적용 (docker exec 등)
 if ! grep -q 'docker-env.sh' /etc/bash.bashrc 2>/dev/null; then
     echo '[ -f /etc/profile.d/docker-env.sh ] && . /etc/profile.d/docker-env.sh' >> /etc/bash.bashrc
 fi
@@ -122,36 +121,6 @@ if [ "$MODE" = "dev" ] && [ ! -f "${USER_HOME}/.local/bin/claude" ]; then
     # pipefail 필수: curl 실패를 bash(빈 입력으로 0 종료)가 가려서 실패 로그가 안 찍히는 문제 방지
     su - "$USERNAME" -c "set -o pipefail; curl -fsSL --connect-timeout 5 --max-time 30 https://claude.ai/install.sh | bash" \
         || echo "⚠️ Claude Code 설치 실패 (폐쇄망이거나 네트워크 문제) — 무시하고 진행" >&2
-fi
-
-# ============================================
-# code-server 설정 + 백그라운드 실행 (root/일반 공통)
-# - 인증 패스워드는 SSH 패스워드(PASSWORD)와 동일
-# - 확장은 이미지에 포함된 /opt/code-server-extensions 사용
-# - telemetry 차단 (폐쇄망 대응)
-# - YAML single-quote 이스케이프: !, :, #, 공백 등 특수문자 안전 처리
-# ============================================
-YAML_PASSWORD="${PASSWORD//\'/\'\'}"
-mkdir -p "${USER_HOME}/.config/code-server"
-cat > "${USER_HOME}/.config/code-server/config.yaml" <<EOF
-bind-addr: 0.0.0.0:${CODE_SERVER_PORT}
-auth: password
-password: '${YAML_PASSWORD}'
-cert: false
-extensions-dir: /opt/code-server-extensions
-disable-telemetry: true
-disable-update-check: true
-EOF
-# 일반 사용자일 때만 소유권 이전 (root는 이미 root 소유)
-if [ "$USERNAME" != "root" ]; then
-    chown -R "${USERNAME}:${USERNAME}" "${USER_HOME}/.config"
-fi
-
-# code-server 시작 (자동 복구 없음 — 크래시는 docker healthcheck로 가시화,
-# 복구는 관리자가 로그 확인 후 수동으로: docker exec <ctn> su - <user> -c 'code-server /workspace &')
-if ! pgrep -u "$USERNAME" -f "code-server" >/dev/null 2>&1; then
-    echo "==> code-server 실행 (user: ${USERNAME}, home: ${USER_HOME}, port: ${CODE_SERVER_PORT})"
-    su - "$USERNAME" -c "nohup code-server /workspace > ${USER_HOME}/.code-server.log 2>&1 &"
 fi
 
 # ============================================

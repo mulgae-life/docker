@@ -31,12 +31,11 @@ import asyncio
 import glob
 import json
 import logging
-# (json은 runtime 파일 파싱에도 재사용)
 import logging.handlers
 import os
 import time
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import AsyncGenerator
 
 import httpx
@@ -51,7 +50,6 @@ from pydantic import BaseModel
 # ═══════════════════════════════════════════════════════
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_CONFIG = os.path.join(BASE_DIR, "vllm_gateway_config.yaml")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s — %(message)s"
 
@@ -128,9 +126,7 @@ class HttpClientConfig(BaseModel):
 
 
 class GatewayConfig(BaseModel):
-    vllm_config: str = "vllm_config.yaml"  # (deprecated) 1세대 fallback 호환
     gateway: GatewayServerConfig = GatewayServerConfig()
-    backend_count: int = 1                 # (deprecated) 1세대 fallback 호환
     discover_from: str = ""                # 인스턴스 yaml 디렉토리 (gateway_port 매칭)
     backend_api_key: str = ""              # vLLM --api-key 설정 시 내부 요청에 사용
     backends: list[BackendConfig] = []     # load_config에서 자동 생성
@@ -229,7 +225,7 @@ def load_config(path: str) -> GatewayConfig:
     백엔드 결정 우선순위:
       1) yaml에 backends 리스트 명시 → 그대로 사용 (수동 오버라이드 / 이질 라우팅)
       2) discover_from 명시 → 해당 디렉토리에서 gateway_port 매칭 자동 등록
-      3) (deprecated) vllm_config.yaml + backend_count로 base_port + i 자동 생성
+    둘 다 없으면 ValueError로 fail-fast.
     """
     with open(path, encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
@@ -247,28 +243,10 @@ def load_config(path: str) -> GatewayConfig:
         raw["backends"] = _discover_backends(path, raw)
         return GatewayConfig(**raw)
 
-    # 3) (deprecated) vllm_config.yaml + backend_count fallback
-    logger.warning(
-        "discover_from 미설정 — 1세대 fallback 사용 (deprecated). "
-        "gateways/<port>.yaml + instances/*.yaml 구조로 마이그레이션 권장."
+    raise ValueError(
+        f"{path}: backends 또는 discover_from 중 하나는 명시해야 합니다. "
+        "예: discover_from: '../instances'"
     )
-    config_dir = os.path.dirname(os.path.abspath(path))
-    vllm_config_rel = raw.get("vllm_config", "vllm_config.yaml")
-    vllm_config_path = os.path.join(config_dir, vllm_config_rel)
-
-    base_port = 8000  # vLLM 기본 포트
-    if os.path.exists(vllm_config_path):
-        with open(vllm_config_path, encoding="utf-8") as f:
-            vllm_raw = yaml.safe_load(f) or {}
-        base_port = vllm_raw.get("port", base_port)
-        logger.info("vllm_config 로드: %s (base_port=%d)", vllm_config_path, base_port)
-    else:
-        logger.warning("vllm_config 없음: %s (base_port=%d 사용)", vllm_config_path, base_port)
-
-    count = raw.get("backend_count", 1)
-    raw["backends"] = [{"host": "127.0.0.1", "port": base_port + i} for i in range(count)]
-
-    return GatewayConfig(**raw)
 
 
 # ═══════════════════════════════════════════════════════
@@ -630,7 +608,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     global _lb, _client, _health_checker, _start_time
 
     # ── 설정 로드 ──
-    config_path = os.environ.get("VLLM_GATEWAY_CONFIG", DEFAULT_CONFIG)
+    config_path = os.environ.get("VLLM_GATEWAY_CONFIG")
+    if not config_path:
+        raise RuntimeError(
+            "VLLM_GATEWAY_CONFIG 환경변수가 설정되지 않았습니다. "
+            "`python vllm_gateway.py -c gateways/<port>.yaml`로 실행하세요."
+        )
     config = load_config(config_path)
     logger.info("설정 로드: %s", config_path)
 
@@ -860,8 +843,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="vLLM Gateway")
     parser.add_argument(
         "-c", "--config",
-        default=DEFAULT_CONFIG,
-        help=f"게이트웨이 설정 파일 경로 (기본: {DEFAULT_CONFIG})",
+        required=True,
+        help="게이트웨이 설정 파일 경로 (예: gateways/5015.yaml)",
     )
     args = parser.parse_args()
 

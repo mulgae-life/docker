@@ -254,7 +254,7 @@
 
 ## 7. 모델 교체 퀵 가이드
 
-`vllm_config.yaml`에서 아래 부분만 바꾸면 됩니다.
+`instances/<name>.yaml`에서 아래 부분만 바꾸면 됩니다 (현 운영은 `instances/qwen.yaml`).
 
 ```yaml
 # ─────────────────────────────────────────────
@@ -309,7 +309,7 @@ mm_processor_cache_type: shm
 | **운영 안정성** | 🟢 **Qwen 3.6** — 라이선스·의존성·공식 레시피 모두 유리 |
 | **특수 케이스** | Gemma 4는 다국어·경쟁 코딩에서 선택지로 남겨둘 가치 |
 
-chatbot-poc는 현재 Qwen 3.6로 운영 중이며, Mamba-hybrid 전용 방어선(`async_scheduling: false`, `disable_chunked_mm_input` 금지 등)이 `vllm_config.yaml`에 반영되어 있습니다. 모델 교체 시 위 플래그 차이를 체크하세요.
+chatbot-poc는 현재 Qwen 3.6로 운영 중이며, Mamba-hybrid 전용 방어선(`async_scheduling: false`, `disable_chunked_mm_input` 금지 등)이 `instances/qwen.yaml`에 반영되어 있습니다. 모델 교체 시 위 플래그 차이를 체크하세요.
 
 ---
 

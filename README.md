@@ -7,7 +7,7 @@
 | 경로 | 역할 |
 |------|------|
 | [`my-docker-server/`](my-docker-server/) | 로컬 PC·사내 서버용 dev/GPU Docker 환경 (`Dockerfile.dev`, `Dockerfile.gpu`, `docker-compose.yml`) |
-| [`aws/`](aws/) | AWS EC2 GPU 인스턴스 셋업 + 다중 사용자 컨테이너 운영 인프라 (vLLM 베이스, SSH, code-server) |
+| [`aws/`](aws/) | AWS EC2 GPU 인스턴스 셋업 + 다중 사용자 컨테이너 운영 인프라 (vLLM 베이스, SSH) |
 | [`llm-serving/`](llm-serving/) | LLM 서빙 프레임워크 운영 구성 (현재 vLLM, 향후 SGLang/STT 등 추가 예정) |
 
 각 디렉토리는 자체 README/가이드를 포함합니다. 아래 진입점에서 시작하세요.

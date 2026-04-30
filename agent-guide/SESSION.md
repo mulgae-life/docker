@@ -52,7 +52,7 @@ last-updated: 2026-04-30 (vLLM 게이트웨이 자동 디스커버리 + yaml 통
 |------|----------|------|
 | `llm-serving/vllm/instances/{gemma,qwen}.yaml` | 신규 (각 390줄) | 인스턴스 단위 yaml. `gateway_port` 메타 키로 소속 게이트웨이 선언. archive 원본의 모든 운영 노하우 주석을 두 파일에 동일하게 보존 |
 | `llm-serving/vllm/gateways/{5015,5016}.yaml` | 신규 (각 70줄) | 게이트웨이 단위 yaml. `discover_from: ../instances`로 자동 매칭. backends 수동 명시는 escape hatch로 유지 |
-| `llm-serving/vllm/vllm_gateway.py` | 수정 (+107줄) | `_discover_backends()` 추가, `load_config` 우선순위 재정의: backends → discover_from → deprecated fallback. vLLM port 중복 검증, `gateway.port` 누락 ValueError |
+| `llm-serving/vllm/vllm_gateway.py` | 수정 | `_discover_backends()` 추가, `load_config` 우선순위 재정의: backends → discover_from (둘 다 미설정 시 fail-fast). vLLM port 중복 검증, `gateway.port` 누락 ValueError. 잔재 1세대 fallback(vllm_config + backend_count)은 dead code로 확정되어 동일 세션에서 제거 |
 | `llm-serving/vllm/vllm_server_launcher.py` | 수정 (+22줄) | `_LAUNCHER_KEYS`에 `gateway_port` 추가 (vllm serve 인자 누수 방지). docstring을 `instances/<name>.yaml` 형태로 갱신 |
 | `llm-serving/vllm/start.sh` | 재작성 (+327/-220) | `instances/*.yaml` + `gateways/*.yaml` 자동 순회. 인터페이스 `up [name]` / `down [name]` / `status` / `restart [name]`. 단일 인스턴스 모드는 게이트웨이 미터치 |
 | `llm-serving/vllm/{vllm_config,vllm_gateway_config}.yaml` | 이동(아카이브) | `agent-guide/.archive/2026-04-30_vllm-config-migration/`로 mv (rm 금지) |
@@ -64,7 +64,7 @@ last-updated: 2026-04-30 (vLLM 게이트웨이 자동 디스커버리 + yaml 통
 #### 결정 사항
 - **자동 디스커버리 채택 (Phase 2)**: 게이트웨이 yaml에서 backends 수동 명시 대신 `discover_from` + 인스턴스 yaml의 `gateway_port` 메타 키로 단방향 선언. 복붙 확장 시 한 파일만 추가하면 게이트웨이 재기동 시 자동 등록.
 - **격리 페어 + LB 양립**: 같은 `gateway_port`를 갖는 인스턴스가 여러 개면 자동 LB. 다른 게이트웨이 소속이면 무시. vLLM port 중복은 게이트웨이 기동 시 ValueError로 거부.
-- **escape hatch 유지**: 게이트웨이 yaml에 `backends:` 명시 시 그쪽이 우선. 1세대 fallback(`vllm_config + backend_count`)도 deprecated 경고와 함께 유지 — 호환성/디버깅 목적.
+- **escape hatch 유지**: 게이트웨이 yaml에 `backends:` 명시 시 그쪽이 우선 (이질 라우팅 / 디버깅). `discover_from`도 미설정이면 `load_config`가 즉시 ValueError. 옛 1세대 fallback(`vllm_config + backend_count`)은 archive 후 dead code로 확정되어 제거 — 새 yaml 어디에도 해당 키가 없어 호환 의미가 없었음.
 - **무중단 마이그레이션**: vLLM 본체 2대(:7070, :7071) 무중단 유지. 게이트웨이만 신규 yaml로 재기동.
 - **yaml 통일 = 동일 구조 + 풍부 주석 보존**: 1차 통일에서 운영 노하우 주석을 일반화 핑계로 다이어트했다가 대표님 항의로 archive 원본 베이스 풍부 복원. 두 instances yaml 라인 수 390/390, top-level 키 29/29 완전 일치, diff 13라인(모두 모델/리소스 값).
 - **포트 자동 회피**: 인스턴스 yaml의 `port`는 hint. launcher가 socket binding test로 사용 중이면 `+1, +2 ...` 비어있는 첫 포트로 자동 회피. 실제 포트를 `instances/.runtime/<name>.json`에 기록하고 게이트웨이가 이 파일을 우선 참조. **복붙 LB 시나리오에서 port 깜빡 안 바꿔도 자동으로 다른 포트에 띄우고 게이트웨이가 자동 LB**. 검증: 같은 yaml port 7000 두 인스턴스 → 자동 회피 7000+7001 → 게이트웨이가 둘 다 backends 등록 (시뮬레이션 테스트 6/6 통과).

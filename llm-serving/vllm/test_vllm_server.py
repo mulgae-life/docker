@@ -5,7 +5,7 @@ vLLM 서버 배포 후 기능 검증을 위한 테스트 스위트.
 외부 의존성 없이 Python 표준 라이브러리만 사용.
 
 사용법:
-    # 기본 (localhost:5015, vllm_config.yaml에서 모델명 자동 추출)
+    # 기본 (localhost:5015, base-url 포트 → gateways/+instances/에서 모델명 자동 추출)
     python test_vllm_server.py
 
     # 커스텀 서버/모델
@@ -984,7 +984,10 @@ def parse_args():
         """),
     )
     p.add_argument("--base-url", default="http://localhost:5016", help="vLLM 서버 URL (기본: http://localhost:5015)")
-    p.add_argument("--model", default=None, help="모델명 (미지정 시 vllm_config.yaml에서 자동 추출)")
+    p.add_argument(
+        "--model", default=None,
+        help="모델명 (미지정 시 base-url 포트 → gateways/<port>.yaml → instances/<name>.yaml의 served_model_name 자동 추출)",
+    )
     p.add_argument("--category", nargs="*", choices=list(CATEGORIES.keys()), help="실행할 카테고리 (미지정 시 전체)")
     p.add_argument("--list", action="store_true", help="카테고리 목록 출력")
     p.add_argument("--no-color", action="store_true", help="컬러 출력 비활성화")
@@ -992,21 +995,50 @@ def parse_args():
     return p.parse_args()
 
 
-def _resolve_model_from_config() -> str:
-    """vllm_config.yaml에서 served_model_name을 읽어 모델명을 반환한다."""
+def _resolve_model_from_config(base_url: str) -> str:
+    """base_url의 포트로 gateways/<port>.yaml을 찾고, 매칭되는 instances/<name>.yaml의
+    served_model_name을 반환한다. LB 시나리오에서는 첫 매칭 인스턴스를 사용한다."""
+    import glob
     import yaml
+    from urllib.parse import urlparse
 
-    config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vllm_config.yaml")
-    with open(config_path, encoding="utf-8") as f:
-        config = yaml.safe_load(f) or {}
-    served = config.get("served_model_name", [])
-    if isinstance(served, list) and served:
-        return served[0]
-    if isinstance(served, str) and served:
-        return served
-    # fallback: model 필드에서 슬래시 뒤 추출
-    model = config.get("model", "")
-    return model.split("/")[-1] if "/" in model else model
+    parsed = urlparse(base_url)
+    port = parsed.port
+    if port is None:
+        raise RuntimeError(
+            f"--base-url에서 포트를 추출할 수 없습니다: {base_url}. --model을 직접 지정하세요."
+        )
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    gw_yaml = os.path.join(base_dir, "gateways", f"{port}.yaml")
+    if not os.path.isfile(gw_yaml):
+        raise RuntimeError(
+            f"게이트웨이 설정 없음: {gw_yaml}. --model을 직접 지정하세요."
+        )
+
+    with open(gw_yaml, encoding="utf-8") as f:
+        gw = yaml.safe_load(f) or {}
+    gateway_port = int((gw.get("gateway") or {}).get("port", port))
+    discover_from = gw.get("discover_from", "../instances")
+    instances_dir = os.path.normpath(os.path.join(os.path.dirname(gw_yaml), discover_from))
+
+    for inst_path in sorted(glob.glob(os.path.join(instances_dir, "*.yaml"))):
+        with open(inst_path, encoding="utf-8") as f:
+            inst = yaml.safe_load(f) or {}
+        if int(inst.get("gateway_port", 0)) != gateway_port:
+            continue
+        served = inst.get("served_model_name", [])
+        if isinstance(served, list) and served:
+            return served[0]
+        if isinstance(served, str) and served:
+            return served
+        model = inst.get("model", "")
+        return model.split("/")[-1] if "/" in model else model
+
+    raise RuntimeError(
+        f"게이트웨이 :{gateway_port}와 매칭되는 인스턴스가 없습니다: {instances_dir}. "
+        "--model을 직접 지정하세요."
+    )
 
 
 def main():
@@ -1019,7 +1051,7 @@ def main():
             print(f"  {key:<12} {desc}")
         return
 
-    model = args.model or _resolve_model_from_config()
+    model = args.model or _resolve_model_from_config(args.base_url)
 
     ctx = TestContext(
         base_url=args.base_url.rstrip("/"),

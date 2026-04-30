@@ -6,16 +6,16 @@ set -euo pipefail
 #
 # 사용법:
 #   ./user.sh up <name> [--root] [--password <pw>] [--gpus <gpus>]
-#                       [--service-port <p>] [--code-port <p>]
+#                       [--service-port <p>]
 #   ./user.sh down <name>
 #   ./user.sh rebuild [name]       ← 이미지 변경 후 컨테이너 재생성
 #   ./user.sh list
 #
 # --root: 컨테이너 내부 OS 계정을 root로 사용 (운영계 root 컨테이너를 여러 개 동시 운용)
 #         - 홈 볼륨: /volume/root-homes/<name>:/root (컨테이너별 독립)
-#         - SSH 접속 불가 (PermitRootLogin no) → code-server 전용
-#         - 다중 운용: --service-port / --code-port 로 컨테이너마다 호스트 포트 분리
-#           (미지정 시 .env LLM_EXTRA_PORTS / LLM_CODE_SERVER_PORT 폴백)
+#         - SSH 접속 불가 (PermitRootLogin no) → docker exec 로 접근
+#         - 다중 운용: --service-port 로 컨테이너마다 호스트 포트 분리
+#           (미지정 시 .env LLM_EXTRA_PORTS 폴백)
 #
 # 포트 할당 (자동):
 #   docker-compose 메인: 5000(SSH), 5001-5009
@@ -65,7 +65,6 @@ usage() {
     echo ""
     echo "  --root: 내부 OS 계정을 root로 사용 (홈=/volume/root-homes/<name>, SSH 접속 불가)"
     echo "  --service-port <p>: 외부 노출 서비스 포트 (단일 또는 range, 기본 .env LLM_EXTRA_PORTS)"
-    echo "  --code-port <p>:    code-server 호스트 포트 (기본 .env LLM_CODE_SERVER_PORT)"
     exit 1
 }
 
@@ -145,7 +144,6 @@ cmd_up() {
     local gpus="all"
     local forced_port=""
     local forced_service_port=""
-    local forced_code_port=""
     local as_root=false
 
     # 인자 파싱
@@ -165,10 +163,6 @@ cmd_up() {
                 # --root 다중 운용용: 호스트 서비스 포트(단일/range) 명시
                 [ $# -ge 2 ] || { echo "❌ --service-port에 값이 필요합니다."; usage; }
                 forced_service_port="$2"; shift 2 ;;
-            --code-port)
-                # --root 다중 운용용: 호스트 code-server 포트 명시
-                [ $# -ge 2 ] || { echo "❌ --code-port에 값이 필요합니다."; usage; }
-                forced_code_port="$2"; shift 2 ;;
             --root)
                 as_root=true; shift ;;
             -*) echo "알 수 없는 옵션: $1"; usage ;;
@@ -184,12 +178,11 @@ cmd_up() {
     validate_username "$username"
     validate_gpus "$gpus"
     [ -n "$forced_service_port" ] && validate_port_spec "$forced_service_port"
-    [ -n "$forced_code_port" ] && validate_port_spec "$forced_code_port"
 
-    # --service-port / --code-port 는 --root 다중 운용 전용
+    # --service-port 는 --root 다중 운용 전용
     # — 일반 모드(자동 포트 할당)에서 사용하면 silent 무시되어 오해 소지 → fail-fast로 차단
-    if ! $as_root && { [ -n "$forced_service_port" ] || [ -n "$forced_code_port" ]; }; then
-        echo "❌ --service-port / --code-port 는 --root 모드 전용입니다."
+    if ! $as_root && [ -n "$forced_service_port" ]; then
+        echo "❌ --service-port 는 --root 모드 전용입니다."
         usage
     fi
 
@@ -224,15 +217,15 @@ cmd_up() {
     fi
 
     # 포트 할당
-    # --root: .env 가 기본값, --service-port / --code-port 인자가 있으면 우선 적용
+    # --root: .env 가 기본값, --service-port 인자가 있으면 우선 적용
     #         → 다중 root 컨테이너 동시 운용 시 인자로 컨테이너별 호스트 포트 분리
     #         → 컨테이너끼리 호스트 포트가 겹치면 docker run 단계에서 fail-fast
     # 일반  : base 자동 할당 (5010, 5020, ...) 또는 --ssh-port 로 강제
     local ssh_port extra_start extra_end extra_ports_spec
     if $as_root; then
         ssh_port="${LLM_SSH_PORT:-5000}"
-        extra_start="${forced_code_port:-${LLM_CODE_SERVER_PORT:-5500}}"
-        extra_end="$extra_start"
+        extra_start=""
+        extra_end=""
         extra_ports_spec="${forced_service_port:-${LLM_EXTRA_PORTS:-5001-5009}}"
     else
         local base
@@ -297,14 +290,11 @@ cmd_up() {
     echo "🚀 컨테이너 생성: ${username}"
     if $as_root; then
         # 포트 출처 표기: CLI 인자가 있으면 'CLI', 없으면 '.env <키>' 폴백
-        local code_src="${forced_code_port:+CLI}${forced_code_port:-.env LLM_CODE_SERVER_PORT}"
         local svc_src="${forced_service_port:+CLI}${forced_service_port:-.env LLM_EXTRA_PORTS}"
-        echo "   모드:         root (SSH 접속 불가 — code-server 전용)"
-        echo "   code-server:  :${extra_start} (${code_src})"
+        echo "   모드:         root (SSH 접속 불가 — docker exec 로 접근)"
         echo "   서비스 포트:  ${extra_ports_spec} (${svc_src})"
     else
         echo "   SSH:          ssh -p ${ssh_port} ${username}@<host>"
-        echo "   code-server:  :${extra_start} (SSM 포트 포워딩으로 접속 권장)"
         echo "   포트 범위:    ${extra_start}-${extra_end} (1:1 매핑)"
     fi
     echo "   GPU:          ${gpus}"
@@ -312,11 +302,10 @@ cmd_up() {
     # 포트 바인딩
     # — 일반: SSH(5555) + 서비스 range
     # — --root: SSH 미바인딩 (Dockerfile sshd가 PermitRootLogin no라 접속 불가, 포트만 점유) +
-    #           서비스 포트 + code-server 포트 (compose llm-root와 동일한 체계)
+    #           서비스 포트만 노출 (셸 접근은 docker exec)
     local -a port_opts=()
     if $as_root; then
         port_opts+=(-p "${extra_ports_spec}:${extra_ports_spec}")
-        port_opts+=(-p "${extra_start}:${extra_start}")
     else
         port_opts+=(-p "${ssh_port}:5555")
         port_opts+=(-p "${extra_start}-${extra_end}:${extra_start}-${extra_end}")
@@ -328,7 +317,6 @@ cmd_up() {
         --label "managed-by=user.sh" \
         --label "as-root=${as_root}" \
         --label "service-port=${extra_ports_spec}" \
-        --label "code-port=${extra_start}" \
         --restart unless-stopped \
         --security-opt apparmor=unconfined \
         --security-opt seccomp=unconfined \
@@ -346,7 +334,6 @@ cmd_up() {
         -e "HF_TOKEN=${HF_TOKEN}" \
         -e "EXTRA_REQUIREMENTS=${EXTRA_REQUIREMENTS}" \
         -e "ASSIGNED_GPUS=${gpus}" \
-        -e "CODE_SERVER_PORT=${extra_start}" \
         -e "MODE=${MODE}" \
         "${gpu_opts[@]}" \
         "$IMAGE_NAME"
@@ -440,7 +427,7 @@ cmd_rebuild() {
         local env_json
         env_json=$(docker inspect --format='{{json .Config.Env}}' "$cname" 2>/dev/null)
 
-        local old_password old_gpus old_uid old_gid old_ssh_port old_as_root old_service_port old_code_port
+        local old_password old_gpus old_uid old_gid old_ssh_port old_as_root old_service_port
         old_password=$(echo "$env_json" | jq -r '.[] | select(startswith("PASSWORD=")) | sub("^PASSWORD=";"")')
         old_gpus=$(echo "$env_json" | jq -r '.[] | select(startswith("ASSIGNED_GPUS=")) | sub("^ASSIGNED_GPUS=";"")')
         # 이전 버전 호환 (NVIDIA_VISIBLE_DEVICES → ASSIGNED_GPUS 마이그레이션)
@@ -459,7 +446,6 @@ cmd_rebuild() {
         # --root 모드 + 포트 인자 복원 (라벨 없는 구버전 컨테이너는 false/빈값으로 간주)
         old_as_root=$(docker inspect --format='{{index .Config.Labels "as-root"}}' "$cname" 2>/dev/null || true)
         old_service_port=$(docker inspect --format='{{index .Config.Labels "service-port"}}' "$cname" 2>/dev/null || true)
-        old_code_port=$(docker inspect --format='{{index .Config.Labels "code-port"}}' "$cname" 2>/dev/null || true)
 
         old_password="${old_password:-changeme}"
         old_gpus="${old_gpus:-all}"
@@ -483,7 +469,6 @@ cmd_rebuild() {
             root_opts=(--root)
             # 라벨에 저장된 포트 그대로 복원 — .env가 바뀌어도 기존 컨테이너 포트는 유지
             [ -n "$old_service_port" ] && root_opts+=(--service-port "$old_service_port")
-            [ -n "$old_code_port" ] && root_opts+=(--code-port "$old_code_port")
         else
             [ -n "$old_ssh_port" ] && port_opts=(--ssh-port "$old_ssh_port")
         fi

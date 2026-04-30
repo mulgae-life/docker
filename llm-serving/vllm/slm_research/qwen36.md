@@ -275,7 +275,7 @@ FP8 가중치 ~35 GB. chatbot-poc 현행 구성은 **L40S 46GB × 2장, TP=2**. 
 | 구성 | 가중치 | KV 캐시 가용 | 권장 `max_model_len` (실측 기준) |
 |------|-------|-------------|-------------------------------|
 | L40S 46GB × 1 (TP=1) | ~35 GB | 부족 | 비권장 |
-| **L40S 46GB × 2 (TP=2)** | ~35 GB / 2 rank | 넉넉 | 현재 vllm_config.yaml 기준 262,144 |
+| **L40S 46GB × 2 (TP=2)** | ~35 GB / 2 rank | 넉넉 | 현재 `instances/qwen.yaml` 기준 262,144 |
 
 > Mamba-hybrid(`mamba_cache_mode='align'`)가 prefix caching과 함께 자동 활성되면 attention block_size가 ~1056~1568로 확장되어 일반 모델 대비 KV 캐시 계산이 다름. 용량 추정 시 vLLM 기동 로그의 실제 `num_gpu_blocks`를 확인할 것 (아래 7장 이슈 #37121 참조).
 
@@ -315,7 +315,7 @@ FP8 가중치 ~35 GB. chatbot-poc 현행 구성은 **L40S 46GB × 2장, TP=2**. 
 | `AssertionError: Chunked MM input is required` | Mamba-hybrid + prefix caching이 `mamba_cache_mode='align'` 자동 활성 → attention block_size 확장 → `validate_block_size()`가 `disable_chunked_mm_input=True`를 거부 | **Qwen3.6 고유 제약**. 일반 VL 모델용 방어 플래그인 `disable_chunked_mm_input`을 본 모델에 적용 금지 |
 | YAML `async_scheduling: false` 무시 | vLLM YAML 파서가 bool `false`를 drop → auto-enable 로직이 `True`로 덮음 | Launcher에서 `--no-async-scheduling` CLI 플래그 직접 주입으로 해결 |
 
-### 현재 `vllm_config.yaml` 적용 중인 Qwen3.6 전용 권장치 (검증됨)
+### 현재 `instances/qwen.yaml` 적용 중인 Qwen3.6 전용 권장치 (검증됨)
 
 | 항목 | 값 | 근거 |
 |------|-----|------|

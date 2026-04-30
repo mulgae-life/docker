@@ -34,8 +34,7 @@ last-updated: 2026-04-29
 | **user.sh** | `aws/`의 다중 사용자 컨테이너 관리 스크립트 (포트 5010~5499 자동 할당) |
 | **vLLM Gateway** | `llm-serving/vllm/vllm_gateway.py`. OpenAI 호환 + 모델 라우팅 (다중 vLLM 서버 라우팅) |
 | **SLM** | Small Language Model. `llm-serving/vllm/slm_research/`에 비교 자료 (Gemma, Qwen) |
-| **code-server** | 브라우저 IDE. 폐쇄망 EC2에서 `aws ssm start-session`으로 포트 포워딩하여 접근 |
-| **SSM 포트 포워딩** | AWS Systems Manager Session Manager로 폐쇄망 EC2 SSH/HTTP 접근 |
+| **SSM Session Manager** | AWS Systems Manager로 폐쇄망 EC2 호스트 셸 접근 |
 | **MCP** | Model Context Protocol. AI가 외부 도구와 통신하는 방식 |
 | **P0/P1/P2** | 우선순위. P0(긴급) > P1(중요) > P2(보통) |
 

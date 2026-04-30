@@ -1,7 +1,7 @@
 ---
 name: project
 description: docker 레포 핵심 요약. 서버·운영 구성 자산 모음으로 디렉토리 분리 원칙과 기술 스택 파악용.
-last-updated: 2026-04-29
+last-updated: 2026-04-30
 ---
 
 # 프로젝트 개요
@@ -53,23 +53,27 @@ docker/
 │   ├── setup-ec2.sh                  # Phase 1 → reboot → Phase 2 자동
 │   ├── user.sh                       # 다중 사용자 컨테이너 (포트 자동 할당)
 │   ├── docker-compose.yml            # vLLM 베이스 컨테이너
-│   ├── Dockerfile.llm                # vLLM 베이스 + SSH + code-server (dev/prd)
+│   ├── Dockerfile.llm                # vLLM 베이스 + SSH (dev/prd)
 │   ├── entrypoint-llm.sh
 │   ├── requirements.txt              # 컨테이너 내 pip (transformers는 --no-deps)
 │   ├── .env.dev.example / .env.prd.example
 │   ├── ssh-config-sample
-│   ├── vsix/                         # 폐쇄망용 VS Code 확장 사이드로드
 │   └── README.md
 │
 └── llm-serving/                      # LLM 서빙 프레임워크 모음
     ├── README.md                     # 프레임워크 인덱스
-    └── vllm/                         # 운영 중 (멀티 GPU + 게이트웨이)
+    ├── DEPLOY_GUIDE.md               # 서빙 인프라 배포 가이드
+    └── vllm/                         # 운영 중 (격리 페어 + 자동 디스커버리)
         ├── VLLM_OPS_GUIDE.md         # 운영 가이드 (핵심)
-        ├── start.sh                  # 빠른 기동
-        ├── vllm_server_launcher.py   # 다중 vLLM 서버 기동
-        ├── vllm_gateway.py           # OpenAI 호환 라우팅 게이트웨이
-        ├── vllm_config.yaml          # 모델/포트/GPU 분할 설정
-        ├── vllm_gateway_config.yaml  # 라우팅 설정
+        ├── start.sh                  # 빠른 기동 (instances/+gateways/ 자동 순회)
+        ├── vllm_server_launcher.py   # 단일 vLLM 기동 + 포트 자동 회피
+        ├── vllm_gateway.py           # OpenAI 호환 게이트웨이 + 자동 디스커버리
+        ├── instances/                # 인스턴스 yaml (모델/포트/GPU)
+        │   ├── gemma.yaml            #   ├ gateway_port: 5015 → :5015 페어
+        │   └── qwen.yaml             #   └ gateway_port: 5016 → :5016 페어
+        ├── gateways/                 # 게이트웨이 yaml (포트/디스커버리)
+        │   ├── 5015.yaml
+        │   └── 5016.yaml
         ├── test_vllm_server.py       # 서버 헬스/추론 테스트
         ├── slm_research/             # SLM 비교 (Gemma, Qwen)
         └── bugfix/                   # 운영 중 발견 이슈 기록
@@ -90,7 +94,7 @@ docker/
 | **개발 도구** | Claude Code, OpenAI Codex, GitHub CLI, tmux, fzf, ripgrep |
 | **풀스택 SDK** | Next.js, FastAPI, LangChain, ChromaDB, Supabase CLI, Playwright |
 | **GPU Python** | NumPy, Numba, CuPy, Matplotlib, nvitop |
-| **보안 / 접근** | OpenSSH, fail2ban, code-server (브라우저 IDE) |
+| **보안 / 접근** | OpenSSH, fail2ban |
 | **로케일** | ko_KR.UTF-8, Asia/Seoul |
 
 ---
@@ -102,7 +106,7 @@ docker/
 | `my-docker-server/docker-compose.yml` | `cfd`(GPU) + `dev`(풀스택) 서비스 정의, 호스트 홈 영속화 |
 | `aws/setup-ec2.sh` | Amazon Linux 2023 호스트 1회 셋업 (사용자/SSH/EBS/Docker/NVIDIA, Phase 1↔2 자동 전환) |
 | `aws/user.sh` | 사용자별 독립 컨테이너 + 포트 자동 할당(`up`/`down`/`list`/`rebuild`) |
-| `aws/Dockerfile.llm` | vLLM 베이스 + SSH + code-server. dev/prd 모드 분기 |
+| `aws/Dockerfile.llm` | vLLM 베이스 + SSH. dev/prd 모드 분기 |
 | `aws/docker-compose.yml` | 메인 컨테이너 정의 (`.env`로 GPU/메모리/포트 제어) |
 | `llm-serving/vllm/vllm_server_launcher.py` | 다중 vLLM 서버 기동 (GPU 분할) |
 | `llm-serving/vllm/vllm_gateway.py` | OpenAI 호환 + 모델 라우팅 게이트웨이 |
@@ -130,8 +134,9 @@ sudo ./user.sh up jin --password 1234 --gpus 0,1   # 추가 사용자
 
 # 3) vLLM 서빙
 cd llm-serving/vllm
-bash start.sh              # vllm_config.yaml 기준 다중 서버 + 게이트웨이
-python test_vllm_server.py
+./start.sh up              # instances/+gateways/ 자동 순회 (포트 충돌 시 자동 회피)
+./start.sh status          # 인스턴스/게이트웨이 상태 확인
+python test_vllm_server.py # 추론/스트리밍/툴콜 QA
 ```
 
 > 자세한 절차/트러블슈팅은 각 디렉토리의 README 또는 `llm-serving/vllm/VLLM_OPS_GUIDE.md` 참조.

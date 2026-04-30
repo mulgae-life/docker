@@ -71,27 +71,6 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt \
     && pip install --no-cache-dir --no-deps "transformers>=5.5.0"
 
 # ============================================
-# code-server (브라우저 기반 VS Code) — 폐쇄망 컨테이너 IDE
-# ============================================
-ARG CODE_SERVER_VERSION=4.116.0
-RUN curl -fsSL "https://github.com/coder/code-server/releases/download/v${CODE_SERVER_VERSION}/code-server-${CODE_SERVER_VERSION}-linux-amd64.tar.gz" \
-      | tar -xz -C /opt/ \
-    && ln -s /opt/code-server-${CODE_SERVER_VERSION}-linux-amd64/bin/code-server /usr/local/bin/code-server \
-    && mkdir -p /opt/code-server-extensions
-
-# ============================================
-# VS Code 확장 사이드로드 (폐쇄망 대응)
-# - vsix/ 폴더의 *.vsix 를 빌드 타임에 자동 설치
-# - /opt/code-server-extensions 에 설치 → 홈 bind mount 영향 없음
-# - 폴더가 비어 있어도 빌드 성공 (find 특성)
-# ============================================
-COPY vsix/ /tmp/vsix/
-RUN find /tmp/vsix -name "*.vsix" -type f -exec \
-        code-server --extensions-dir /opt/code-server-extensions --install-extension {} \; \
-    && chmod -R a+rX /opt/code-server-extensions \
-    && rm -rf /tmp/vsix
-
-# ============================================
 # 작업 디렉토리
 # ============================================
 WORKDIR /workspace
