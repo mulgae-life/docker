@@ -634,25 +634,43 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     _lb = LoadBalancer(servers)
     logger.info("백엔드 %d개 등록: %s", len(servers), [s.label for s in servers])
 
-    # ── 웜업 ──
+    # ── 웜업 (백그라운드) ──
+    # backend ready를 lifespan startup에서 await하면 첫 backend가 뜰 때까지 uvicorn이
+    # listen을 시작하지 못한다(yield에 도달 못 함). backend가 안 떠있는 상태에서도
+    # 게이트웨이가 health 응답·운영 명령을 받을 수 있어야 하므로 백그라운드 태스크로 분리.
+    # 첫 요청이 들어왔는데 ready 서버가 없으면 LoadBalancer.acquire가 503을 발생시킨다.
     warmup_mgr = WarmupManager(
         _client, config.warmup, config.prefix_cache_warmup, config.backend_api_key,
     )
-    await warmup_mgr.warmup_all(servers)
+    warmup_task = asyncio.create_task(warmup_mgr.warmup_all(servers))
 
-    ready = _lb.ready_count
-    logger.info("웜업 완료 — %d/%d 서버 ready", ready, len(servers))
+    def _log_warmup_result(t: asyncio.Task) -> None:
+        if t.cancelled():
+            return
+        exc = t.exception()
+        if exc is not None:
+            logger.error("웜업 백그라운드 태스크 실패", exc_info=exc)
+        else:
+            logger.info("웜업 백그라운드 태스크 완료 — %d/%d 서버 ready",
+                        _lb.ready_count, len(servers))
+    warmup_task.add_done_callback(_log_warmup_result)
 
     # ── 헬스체크 시작 ──
     _health_checker = HealthChecker(servers, _client, config.health_check, warmup_mgr)
     await _health_checker.start()
 
     _start_time = time.monotonic()
-    logger.info("게이트웨이 시작 — :%d", config.gateway.port)
+    logger.info("게이트웨이 시작 — :%d (웜업/헬스체크 백그라운드 진행)", config.gateway.port)
 
     yield
 
     # ── 종료 ──
+    if not warmup_task.done():
+        warmup_task.cancel()
+        try:
+            await warmup_task
+        except (asyncio.CancelledError, Exception):
+            pass
     await _health_checker.stop()
     await _client.aclose()
     logger.info("게이트웨이 종료")

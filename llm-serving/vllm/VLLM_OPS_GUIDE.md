@@ -1371,7 +1371,7 @@ cp E=128,N=352,device_name=NVIDIA_RTX_PRO_6000_Blackwell_Workstation_Edition,dty
 ### 10.1 기본 사용법
 
 ```bash
-cd /workspace/chatbot-poc/scripts/vllm
+cd /workspace/llm-serving/vllm
 
 # 전체 테스트 (모델명 자동 추출 — 아래 우선순위)
 python test_vllm_server.py
@@ -1444,6 +1444,7 @@ grep -B1 -A20 "FAIL " logs/test_20260430_144909.log
 | Tool Calling | `tool` | 4 | 단일/복수 호출, 불필요 시 스킵, 결과 반영 |
 | 경계값 | `edge` | 6 | 빈 메시지, 긴 입력, 동시 5/10개, 잘못된 JSON |
 | 캐싱 | `caching` | 1 | 프리픽스 캐싱 TTFT 비교 |
+| 멀티모달 | `multimodal` | 4 | 단일 이미지, 동시 5/10개, 이미지+텍스트 혼합 (Encoder cache 안정성) |
 
 ### 10.3 테스트 항목 상세
 
@@ -1516,6 +1517,17 @@ grep -B1 -A20 "FAIL " logs/test_20260430_144909.log
 | ID | 테스트 | 판정 기준 |
 |----|-------|----------|
 | 8.1 | 프리픽스 캐싱 TTFT | 2차 요청이 1차보다 빠름 |
+
+#### 멀티모달 (`multimodal`)
+
+| ID | 테스트 | 판정 기준 |
+|----|-------|----------|
+| 9.1 | 단일 이미지 — 강아지 5마리 정답 | HTTP 200 + 응답에 "5"/"다섯" 포함 |
+| 9.2 | 동시 이미지 5개 (max_num_seqs 이내) | 5개 모두 HTTP 200 |
+| 9.3 | 동시 이미지 10개 (큐잉) | 10개 모두 HTTP 200, 크래시 없음 |
+| 9.4 | 이미지 + 텍스트 혼합 동시 10개 | img 5/5 + txt 5/5 |
+
+> 9.x는 2026-04-18 `Encoder cache miss` 크래시 재발 방지를 위한 회귀 테스트입니다.
 
 ---
 

@@ -97,6 +97,23 @@ get_pid() {
     netstat -tlnp 2>/dev/null | awk -v port=":$1" '$4 ~ port {split($7,a,"/"); print a[1]}' || true
 }
 
+# runtime json에서 pid 추출. 파일/키 부재·파싱 실패 시 빈 출력.
+read_runtime_pid() {
+    local runtime_path="$1"
+    [ -f "$runtime_path" ] || return 0
+    python3 -c "import json,sys
+try:
+    d=json.load(open(sys.argv[1]))
+    print(d.get('pid','') or '')
+except Exception:
+    pass" "$runtime_path" 2>/dev/null
+}
+
+# kill -0으로 PID 생사 검사. 빈 PID는 죽음 취급.
+is_pid_alive() {
+    [ -n "${1:-}" ] && kill -0 "$1" 2>/dev/null
+}
+
 list_instance_yamls() {
     ls "$INSTANCES_DIR"/*.yaml 2>/dev/null | sort
 }
@@ -141,13 +158,20 @@ start_instance() {
         return
     fi
 
-    # 인스턴스 정체성 = instances/.runtime/<name>.json 존재 여부.
+    # 인스턴스 정체성 = instances/.runtime/<name>.json + 그 안의 launcher PID 생존.
     # 같은 yaml port를 갖는 다른 인스턴스가 그 포트를 잡고 있어도, 자기 이름의
     # runtime 파일이 없으면 새로 기동 가능 (launcher가 +1 자동 회피).
+    # PID가 죽었으면 stale로 보고 자동 정리 후 진행 (컨테이너 재시작 등 비정상 종료 잔재).
     local runtime_path="$INSTANCES_DIR/.runtime/${INST_NAME}.json"
     if [ -f "$runtime_path" ]; then
-        echo "[SKIP]  vLLM $INST_NAME — 이미 실행 중 (runtime: ${INST_NAME}.json)"
-        return
+        local existing_pid
+        existing_pid=$(read_runtime_pid "$runtime_path")
+        if is_pid_alive "$existing_pid"; then
+            echo "[SKIP]  vLLM $INST_NAME — 이미 실행 중 (PID $existing_pid)"
+            return
+        fi
+        echo "[CLEAN] vLLM $INST_NAME — stale runtime 정리 (PID ${existing_pid:-?} 죽음)"
+        rm -f "$runtime_path"
     fi
 
     echo "[START] vLLM $INST_NAME (GPU $INST_GPUS_CSV, port hint :$INST_PORT_HINT, → gateway :$INST_GATEWAY_PORT)"
@@ -168,14 +192,37 @@ stop_instance() {
         return
     fi
 
-    # runtime 파일에서 launcher PID 추출하여 SIGTERM. launcher가 vLLM 자식 프로세스도 정리.
     local pid
-    pid=$(python3 -c "import json; print(json.load(open('$runtime_path')).get('pid',''))")
-    if [ -n "$pid" ]; then
-        echo "[STOP]  vLLM $INST_NAME (port :$INST_PORT, launcher PID $pid)"
-        kill "$pid" 2>/dev/null || true
-    else
-        echo "[SKIP]  vLLM $INST_NAME — runtime에 PID 없음"
+    pid=$(read_runtime_pid "$runtime_path")
+
+    # PID 죽음 → 신호 보내지 않음 (엉뚱한 PID 재할당된 경우 다른 프로세스 kill 위험).
+    # runtime 파일만 정리.
+    if ! is_pid_alive "$pid"; then
+        echo "[CLEAN] vLLM $INST_NAME — runtime stale (PID ${pid:-?} 죽음), 정리만 수행"
+        rm -f "$runtime_path"
+        return
+    fi
+
+    echo "[STOP]  vLLM $INST_NAME (port :$INST_PORT, launcher PID $pid)"
+    kill "$pid" 2>/dev/null || true
+
+    # launcher의 finally 블록이 vLLM child terminate(최대 10s) + runtime 정리.
+    # 폴링하여 정리 완료를 기다린다. 15초까지.
+    local i
+    for i in $(seq 1 15); do
+        [ ! -f "$runtime_path" ] && break
+        sleep 1
+    done
+
+    # 폴링 후에도 잔존 → launcher가 비정상 → SIGKILL + 직접 삭제.
+    if [ -f "$runtime_path" ]; then
+        if is_pid_alive "$pid"; then
+            echo "[KILL]  vLLM $INST_NAME — SIGTERM 무응답 15s, SIGKILL 강제 종료"
+            kill -9 "$pid" 2>/dev/null || true
+            sleep 1
+        fi
+        rm -f "$runtime_path"
+        echo "        runtime 파일 직접 정리"
     fi
 }
 
@@ -297,15 +344,21 @@ cmd_status() {
         local runtime_path="$INSTANCES_DIR/.runtime/${INST_NAME}.json"
 
         if [ -f "$runtime_path" ]; then
-            # runtime 파일 있음 → 실제 port로 health check
+            local pid
+            pid=$(read_runtime_pid "$runtime_path")
+            # PID 죽었으면 STALE — 신호 보내지 말고 정리 안내만.
+            if ! is_pid_alive "$pid"; then
+                echo "[STALE]   vLLM $INST_NAME (port hint :$INST_PORT_HINT, runtime PID ${pid:-?} 죽음 — './start.sh down $INST_NAME'으로 정리)"
+                continue
+            fi
             local port_label=":$INST_PORT"
             if [ "$INST_PORT" != "$INST_PORT_HINT" ]; then
                 port_label=":$INST_PORT (hint :$INST_PORT_HINT 자동 회피)"
             fi
             if is_running "$INST_PORT"; then
-                echo "[UP]      vLLM $INST_NAME (GPU $INST_GPUS_CSV, $port_label, → gw :$INST_GATEWAY_PORT)"
+                echo "[UP]      vLLM $INST_NAME (GPU $INST_GPUS_CSV, $port_label, → gw :$INST_GATEWAY_PORT, PID $pid)"
             else
-                echo "[STARTING] vLLM $INST_NAME (GPU $INST_GPUS_CSV, $port_label, runtime 있음 / health 응답 없음 — 기동 중이거나 stale)"
+                echo "[STARTING] vLLM $INST_NAME (GPU $INST_GPUS_CSV, $port_label, PID $pid 살아있음 / health 응답 없음 — 모델 로딩 중)"
             fi
         else
             echo "[DOWN]    vLLM $INST_NAME (GPU $INST_GPUS_CSV, port hint :$INST_PORT_HINT, → gw :$INST_GATEWAY_PORT)"

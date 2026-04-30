@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-04-30 (vLLM 게이트웨이 자동 디스커버리 + yaml 통일)
+last-updated: 2026-04-30 (4차 세션 — code-server 제거 + vLLM 운영 가이드/테스트 보강)
 ---
 
 # 세션 상태
@@ -34,11 +34,78 @@ last-updated: 2026-04-30 (vLLM 게이트웨이 자동 디스커버리 + yaml 통
 
 ## 기타 이슈
 
-- 없음 (이전 세션의 unstaged 변경은 commit `2905914`로 정리됨)
+- `llm-serving/vllm/VLLM_OPS_GUIDE.md` §10.1 1줄 unstaged: 구 경로 `cd /workspace/chatbot-poc/scripts/vllm` → `cd /workspace/llm-serving/vllm` (대표님이 직접 발견한 경로 잔재. commit/push 시점은 대표님 결정)
 
 ---
 
 ## 최근 세션
+
+### 2026-04-30 (4차 세션 — code-server 제거 + vLLM 운영 가이드/테스트 보강)
+
+#### 세션 목표
+- 폐쇄망 운영 환경 대응: `code-server` / `vsix` 인프라 전면 제거 (정보보호팀 방화벽 미허용)
+- Phase 2 디스커버리 구조에 따른 운영 가이드/스크립트 정합화 (VLLM_OPS_GUIDE / start.sh / test_vllm_server)
+- `aws/` 디렉토리 진입점 분리 — 안내용 README ↔ 셋업 가이드(SETUP_GUIDE.md)
+- `user.sh` GPU 미할당 옵션(`--gpus none`) 운영 시나리오 명시
+
+#### 변경 파일
+| 파일 | 변경 유형 | 요약 |
+|------|----------|------|
+| `aws/{README.md → SETUP_GUIDE.md}` | rename + 보강 | 안내 README와 셋업 가이드 분리. 모드/사용자/포트/볼륨/배포까지 단일 가이드로 정리. 루트 `README.md`/`PROJECT.md` 진입점 갱신 |
+| `aws/Dockerfile.llm` | -21줄 | `CODE_SERVER_VERSION` 설치 블록 + `COPY vsix/` + `find vsix install` 제거 |
+| `aws/entrypoint-llm.sh` | -35줄 | `CODE_SERVER_PORT` env, code-server config.yaml 생성, `nohup`/`pgrep` 백그라운드 실행 제거. `/etc/bash.bashrc` SSH/`docker exec` 셸 환경 주석 정리 |
+| `aws/docker-compose.yml` | -10줄 | `5500` 포트 매핑, `CODE_SERVER_PORT` env, `healthcheck`(URL 의존) 제거 |
+| `aws/.env.{dev,prd}.example` | -2줄 | `LLM_CODE_SERVER_PORT=5500` + 주석 제거 |
+| `aws/user.sh` | -41줄 | `--code-port` 인자 / `forced_code_port` / port_opts 매핑 / `--label code-port` / `-e CODE_SERVER_PORT` / `cmd_rebuild`의 `old_code_port` 추출 모두 제거. `--root` 분기에 `--gpus none` (`--runtime=runc`) 운영 동선 명시 |
+| `aws/vsix/.gitkeep` | 삭제 | `git rm aws/vsix/.gitkeep && rmdir aws/vsix` (디렉토리 자체 제거) |
+| `aws/SETUP_GUIDE.md` | 재작성 | §1 개요, §4 .env 표, §6 사용 예시(`job/gemma/mail` 다중 root + `--gpus none`), §7-2 운영 root 컨테이너(SSH 불가, `docker exec` 안내), §8 prd 모드, §11 트러블슈팅에서 code-server 흔적 일괄 제거 |
+| `README.md` (루트) | 1줄 | `aws/` 안내 문구에서 "code-server" 표기 제거 + `SETUP_GUIDE.md` 진입점 링크 |
+| `agent-guide/{PROJECT,GUIDE}.md` | 미세 정리 | `Dockerfile.llm` 설명 "vLLM 베이스 + SSH (dev/prd)"로 갱신, vsix/ 행 제거, `SSM Session Manager` 용어 통합, code-server 행 제거 |
+| `llm-serving/vllm/VLLM_OPS_GUIDE.md` | 대규모 갱신 (+232 net) | 운영 모델 표기를 단일 → **격리 페어**(Gemma `:5015↔:7070`, Qwen `:5016↔:7080`)로, 새 디렉토리 구조(`instances/`, `gateways/`, `discover_from`, `gateway_port`) 반영. 포트 자동 회피 설명 추가. `start.sh` 인터페이스(`up`/`down`/`status` + `[name]` 자동 라우팅) 반영 |
+| `llm-serving/vllm/start.sh` | 라우팅 보강 (+178/-92) | `[name]` 인자가 `instances/<name>.yaml`이면 인스턴스, `gateways/<name>.yaml`이면 게이트웨이로 자동 감지. 양쪽 충돌 시 즉시 에러. 매칭 실패 시 가용 후보 목록 출력 |
+| `llm-serving/vllm/vllm_gateway.py` | 정리 (-43줄) | 잔재 1세대 fallback(`vllm_config + backend_count`)을 dead code로 확정 후 제거. `discover_from` 미설정도 즉시 ValueError(fail-fast) |
+| `llm-serving/vllm/vllm_server_launcher.py` | 추가 보강 | docstring/CLI 메시지를 `instances/<name>.yaml` 기준으로 정합 |
+| `llm-serving/vllm/test_vllm_server.py` | +273 net | (1) `_Tee` 로거: 콘솔에는 ANSI 색 유지, 파일에는 `\x1b\[...m` 제거하여 사후 가독성 확보. (2) `_record_request/_record_response/_reset_request_log` 도입 — `_run_test`가 fail 시 마지막 요청/응답 메타를 detail에 자동 첨부. (3) traceback 자동 첨부. (4) 보조 검증 강화 |
+| `llm-serving/{DEPLOY_GUIDE.md, README.md}` | 보강 | 새 디렉토리 구조(`instances/`, `gateways/`) 반영 + 컨테이너 내 배포 흐름 정리 |
+| `llm-serving/vllm/instances/{gemma,qwen}.yaml` | 미세 수정 (각 10줄) | 디스커버리 메타/주석 정합 |
+| `.gitignore` | 보강 | `__pycache__` 추적 끊기, `.runtime/` 등 잔여 룰 정리 |
+| `agent-guide/SESSION.md` | 갱신 | 본 4차 세션 entry 추가 + 다음 작업 / 기타 이슈 정정 |
+
+#### 결정 사항
+- **code-server / vsix 전면 제거**: 폐쇄망 운영서버에서 정보보호팀이 5500 포트 방화벽을 허용하지 않을 가능성이 높음 → 브라우저 IDE 대신 `docker exec`(컨테이너 내부 셸) + SSM Session Manager(호스트 셸) 조합으로 운영. `vsix/` 디렉토리도 사이드로드 미사용으로 함께 제거. 진입점 README/PROJECT.md/GUIDE.md/`SETUP_GUIDE.md`/`docker-compose.yml`/`Dockerfile.llm`/`entrypoint-llm.sh`/`.env.example`/`user.sh`까지 일괄 정합 (잔존 키워드 0건, bash/yaml syntax PASS).
+- **`aws/README.md` → `SETUP_GUIDE.md`**: 디렉토리 진입점(README는 짧은 안내) ↔ 셋업 가이드(SETUP_GUIDE는 절차 중심)를 분리. 루트 README/PROJECT.md에서 `SETUP_GUIDE.md`로 직접 진입.
+- **`user.sh --gpus none`**: GPU 미할당 컨테이너 기동을 운영 동선으로 명시(예: 메일/관제 등 비-GPU 서비스). 내부적으로 `--runtime=runc`로 nvidia 런타임 자체를 우회. 다중 root 시나리오 예시(`job/gemma/mail` 동시 운영)도 SETUP_GUIDE §6에 추가.
+- **`user.sh` 단독 실행 가능**: `docker compose up -d` 없이도 이미지만 빌드돼 있으면 `user.sh up <name> --root --service-port ... --gpus ...`만으로 컨테이너 기동 가능. `cmd_up`의 의존은 이미지 존재 검사뿐(외부 네트워크/볼륨 없음).
+- **`start.sh [name]` 라우팅 통합**: `instances/<name>.yaml`과 `gateways/<port>.yaml`을 같은 `[name]` 인자로 처리. 단일 게이트웨이 재기동도 인스턴스 미터치로 가능 → 무중단 LB 운영 패턴 단단해짐.
+- **`test_vllm_server.py` 디버그 가독성**: 콘솔 컬러는 유지하되 파일 로그는 ANSI escape 제거 + 마지막 request/response 자동 첨부. fail 케이스에서 "어떤 요청에 어떤 응답이었는지"를 traceback과 함께 한 detail에 모음.
+- **운영 정합성 (변경 없음)**: 이전 세션의 P1 "vLLM Qwen 본체 :7080 이전"은 본 세션에서 진행하지 않음. 다음 :5016 게이트웨이 재기동 전에 vLLM 본체를 :7080으로 옮겨야 정합.
+
+#### 검증
+- `bash -n` PASS: `aws/user.sh`, `aws/entrypoint-llm.sh`, `aws/setup-ec2.sh`, `llm-serving/vllm/start.sh`
+- yaml `safe_load` PASS: `aws/docker-compose.yml`
+- `Dockerfile.llm` `EXPOSE`: 5555(SSH) 단독 (5500 잔재 0건)
+- code-server 키워드 grep: 코드/문서/스크립트 0건
+- `user.sh --root` 분기 트레이싱: `extra_start`/`extra_end`/`ssh_port` 잔재 변수 → 사용 경로 없음(참고 등급)
+- work-verify (스킬 + 부에이전트) 2회: PASS, 심각/주의 등급 0건, 참고 3건 (SETUP_GUIDE §3-1 trailing space, user.sh dead variable, password 표기 일관성)
+
+#### 교훈 (영구 기록)
+- **`shell source` 시 main 가드 확인** (`lessons_shell_source_main_guard.md`): 가드 없는 스크립트를 source하면 main까지 실행됨. 운영 영향 가능 명령(서비스 기동/재기동) 시뮬레이션 시 사전에 가드 유무 확인 필수.
+
+#### 커밋
+| 해시 | 메시지 |
+|------|--------|
+| `ea17ea6` | update (aws README→SETUP_GUIDE 분리 + VLLM_OPS_GUIDE 운영 모델 표기 + 디스커버리 fail-fast 정합) |
+| `3c8ac32` | update (code-server / vsix 인프라 전면 제거 — 폐쇄망 정책, +`user.sh --gpus none` 동선) |
+| `8df843a` | update (start.sh `[name]` instances/↔gateways/ 자동 라우팅 + test 디버그 정밀화 1차) |
+| `7cc29b0` | update (test_vllm_server Tee 로거 + 마지막 request/response 자동 첨부 + DEPLOY/OPS 가이드 보강) |
+
+#### 현재 상태
+- code-server / vsix 제거 + work-verify PASS (3건 참고 등급은 운영 영향 없음)
+- aws 진입점 README/SETUP_GUIDE 분리 + Phase 2 디스커버리 구조 운영 문서 정합 완료
+- vLLM 테스트 디버깅 가독성 개선 완료 (Tee + request/response 자동 첨부)
+- 다음: Qwen 본체 `:7080` 이전(이전 세션 P1 미해결 그대로) → SGLang 골격 / STT 첫 기동
+
+---
 
 ### 2026-04-30 (vLLM 게이트웨이 자동 디스커버리 + yaml 통일)
 
