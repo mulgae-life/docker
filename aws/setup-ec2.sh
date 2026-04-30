@@ -276,7 +276,20 @@ JAIL
     dnf update -y --exclude='kernel*'
     dnf install -y \
         dnf-plugins-core curl wget git jq htop tmux \
-        gcc dkms --allowerasing
+        gcc dkms python3-pip --allowerasing
+
+    # nvitop (호스트에서 GPU 실시간 모니터링 — htop의 GPU 버전, Phase 2 완료 후 동작)
+    # — AL2023은 PEP 668(외부 관리 환경) 정책으로 시스템 Python에 직접 pip install이 차단됨.
+    #   호스트 운영자용 단일 CLI라 시스템 site-packages 충돌 위험이 낮으므로 --break-system-packages로 우회.
+    # — pip3가 아주 구버전이라 해당 플래그를 모르면 plain pip3 install로 폴백 (현재 dnf python3-pip는 충분히 신버전).
+    if command -v nvitop &>/dev/null; then
+        log "  nvitop 이미 설치됨. 건너뜀."
+    elif pip3 install --break-system-packages nvitop 2>/dev/null \
+        || pip3 install nvitop 2>/dev/null; then
+        log "  nvitop 설치 완료 (호스트에서 nvitop 실행 → GPU 실시간 모니터링)"
+    else
+        log "  ⚠️ nvitop 설치 실패. 수동 설치: pip3 install --break-system-packages nvitop"
+    fi
 
     # AL2023 커널 패키지명 자동 감지 (6.1: kernel-devel, 6.12+: kernel6.12-devel)
     local kver kpkg
