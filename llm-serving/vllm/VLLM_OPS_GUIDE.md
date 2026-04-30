@@ -1403,6 +1403,35 @@ python test_vllm_server.py -v
 
 > 원격 서버 테스트 시 로컬에 yaml 사본이 없어도 2번 경로(`/v1/models`)가 응답하면 정상 동작합니다.
 
+**실패 진단 — 자동 부착 정보**
+
+테스트가 fail이거나 예외가 나면 다음 정보가 자동으로 detail에 부착됩니다 (별도 옵션 없이):
+
+- **마지막 HTTP 요청** — `method` · `URL` · 요청 body (pretty JSON)
+- **마지막 HTTP 응답** — `status` · 응답 body (vLLM의 에러 메시지 등 그대로)
+- **예외 발생 시** — `type` · 메시지 · 전체 traceback (파일·라인까지)
+
+각 테스트 직후 콘솔에 한 번, 끝에 `print_summary` "실패 목록"에서 다시 한 번 출력됩니다. JSON 응답은 `indent=2`로 가독성 있게 표시됩니다.
+
+**자동 로그 파일 — 항상 저장**
+
+매 실행마다 콘솔 출력 전체가 다음 경로에 자동 저장됩니다 (ANSI 색 제거된 plain text):
+
+```
+llm-serving/vllm/logs/test_YYYYMMDD_HHMMSS.log
+```
+
+main 시작 시 path가 안내되고 종료 시 다시 출력됩니다. 사후 분석 예시:
+
+```bash
+# 최근 로그 확인
+ls -lt logs/test_*.log | head -3
+# 실패만 추출
+grep -B1 -A20 "FAIL " logs/test_20260430_144909.log
+```
+
+> 백그라운드/CI 실행, 긴 출력 스크롤 등으로 콘솔 확인이 어려울 때 이 파일이 단일 진실 소스입니다.
+
 ### 10.2 테스트 카테고리
 
 | 카테고리 | 키 | 테스트 수 | 검증 내용 |

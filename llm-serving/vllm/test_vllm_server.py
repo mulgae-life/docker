@@ -22,14 +22,40 @@ import base64
 import http.client
 import json
 import os
+import re
 import sys
 import textwrap
 import threading
 import time
+import traceback
 import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
+
+# ── 로그 Tee (콘솔 + 파일) ──────────────────────────────
+# main 진입 시 sys.stdout/stderr를 _Tee로 교체. 콘솔에는 색 그대로,
+# 파일에는 ANSI escape 제거하여 사후 검토 가독성 확보.
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+class _Tee:
+    def __init__(self, console, log_file):
+        self.console = console
+        self.log_file = log_file
+
+    def write(self, data):
+        self.console.write(data)
+        self.log_file.write(_ANSI_RE.sub("", data))
+        self.console.flush()
+        self.log_file.flush()
+
+    def flush(self):
+        self.console.flush()
+        self.log_file.flush()
+
+    def isatty(self):
+        return self.console.isatty()
 
 # ── 컬러 출력 ────────────────────────────────────────────
 
@@ -74,6 +100,29 @@ class TestContext:
 
 # ── HTTP 헬퍼 ────────────────────────────────────────────
 
+# 마지막 요청/응답 메타. _run_test가 fail 시 자동으로 detail에 부착.
+# 동시 요청 테스트(예: t_8.x)에선 race condition 가능하지만, 그런 케이스는
+# 자체 detail로 풍부 정보를 채우므로 보조 컨텍스트로만 사용.
+_LAST_REQUEST: dict | None = None
+_LAST_RESPONSE: dict | None = None
+
+
+def _record_request(method: str, url: str, body: dict | None) -> None:
+    global _LAST_REQUEST
+    _LAST_REQUEST = {"method": method, "url": url, "body": body}
+
+
+def _record_response(status: int | str, body) -> None:
+    global _LAST_RESPONSE
+    _LAST_RESPONSE = {"status": status, "body": body}
+
+
+def _reset_request_log() -> None:
+    """_run_test 시작 시 호출 — 이전 테스트의 메타가 다음 fail 진단에 누수되지 않게."""
+    global _LAST_REQUEST, _LAST_RESPONSE
+    _LAST_REQUEST = None
+    _LAST_RESPONSE = None
+
 
 def _request(
     url: str,
@@ -82,7 +131,9 @@ def _request(
     body: dict | None = None,
     timeout: float = 60,
 ) -> tuple[int, dict | str]:
-    """urllib로 HTTP 요청. (status_code, parsed_body) 반환."""
+    """urllib로 HTTP 요청. (status_code, parsed_body) 반환.
+    실패 진단을 위해 마지막 요청/응답을 모듈 전역에 기록한다."""
+    _record_request(method, url, body)
     headers = {"Content-Type": "application/json"}
     data = json.dumps(body).encode() if body else None
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
@@ -90,15 +141,22 @@ def _request(
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             raw = resp.read().decode()
             try:
-                return resp.status, json.loads(raw)
+                parsed = json.loads(raw)
             except json.JSONDecodeError:
-                return resp.status, raw
+                parsed = raw
+            _record_response(resp.status, parsed)
+            return resp.status, parsed
     except urllib.error.HTTPError as e:
         raw = e.read().decode()
         try:
-            return e.code, json.loads(raw)
+            parsed = json.loads(raw)
         except json.JSONDecodeError:
-            return e.code, raw
+            parsed = raw
+        _record_response(e.code, parsed)
+        return e.code, parsed
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        _record_response(f"<network error: {type(e).__name__}>", str(e))
+        raise
 
 
 def _chat(
@@ -162,15 +220,12 @@ def _stream_chat(
     **extra,
 ) -> tuple[int, list[str]]:
     """스트리밍 chat/completions 요청. (status, [raw_lines]) 반환."""
+    url = f"{ctx.base_url}/v1/chat/completions"
     body = {"model": ctx.model, "messages": messages, "stream": True, **extra}
+    _record_request("POST", url, body)
     data = json.dumps(body).encode()
     headers = {"Content-Type": "application/json"}
-    req = urllib.request.Request(
-        f"{ctx.base_url}/v1/chat/completions",
-        data=data,
-        headers=headers,
-        method="POST",
-    )
+    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             lines = []
@@ -178,18 +233,60 @@ def _stream_chat(
                 decoded = line.decode().strip()
                 if decoded:
                     lines.append(decoded)
+            _record_response(resp.status, f"<{len(lines)} SSE lines>")
             return resp.status, lines
     except urllib.error.HTTPError as e:
+        raw = e.read().decode()
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            parsed = raw
+        _record_response(e.code, parsed)
         return e.code, []
 
 
 # ── 테스트 실행 프레임워크 ────────────────────────────────
 
 
+def _format_body(body, *, max_len: int = 800) -> str:
+    """dict는 indent=2로 pretty print, 그 외는 str. 길이 cap."""
+    if body is None:
+        return "<none>"
+    if isinstance(body, (dict, list)):
+        try:
+            text = json.dumps(body, ensure_ascii=False, indent=2)
+        except (TypeError, ValueError):
+            text = repr(body)
+    else:
+        text = str(body)
+    if len(text) > max_len:
+        text = text[:max_len] + f"\n... (생략, 전체 {len(text)}자)"
+    return text
+
+
+def _build_failure_context() -> str:
+    """fail/예외 시 detail에 자동으로 부착할 마지막 요청/응답 컨텍스트."""
+    if _LAST_REQUEST is None and _LAST_RESPONSE is None:
+        return ""
+    parts = []
+    if _LAST_REQUEST is not None:
+        parts.append(f"요청: {_LAST_REQUEST['method']} {_LAST_REQUEST['url']}")
+        if _LAST_REQUEST.get("body") is not None:
+            parts.append("요청 body:")
+            parts.append(_format_body(_LAST_REQUEST["body"], max_len=600))
+    if _LAST_RESPONSE is not None:
+        parts.append(f"응답: HTTP {_LAST_RESPONSE['status']}")
+        parts.append("응답 body:")
+        parts.append(_format_body(_LAST_RESPONSE["body"], max_len=1200))
+    return "\n".join(parts)
+
+
 def _run_test(ctx: TestContext, test_id: str, category: str, name: str, fn):
-    """테스트 함수를 실행하고 결과를 기록한다."""
+    """테스트 함수를 실행하고 결과를 기록한다.
+    실패 시 마지막 HTTP 요청/응답 컨텍스트를 자동 부착, 예외는 traceback 포함."""
     c = ctx.colors
     label = f"  [{test_id}] {name}"
+    _reset_request_log()
     start = time.monotonic()
     try:
         passed, detail = fn()
@@ -197,7 +294,14 @@ def _run_test(ctx: TestContext, test_id: str, category: str, name: str, fn):
         result = TestResult(test_id, category, name, passed, detail, elapsed)
     except Exception as e:
         elapsed = (time.monotonic() - start) * 1000
-        result = TestResult(test_id, category, name, False, f"예외: {e}", elapsed)
+        tb = traceback.format_exc().rstrip()
+        detail = f"예외: {type(e).__name__}: {e}\n{tb}"
+        result = TestResult(test_id, category, name, False, detail, elapsed)
+
+    if not result.passed:
+        ctx_info = _build_failure_context()
+        if ctx_info:
+            result.detail = f"{result.detail}\n{ctx_info}" if result.detail else ctx_info
 
     ctx.results.append(result)
 
@@ -1069,6 +1173,15 @@ def _resolve_model_auto(base_url: str) -> str:
             ) from cfg_err
 
 
+def _open_log_file() -> tuple[str, "object"]:
+    """logs/test_YYYYMMDD_HHMMSS.log 생성 후 (path, file) 반환."""
+    log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    log_path = os.path.join(log_dir, f"test_{time.strftime('%Y%m%d_%H%M%S')}.log")
+    log_file = open(log_path, "w", encoding="utf-8", buffering=1)
+    return log_path, log_file
+
+
 def main():
     args = parse_args()
     colors = NO_COLORS if args.no_color else COLORS
@@ -1079,38 +1192,50 @@ def main():
             print(f"  {key:<12} {desc}")
         return
 
-    model = args.model or _resolve_model_auto(args.base_url)
+    # 로그 파일 항상 저장 — 콘솔에는 색 그대로, 파일에는 ANSI 제거.
+    log_path, log_file = _open_log_file()
+    orig_stdout, orig_stderr = sys.stdout, sys.stderr
+    sys.stdout = _Tee(orig_stdout, log_file)
+    sys.stderr = _Tee(orig_stderr, log_file)
 
-    ctx = TestContext(
-        base_url=args.base_url.rstrip("/"),
-        model=model,
-        colors=colors,
-        verbose=args.verbose,
-    )
-
-    print(f"\n{_c(colors, 'bold', 'vLLM 서버 QA 테스트')}")
-    print(f"  서버: {ctx.base_url}")
-    print(f"  모델: {ctx.model}")
-
-    # 서버 연결 확인
     try:
-        status, _ = _request(f"{ctx.base_url}/health", timeout=5)
-    except Exception:
-        print(f"\n{_c(colors, 'red', '서버 연결 실패')}: {ctx.base_url}/health")
-        print("vLLM 서버가 실행 중인지 확인하세요.")
-        sys.exit(1)
+        model = args.model or _resolve_model_auto(args.base_url)
 
-    # 카테고리 실행
-    selected = args.category or list(CATEGORIES.keys())
-    for key in selected:
-        _, test_fn = CATEGORIES[key]
-        test_fn(ctx)
+        ctx = TestContext(
+            base_url=args.base_url.rstrip("/"),
+            model=model,
+            colors=colors,
+            verbose=args.verbose,
+        )
 
-    print_summary(ctx)
+        print(f"\n{_c(colors, 'bold', 'vLLM 서버 QA 테스트')}")
+        print(f"  서버: {ctx.base_url}")
+        print(f"  모델: {ctx.model}")
+        print(f"  로그: {log_path}")
 
-    # 실패 시 exit code 1
-    failures = sum(1 for r in ctx.results if not r.passed)
-    sys.exit(1 if failures else 0)
+        # 서버 연결 확인
+        try:
+            status, _ = _request(f"{ctx.base_url}/health", timeout=5)
+        except Exception as e:
+            print(f"\n{_c(colors, 'red', '서버 연결 실패')}: {ctx.base_url}/health ({type(e).__name__}: {e})")
+            print("vLLM 서버가 실행 중인지 확인하세요.")
+            sys.exit(1)
+
+        # 카테고리 실행
+        selected = args.category or list(CATEGORIES.keys())
+        for key in selected:
+            _, test_fn = CATEGORIES[key]
+            test_fn(ctx)
+
+        print_summary(ctx)
+        print(f"  로그 파일: {log_path}")
+
+        # 실패 시 exit code 1
+        failures = sum(1 for r in ctx.results if not r.passed)
+        sys.exit(1 if failures else 0)
+    finally:
+        sys.stdout, sys.stderr = orig_stdout, orig_stderr
+        log_file.close()
 
 
 if __name__ == "__main__":
