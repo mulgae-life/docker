@@ -2,7 +2,7 @@
 
 `llm-serving/` 코드를 **로컬 → S3 → 운영계 컨테이너**로 옮기고 모델을 띄우는 절차.
 
-> 인프라 셋업(EC2/Docker/컨테이너 기동)은 [`../aws/README.md`](../aws/README.md). 본 문서는 그 위에서 **서빙 코드/모델만**.
+> 인프라 셋업(EC2/Docker/컨테이너 기동)은 [`../aws/SETUP_GUIDE.md`](../aws/SETUP_GUIDE.md). 본 문서는 그 위에서 **서빙 코드/모델만**.
 
 ---
 
@@ -51,18 +51,19 @@ sudo chmod +x llm-serving/*/start.sh
 ## 3. 모델 띄우기
 
 ```bash
-# vLLM (LLM)
+# vLLM (LLM) — instances/*.yaml + gateways/*.yaml 자동 순회
 cd /workspace/llm-serving/vllm
-./start.sh
-./start.sh status        # UP 확인 (1~5분 소요, 모델 미보유 시 자동 다운로드 → /models/LLM/)
+./start.sh up                # 전체 인스턴스 + 게이트웨이 기동
+./start.sh up gemma          # 단일 인스턴스만 기동 (instances/gemma.yaml)
+./start.sh status            # UP 확인 (1~5분 소요, 모델 미보유 시 자동 다운로드 → /models/LLM/)
 
 # STT
 cd /workspace/llm-serving/stt
 ./start.sh
-./start.sh status        # 모델 미보유 시 자동 다운로드 → /models/STT/
+./start.sh status            # 모델 미보유 시 자동 다운로드 → /models/STT/
 ```
 
-> ⚠️ **LLM ↔ STT 동시 운영 주의**: 현재 `vllm_config.yaml` 은 GPU [0,1] TP=2 점유. STT 테스트 시 LLM 먼저 stop 필요 (`cd vllm && ./start.sh stop`). 상세는 [`stt/README.md`](stt/README.md) "운영 주의".
+> ⚠️ **LLM ↔ STT 동시 운영 주의**: 현재 `vllm/instances/{gemma,qwen}.yaml` 이 각각 GPU 0/1 점유. STT 테스트 시 LLM 인스턴스 먼저 stop 필요 (`cd vllm && ./start.sh down`). 상세는 [`stt/README.md`](stt/README.md) "운영 주의".
 
 ---
 
@@ -78,7 +79,7 @@ aws s3 sync ./llm-serving/ s3://hgi-ai-res/hjjo/llm-serving/ \
 # (운영계) 재다운로드 + 재시작
 cd /workspace/
 sudo aws s3 sync s3://hgi-ai-res/hjjo/llm-serving/ ./llm-serving/
-cd llm-serving/vllm && ./start.sh restart        # 또는 stt
+cd llm-serving/vllm && ./start.sh restart        # 또는 stt (단일 재시작은 ./start.sh restart <name>)
 ```
 
 > 로컬에서 파일을 삭제했다면 운영계에 잔존하므로 `--delete` 추가. 처음에는 `--dryrun` 으로 확인 권장.
@@ -95,12 +96,12 @@ cd llm-serving/vllm && ./start.sh restart        # 또는 stt
 | 모델 다운로드 401/403 | gated 모델 + HF_TOKEN 미설정. `~/aws/.env` 의 `HF_TOKEN` 확인 후 `docker compose up -d --force-recreate` |
 | 모델 다운로드 timeout (폐쇄망) | EC2 외부망 차단. 외부망 PC에서 사전 다운로드 → S3 → `/volume/models/` 로 이관. 절차는 [`vllm/VLLM_OPS_GUIDE.md`](vllm/VLLM_OPS_GUIDE.md) §4.2 참조 |
 | 코드 수정이 반영 안 됨 | `__pycache__` 캐시. `find /workspace/llm-serving -name __pycache__ -exec rm -rf {} +` 후 재시작 |
-| GPU OOM | `vllm/vllm_config.yaml` 의 `gpu_memory_utilization` 낮추기, 또는 다른 인스턴스 stop |
+| GPU OOM | `vllm/instances/<name>.yaml` 의 `gpu_memory_utilization` 낮추기, 또는 다른 인스턴스 stop (`./start.sh down <name>`) |
 
 ---
 
 ## 참고
 
-- 인프라/컨테이너: [`../aws/README.md`](../aws/README.md)
+- 인프라/컨테이너: [`../aws/SETUP_GUIDE.md`](../aws/SETUP_GUIDE.md)
 - vLLM 운영 상세 (모델 교체, 메모리 표 등): [`vllm/VLLM_OPS_GUIDE.md`](vllm/VLLM_OPS_GUIDE.md)
 - STT PoC: [`stt/README.md`](stt/README.md), [`stt/MODEL_STUDY.md`](stt/MODEL_STUDY.md)

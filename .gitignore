@@ -6,7 +6,10 @@
 
 .archive/
 
-__pycache__
+__pycache__/
 
 logs/
 samples/
+
+# vLLM launcher runtime 파일 (port 자동 회피 결과 — PID 종속 동적 상태)
+.runtime/

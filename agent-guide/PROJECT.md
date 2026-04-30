@@ -146,6 +146,6 @@ python test_vllm_server.py
 | [GUIDE.md](GUIDE.md) | 작업 원칙, 용어, 체크리스트 |
 | [../README.md](../README.md) | 레포 메타 안내 (디렉토리 진입점) |
 | [../my-docker-server/README.md](../my-docker-server/README.md) | 로컬 dev/GPU 환경 사용법 |
-| [../aws/README.md](../aws/README.md) | EC2 셋업·다중 사용자·dev/prd 모드 |
+| [../aws/SETUP_GUIDE.md](../aws/SETUP_GUIDE.md) | EC2 셋업·다중 사용자·dev/prd 모드 |
 | [../llm-serving/README.md](../llm-serving/README.md) | 서빙 프레임워크 인덱스 |
 | [../llm-serving/vllm/VLLM_OPS_GUIDE.md](../llm-serving/vllm/VLLM_OPS_GUIDE.md) | vLLM 운영 가이드 |

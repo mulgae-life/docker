@@ -31,6 +31,7 @@ import asyncio
 import glob
 import json
 import logging
+# (json은 runtime 파일 파싱에도 재사용)
 import logging.handlers
 import os
 import time
@@ -139,14 +140,38 @@ class GatewayConfig(BaseModel):
     http_client: HttpClientConfig = HttpClientConfig()
 
 
+def _resolve_actual_port(instance_dir: str, yaml_path: str, yaml_port: int) -> tuple[int, str]:
+    """인스턴스의 실제 listen 포트를 결정한다.
+
+    동작:
+      - instance_dir/.runtime/<name>.json 이 존재하면 거기 기록된 port 사용 (launcher가 자동 회피한 실제 포트).
+      - 없으면 yaml의 port를 fallback으로 사용 (vLLM이 아직 안 떴거나 port 자동 회피 미사용 구버전).
+
+    반환: (actual_port, source) — source는 "runtime" 또는 "yaml"
+    """
+    name = os.path.splitext(os.path.basename(yaml_path))[0]
+    runtime_path = os.path.join(instance_dir, ".runtime", f"{name}.json")
+    if os.path.isfile(runtime_path):
+        try:
+            with open(runtime_path, encoding="utf-8") as f:
+                data = json.load(f)
+            if "port" in data:
+                return int(data["port"]), "runtime"
+        except (OSError, json.JSONDecodeError, ValueError) as e:
+            logger.warning("runtime 파일 파싱 실패, yaml port 사용: %s (%s)", runtime_path, e)
+    return int(yaml_port), "yaml"
+
+
 def _discover_backends(config_path: str, raw: dict) -> list[dict]:
     """discover_from 디렉토리를 스캔해 gateway_port가 일치하는 인스턴스를 backends로 변환.
 
     동작:
       1. discover_from(상대 경로 → 절대 경로)의 *.yaml을 모두 읽는다.
       2. 각 yaml의 gateway_port가 자기 게이트웨이 포트와 일치하는 것만 채택.
-      3. {host, port}로 변환하여 backends 리스트로 반환.
-      4. 같은 게이트웨이로 묶인 인스턴스 간 vLLM port 중복은 즉시 ValueError.
+      3. 실제 vLLM port는 instances/.runtime/<name>.json 우선 (launcher 자동 회피 결과),
+         없으면 yaml의 port hint로 fallback.
+      4. {host, port}로 변환하여 backends 리스트로 반환.
+      5. 같은 게이트웨이로 묶인 인스턴스 간 실제 port 중복은 즉시 ValueError.
 
     그 외 yaml(gateway_port 미설정 / 다른 게이트웨이 소속)은 조용히 스킵.
     """
@@ -175,24 +200,25 @@ def _discover_backends(config_path: str, raw: dict) -> list[dict]:
             continue
         matched.append((yaml_path, inst))
 
-    # vLLM port 중복 검증 (같은 게이트웨이 소속 인스턴스끼리)
+    # 실제 port 해석 (runtime 파일 우선, yaml fallback) + 중복 검증
     seen_ports: dict[int, str] = {}
     backends: list[dict] = []
+    sources: list[str] = []
     for yaml_path, inst in matched:
-        port = inst["port"]
-        if port in seen_ports:
+        actual_port, source = _resolve_actual_port(instance_dir, yaml_path, inst["port"])
+        if actual_port in seen_ports:
             raise ValueError(
                 f"같은 gateway_port({gateway_port})로 묶인 인스턴스끼리 "
-                f"vLLM port {port}가 중복됩니다: "
-                f"{seen_ports[port]} vs {yaml_path}"
+                f"실제 vLLM port {actual_port}가 중복됩니다: "
+                f"{seen_ports[actual_port]} vs {yaml_path}"
             )
-        seen_ports[port] = yaml_path
-        backends.append({"host": inst.get("host_for_gateway", "127.0.0.1"), "port": port})
+        seen_ports[actual_port] = yaml_path
+        backends.append({"host": inst.get("host_for_gateway", "127.0.0.1"), "port": actual_port})
+        sources.append(f"{os.path.basename(yaml_path)}→{actual_port}({source})")
 
     logger.info(
         "discover_from %s → gateway_port=%d 매칭 %d개: %s",
-        instance_dir, gateway_port, len(backends),
-        [f"{b['host']}:{b['port']}" for b in backends],
+        instance_dir, gateway_port, len(backends), sources,
     )
     return backends
 

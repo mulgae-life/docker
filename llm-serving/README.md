@@ -15,19 +15,21 @@ LLM 서빙 프레임워크 운영 구성 모음. 서버 인프라(EC2/Docker)와
 
 ## 🎯 vLLM (현재 운영 중)
 
-| 파일 | 역할 |
+설정은 **인스턴스 단위 yaml**(`instances/`)과 **게이트웨이 단위 yaml**(`gateways/`)로 분리. 게이트웨이는 `discover_from` + 인스턴스 yaml의 `gateway_port` 메타 키로 backends를 자동 매칭한다 (수동 명시 불필요).
+
+| 파일 / 디렉토리 | 역할 |
 |------|------|
 | [`vllm/VLLM_OPS_GUIDE.md`](vllm/VLLM_OPS_GUIDE.md) | 운영 가이드 (모델 추가, 트러블슈팅, 멀티 GPU 분할) |
-| [`vllm/start.sh`](vllm/start.sh) | 빠른 기동 스크립트 |
-| [`vllm/vllm_server_launcher.py`](vllm/vllm_server_launcher.py) | vLLM 서버 런처 |
-| [`vllm/vllm_gateway.py`](vllm/vllm_gateway.py) | OpenAI 호환 게이트웨이 (모델 라우팅) |
-| [`vllm/vllm_config.yaml`](vllm/vllm_config.yaml) | 서버 설정 (모델/포트/GPU 분할) |
-| [`vllm/vllm_gateway_config.yaml`](vllm/vllm_gateway_config.yaml) | 게이트웨이 라우팅 설정 |
+| [`vllm/start.sh`](vllm/start.sh) | 빠른 기동 스크립트 (`up [name]` / `down [name]` / `status`) |
+| [`vllm/vllm_server_launcher.py`](vllm/vllm_server_launcher.py) | vLLM 서버 런처 (인스턴스 yaml `-c` 인자 수신) |
+| [`vllm/vllm_gateway.py`](vllm/vllm_gateway.py) | OpenAI 호환 게이트웨이 (자동 디스커버리 LB) |
+| [`vllm/instances/`](vllm/instances/) | **인스턴스 단위 yaml** (`<name>.yaml` 1개 = vLLM 프로세스 1대). `gateway_port` 메타 + 모델/포트/GPU |
+| [`vllm/gateways/`](vllm/gateways/) | **게이트웨이 단위 yaml** (`<port>.yaml` 1개 = 게이트웨이 1대). `discover_from`으로 인스턴스 자동 매칭 |
 | [`vllm/test_vllm_server.py`](vllm/test_vllm_server.py) | 서버 헬스/추론 테스트 |
 | [`vllm/slm_research/`](vllm/slm_research/) | SLM 비교 리서치 (Gemma, Qwen) |
 | [`vllm/bugfix/`](vllm/bugfix/) | 운영 중 발견된 이슈 기록 |
 
-자세한 사용법은 [`vllm/VLLM_OPS_GUIDE.md`](vllm/VLLM_OPS_GUIDE.md) 참조.
+운영 인스턴스/게이트웨이 추가는 yaml 한 파일 복사 → 값만 수정 → `./start.sh up <name>` (인스턴스) 또는 게이트웨이 재기동(자동 디스커버리). 자세한 사용법은 [`vllm/VLLM_OPS_GUIDE.md`](vllm/VLLM_OPS_GUIDE.md) 참조.
 
 ## ➕ 새 프레임워크 추가 시
 

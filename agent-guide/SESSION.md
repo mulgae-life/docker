@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-04-29 (3차 세션)
+last-updated: 2026-04-30 (vLLM 게이트웨이 자동 디스커버리 + yaml 통일)
 ---
 
 # 세션 상태
@@ -24,6 +24,7 @@ last-updated: 2026-04-29 (3차 세션)
 
 | 우선순위 | 작업 | 상태 |
 |---------|------|------|
+| P1 | **vLLM Qwen 본체 :7080 이전**: `instances/qwen.yaml`의 `port: 7080`이 의도된 다음 운영 포트. 게이트웨이 :5016은 메모리상 :7071 보유 중이라 즉시 영향 없으나, 다음 게이트웨이 재기동 시 yaml 기준(:7080)으로 디스커버리하므로 그 시점 전에 vLLM 본체를 :7080으로 옮겨야 정합. | Todo |
 | P1 | `llm-serving/sglang/` 디렉토리 골격 (운영 가이드 + 런처 + 설정 + 테스트) | Todo |
 | P1 | **`llm-serving/stt/` PoC**: 시나리오 D 확정 — **Qwen3-ASR-1.7B + Whisper-large-v3** 동시 서빙(GPU 0/1 분리, port 7170/7171, transcription endpoint). 인프라(start.sh + 모델별 config 2종 + README) 구현 완료. 다음 단계: 실제 기동(LLM 인스턴스 stop 필요) → 한국어 벤치(`test_stt.py`, WER/RTF/latency) → 게이트웨이 통합 | In progress (인프라 구축 완료, 기동/벤치 대기) |
 | P2 | **RTX PRO 6000 Blackwell 운영 이전 후 fused MoE 튜닝**: `benchmark_moe.py`로 `E=128,N=352,device_name=NVIDIA_RTX_PRO_6000_Blackwell_Workstation_Edition,dtype=fp8_w8a8.json` 생성 → site-packages `vllm/model_executor/layers/fused_moe/configs/`에 배치 → 가능하면 vLLM 본가 PR. 트리거: 운영 환경 셋업 완료 시점 | Todo |
@@ -33,11 +34,60 @@ last-updated: 2026-04-29 (3차 세션)
 
 ## 기타 이슈
 
-- `llm-serving/vllm/{VLLM_OPS_GUIDE.md, start.sh, vllm_config.yaml}`에 unstaged 로컬 변경 (작업 외 변경, 사용자 직접 처리 예정)
+- 없음 (이전 세션의 unstaged 변경은 commit `2905914`로 정리됨)
 
 ---
 
 ## 최근 세션
+
+### 2026-04-30 (vLLM 게이트웨이 자동 디스커버리 + yaml 통일)
+
+#### 세션 목표
+- vLLM 게이트웨이 ↔ 인스턴스 페어 격리 + 자동 디스커버리 구조(Phase 2) 도입
+- 다중 모델/LB 시나리오에서 게이트웨이 yaml 백엔드를 수동 명시 없이 자동 매칭
+- 신규 인스턴스 yaml의 복붙 확장성 확보 — 주석/구조 통일 + 운영 노하우 보존
+
+#### 변경 파일
+| 파일 | 변경 유형 | 요약 |
+|------|----------|------|
+| `llm-serving/vllm/instances/{gemma,qwen}.yaml` | 신규 (각 390줄) | 인스턴스 단위 yaml. `gateway_port` 메타 키로 소속 게이트웨이 선언. archive 원본의 모든 운영 노하우 주석을 두 파일에 동일하게 보존 |
+| `llm-serving/vllm/gateways/{5015,5016}.yaml` | 신규 (각 70줄) | 게이트웨이 단위 yaml. `discover_from: ../instances`로 자동 매칭. backends 수동 명시는 escape hatch로 유지 |
+| `llm-serving/vllm/vllm_gateway.py` | 수정 (+107줄) | `_discover_backends()` 추가, `load_config` 우선순위 재정의: backends → discover_from → deprecated fallback. vLLM port 중복 검증, `gateway.port` 누락 ValueError |
+| `llm-serving/vllm/vllm_server_launcher.py` | 수정 (+22줄) | `_LAUNCHER_KEYS`에 `gateway_port` 추가 (vllm serve 인자 누수 방지). docstring을 `instances/<name>.yaml` 형태로 갱신 |
+| `llm-serving/vllm/start.sh` | 재작성 (+327/-220) | `instances/*.yaml` + `gateways/*.yaml` 자동 순회. 인터페이스 `up [name]` / `down [name]` / `status` / `restart [name]`. 단일 인스턴스 모드는 게이트웨이 미터치 |
+| `llm-serving/vllm/{vllm_config,vllm_gateway_config}.yaml` | 이동(아카이브) | `agent-guide/.archive/2026-04-30_vllm-config-migration/`로 mv (rm 금지) |
+| `agent-guide/SESSION.md` | 수정 | 본 세션 + 다음 작업(P1 Qwen :7080 이전) 추가 |
+| `llm-serving/README.md`, `llm-serving/DEPLOY_GUIDE.md`, `llm-serving/vllm/VLLM_OPS_GUIDE.md` | 수정 | 새 디렉토리 구조 반영 (instances/, gateways/, discover_from, gateway_port) |
+| `memory/lessons_archive_via_mv.md` | 신규 | 산출물 정리 시 mv 아카이빙 원칙. "삭제할까요?" 프레이밍 금지 |
+| `memory/feedback_preserve_operational_comments.md` | 신규 | 통일 = 구조/위치/주석 동일화이지 주석 단축 아님. 운영 노하우 보존 원칙 |
+
+#### 결정 사항
+- **자동 디스커버리 채택 (Phase 2)**: 게이트웨이 yaml에서 backends 수동 명시 대신 `discover_from` + 인스턴스 yaml의 `gateway_port` 메타 키로 단방향 선언. 복붙 확장 시 한 파일만 추가하면 게이트웨이 재기동 시 자동 등록.
+- **격리 페어 + LB 양립**: 같은 `gateway_port`를 갖는 인스턴스가 여러 개면 자동 LB. 다른 게이트웨이 소속이면 무시. vLLM port 중복은 게이트웨이 기동 시 ValueError로 거부.
+- **escape hatch 유지**: 게이트웨이 yaml에 `backends:` 명시 시 그쪽이 우선. 1세대 fallback(`vllm_config + backend_count`)도 deprecated 경고와 함께 유지 — 호환성/디버깅 목적.
+- **무중단 마이그레이션**: vLLM 본체 2대(:7070, :7071) 무중단 유지. 게이트웨이만 신규 yaml로 재기동.
+- **yaml 통일 = 동일 구조 + 풍부 주석 보존**: 1차 통일에서 운영 노하우 주석을 일반화 핑계로 다이어트했다가 대표님 항의로 archive 원본 베이스 풍부 복원. 두 instances yaml 라인 수 390/390, top-level 키 29/29 완전 일치, diff 13라인(모두 모델/리소스 값).
+- **포트 자동 회피**: 인스턴스 yaml의 `port`는 hint. launcher가 socket binding test로 사용 중이면 `+1, +2 ...` 비어있는 첫 포트로 자동 회피. 실제 포트를 `instances/.runtime/<name>.json`에 기록하고 게이트웨이가 이 파일을 우선 참조. **복붙 LB 시나리오에서 port 깜빡 안 바꿔도 자동으로 다른 포트에 띄우고 게이트웨이가 자동 LB**. 검증: 같은 yaml port 7000 두 인스턴스 → 자동 회피 7000+7001 → 게이트웨이가 둘 다 backends 등록 (시뮬레이션 테스트 6/6 통과).
+- **__pycache__ 추적 끊기**: `git rm --cached llm-serving/vllm/__pycache__/*.pyc` (working tree 보존). `.gitignore`의 `__pycache__/` 룰이 이미 있어 향후 추가 추적 안 됨. 추가로 `.runtime/` 룰 등록.
+
+#### 운영 정합성 메모
+- 현재 :5016 게이트웨이는 메모리상 backend `:7071` 유지(재기동 안 됨). vLLM 본체도 :7071 살아있음 → 클라이언트 호출 즉시 영향 없음.
+- `instances/qwen.yaml`의 `port: 7080`은 다음 운영 단계에서 의도된 포트 (대표님 직접 변경). 다음 :5016 게이트웨이 재기동 시 yaml 기준(:7080)으로 디스커버리 → vLLM 본체를 :7080으로 옮긴 후 게이트웨이 재기동하는 흐름이 정상.
+
+#### 교훈 (영구 기록)
+- **rm 금지, mv 아카이빙 일변도** (`lessons_archive_via_mv.md`): 자율 작업 마지막 정리 시 "삭제할까요?" 프레이밍하지 말고 처음부터 `.archive/<YYYY-MM-DD>_<태그>/`로 mv. work-principles에 이미 명문화된 룰을 위반.
+- **통일 ≠ 주석 다이어트** (`feedback_preserve_operational_comments.md`): "두 파일 동일하게"는 구조/위치/주석 텍스트 동일화이지 노하우 일반화가 아님. 라인 참조, 크래시 사후 분석 메모, allowed values 표 등은 한두 줄로 복원 불가능한 깊이라 두 파일 모두에 동일하게 유지.
+
+#### 커밋
+| 해시 | 메시지 |
+|------|--------|
+| `2905914` | update (Phase 2 자동 디스커버리 + yaml 통일/복원 + 아카이빙 일괄) |
+
+#### 현재 상태
+- 디스커버리/통일/노하우 보존 모두 완료, work-verify 통과
+- 다음: vLLM Qwen 본체 :7080 이전 (yaml과 본체 정합 회복) → SGLang 골격 / STT 첫 기동
+
+---
 
 ### 2026-04-29
 

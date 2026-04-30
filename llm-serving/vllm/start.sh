@@ -36,17 +36,35 @@ mkdir -p "$LOG_DIR"
 parse_instance_yaml() {
     local yaml_path="$1"
     python3 - "$yaml_path" <<'PYEOF'
-import sys, yaml, os
+import sys, yaml, os, json
 path = sys.argv[1]
 data = yaml.safe_load(open(path)) or {}
 name = os.path.splitext(os.path.basename(path))[0]
-port = data.get("port", "")
+yaml_port = data.get("port", "")
 gpus = data.get("gpus", [])
 gpus_csv = ",".join(str(g) for g in gpus)
 gateway_port = data.get("gateway_port", "")
+
+# 실제 사용 중인 port: instances/.runtime/<name>.json 우선 (launcher 자동 회피 결과).
+# 없으면 yaml의 port hint를 fallback으로 사용 (인스턴스 미기동 상태).
+runtime_path = os.path.join(os.path.dirname(path), ".runtime", f"{name}.json")
+actual_port = yaml_port
+port_source = "yaml"
+if os.path.isfile(runtime_path):
+    try:
+        with open(runtime_path) as f:
+            rt = json.load(f)
+        if "port" in rt:
+            actual_port = rt["port"]
+            port_source = "runtime"
+    except (OSError, json.JSONDecodeError):
+        pass
+
 # 셸 평가용 변수
 print(f"INST_NAME={name}")
-print(f"INST_PORT={port}")
+print(f"INST_PORT={actual_port}")
+print(f"INST_PORT_HINT={yaml_port}")
+print(f"INST_PORT_SOURCE={port_source}")
 print(f"INST_GPUS_CSV={gpus_csv}")
 print(f"INST_GATEWAY_PORT={gateway_port}")
 PYEOF
@@ -98,17 +116,21 @@ start_instance() {
     local yaml_path="$1"
     eval "$(parse_instance_yaml "$yaml_path")"
 
-    if [ -z "$INST_PORT" ]; then
+    if [ -z "$INST_PORT_HINT" ]; then
         echo "[SKIP]  $INST_NAME — port 키 없음 ($yaml_path)"
         return
     fi
 
-    if is_running "$INST_PORT"; then
-        echo "[SKIP]  vLLM $INST_NAME (GPU $INST_GPUS_CSV, :$INST_PORT) — 이미 실행 중"
+    # 인스턴스 정체성 = instances/.runtime/<name>.json 존재 여부.
+    # 같은 yaml port를 갖는 다른 인스턴스가 그 포트를 잡고 있어도, 자기 이름의
+    # runtime 파일이 없으면 새로 기동 가능 (launcher가 +1 자동 회피).
+    local runtime_path="$INSTANCES_DIR/.runtime/${INST_NAME}.json"
+    if [ -f "$runtime_path" ]; then
+        echo "[SKIP]  vLLM $INST_NAME — 이미 실행 중 (runtime: ${INST_NAME}.json)"
         return
     fi
 
-    echo "[START] vLLM $INST_NAME (GPU $INST_GPUS_CSV, :$INST_PORT, → gateway :$INST_GATEWAY_PORT)"
+    echo "[START] vLLM $INST_NAME (GPU $INST_GPUS_CSV, port hint :$INST_PORT_HINT, → gateway :$INST_GATEWAY_PORT)"
     nohup python "$SCRIPT_DIR/vllm_server_launcher.py" \
         -c "$yaml_path" \
         -g "$INST_GPUS_CSV" \
@@ -120,17 +142,20 @@ stop_instance() {
     local yaml_path="$1"
     eval "$(parse_instance_yaml "$yaml_path")"
 
-    if [ -z "$INST_PORT" ]; then
+    local runtime_path="$INSTANCES_DIR/.runtime/${INST_NAME}.json"
+    if [ ! -f "$runtime_path" ]; then
+        echo "[SKIP]  vLLM $INST_NAME — 실행 중 아님 (runtime 없음)"
         return
     fi
 
+    # runtime 파일에서 launcher PID 추출하여 SIGTERM. launcher가 vLLM 자식 프로세스도 정리.
     local pid
-    pid=$(get_pid "$INST_PORT")
+    pid=$(python3 -c "import json; print(json.load(open('$runtime_path')).get('pid',''))")
     if [ -n "$pid" ]; then
-        echo "[STOP]  vLLM $INST_NAME (:$INST_PORT) PID $pid"
+        echo "[STOP]  vLLM $INST_NAME (port :$INST_PORT, launcher PID $pid)"
         kill "$pid" 2>/dev/null || true
     else
-        echo "[SKIP]  vLLM $INST_NAME (:$INST_PORT) — 실행 중 아님"
+        echo "[SKIP]  vLLM $INST_NAME — runtime에 PID 없음"
     fi
 }
 
@@ -234,10 +259,21 @@ cmd_status() {
     while IFS= read -r yaml_path; do
         [ -z "$yaml_path" ] && continue
         eval "$(parse_instance_yaml "$yaml_path")"
-        if is_running "$INST_PORT"; then
-            echo "[UP]   vLLM $INST_NAME (GPU $INST_GPUS_CSV, :$INST_PORT, → gw :$INST_GATEWAY_PORT)"
+        local runtime_path="$INSTANCES_DIR/.runtime/${INST_NAME}.json"
+
+        if [ -f "$runtime_path" ]; then
+            # runtime 파일 있음 → 실제 port로 health check
+            local port_label=":$INST_PORT"
+            if [ "$INST_PORT" != "$INST_PORT_HINT" ]; then
+                port_label=":$INST_PORT (hint :$INST_PORT_HINT 자동 회피)"
+            fi
+            if is_running "$INST_PORT"; then
+                echo "[UP]      vLLM $INST_NAME (GPU $INST_GPUS_CSV, $port_label, → gw :$INST_GATEWAY_PORT)"
+            else
+                echo "[STARTING] vLLM $INST_NAME (GPU $INST_GPUS_CSV, $port_label, runtime 있음 / health 응답 없음 — 기동 중이거나 stale)"
+            fi
         else
-            echo "[DOWN] vLLM $INST_NAME (GPU $INST_GPUS_CSV, :$INST_PORT, → gw :$INST_GATEWAY_PORT)"
+            echo "[DOWN]    vLLM $INST_NAME (GPU $INST_GPUS_CSV, port hint :$INST_PORT_HINT, → gw :$INST_GATEWAY_PORT)"
         fi
     done < <(list_instance_yamls)
 
@@ -246,9 +282,9 @@ cmd_status() {
         [ -z "$yaml_path" ] && continue
         eval "$(parse_gateway_yaml "$yaml_path")"
         if is_running "$GW_PORT"; then
-            echo "[UP]   Gateway $GW_NAME (:$GW_PORT)"
+            echo "[UP]      Gateway $GW_NAME (:$GW_PORT)"
         else
-            echo "[DOWN] Gateway $GW_NAME (:$GW_PORT)"
+            echo "[DOWN]    Gateway $GW_NAME (:$GW_PORT)"
         fi
     done < <(list_gateway_yamls)
 }
