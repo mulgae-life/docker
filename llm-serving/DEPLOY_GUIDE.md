@@ -21,8 +21,7 @@
 ## 1. 로컬 → S3 (코드 업로드)
 
 ```bash
-cd /workspace/docker
-aws s3 sync ./llm-serving/ s3://hgi-ai-res/hjjo/llm-serving/ \
+aws s3 sync /workspace/docker/llm-serving/ s3://hgi-ai-res/hjjo/llm-serving/ \
     --exclude "*/logs/*" --exclude "*/__pycache__/*" \
     --exclude "*/.vllm_serve_*" --exclude "*/samples/*"
 ```
@@ -39,9 +38,8 @@ aws s3 sync ./llm-serving/ s3://hgi-ai-res/hjjo/llm-serving/ \
 docker exec -it gemma bash               # 컨테이너 이름은 환경에 맞게 (예: gemma, llm-root, jin)
 
 # 컨테이너 안에서
-cd /workspace/
-sudo aws s3 sync s3://hgi-ai-res/hjjo/llm-serving/ ./llm-serving/
-sudo chmod +x llm-serving/*/start.sh
+sudo aws s3 sync s3://hgi-ai-res/hjjo/llm-serving/ /workspace/llm-serving/
+sudo chmod +x /workspace/llm-serving/*/start.sh
 ```
 
 > 컨테이너 이름 확인: `docker ps`. user.sh 로 띄운 컨테이너는 이름 그대로(`gemma` 등), 메인 compose 는 `llm-<USERNAME>`.

@@ -25,6 +25,7 @@ start.sh에서 호출되며, 직접 실행도 가능.
     HF_TOKEN=hf_xxx python vllm_server_launcher.py -c instances/<name>.yaml
 """
 import argparse
+import fcntl
 import glob
 import json
 import logging
@@ -47,6 +48,9 @@ logger = logging.getLogger("vllm-launcher")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INSTANCES_DIR = os.path.join(BASE_DIR, "instances")
 RUNTIME_DIR = os.path.join(INSTANCES_DIR, ".runtime")
+# port 할당 + runtime 기록을 동시 기동 launcher 간에 직렬화하기 위한 advisory lock 파일.
+# 프로세스 종료 시 OS가 자동으로 lock 해제하므로 stale lock 위험 없음.
+PORT_ALLOC_LOCK = os.path.join(RUNTIME_DIR, ".port_alloc.lock")
 
 # vllm serve --config에 전달하지 않는 런처 전용 키 + 게이트웨이 매칭용 메타 키.
 # gateway_port: gateways/<port>.yaml의 discover_from이 인스턴스 yaml에서 읽는 메타.
@@ -139,20 +143,26 @@ def _is_port_free(port: int, host: str = "0.0.0.0") -> bool:
     return True
 
 
-def _find_free_port(start: int, max_tries: int = 100) -> int:
+def _find_free_port(start: int, max_tries: int = 100, exclude=None) -> int:
     """yaml의 port를 시작점으로 비어있는 첫 포트를 찾는다.
 
     동작:
-        - start 포트가 비어있으면 그대로 사용 (의도된 포트 보존).
-        - 사용 중이면 +1, +2 ... max_tries까지 회피 탐색.
+        - start 포트가 비어있고 exclude에 없으면 그대로 사용 (의도된 포트 보존).
+        - 사용 중이거나 exclude에 있으면 +1, +2 ... max_tries까지 회피 탐색.
         - 모두 사용 중이면 RuntimeError로 fail-fast.
 
     의도: 인스턴스 yaml을 복붙해 같은 port가 남아있는 경우에도 자동 회피하여
     같은 게이트웨이 아래 LB 인스턴스를 올릴 수 있게 한다. 게이트웨이는
     runtime 파일에서 실제 포트를 읽으므로 backends 등록은 자동.
+
+    exclude는 동시 기동 race 방어용 — 다른 active launcher가 막 결정해 runtime에
+    기록한 port가 socket에선 아직 free로 보이는 윈도우에서도 회피하도록.
     """
+    exclude = exclude or set()
     for offset in range(max_tries):
         port = start + offset
+        if port in exclude:
+            continue
         if _is_port_free(port):
             if offset > 0:
                 logger.info(
@@ -162,6 +172,63 @@ def _find_free_port(start: int, max_tries: int = 100) -> int:
     raise RuntimeError(
         f"비어있는 port를 찾지 못함: {start} ~ {start + max_tries - 1} 모두 사용 중",
     )
+
+
+def _ports_taken_by_active_runtimes() -> set:
+    """현재 살아있는 다른 launcher가 점유 중인 port를 runtime json에서 수집.
+
+    동일 yaml port hint를 가진 launcher가 동시 기동될 때 socket bind 검사만으로는
+    같은 port를 둘 다 free로 보는 race가 발생한다. runtime json은 launcher가
+    port 결정 직후 기록하므로, lock 안에서 함께 검사하면 충돌 회피 가능.
+    """
+    taken: set = set()
+    if not os.path.isdir(RUNTIME_DIR):
+        return taken
+    for path in glob.glob(os.path.join(RUNTIME_DIR, "*.json")):
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, json.JSONDecodeError):
+            continue
+        pid = data.get("pid")
+        port = data.get("port")
+        if port is None or pid is None:
+            continue
+        if not _is_pid_alive(int(pid)):
+            continue
+        try:
+            taken.add(int(port))
+        except (TypeError, ValueError):
+            continue
+    return taken
+
+
+def _allocate_port_and_register(*, instance_name: str, yaml_port: int, model: str):
+    """fcntl.flock으로 port 결정 + runtime 기록을 직렬화한다.
+
+    동일 yaml port hint를 가진 launcher가 동시 기동될 때, socket bind 검사만으로는
+    한쪽이 close()와 다른 쪽 bind() 사이에 같은 port를 free로 보는 race가 발생한다.
+    이를 막기 위해 PORT_ALLOC_LOCK을 EX-lock으로 잡고, 그 안에서
+    (1) 다른 active launcher의 점유 port 수집 (2) free port 결정 (3) runtime json 기록.
+
+    프로세스가 죽으면 OS가 lock 자동 해제하므로 stale lock 위험 없음.
+    반환: (actual_port, runtime_path)
+    """
+    os.makedirs(RUNTIME_DIR, exist_ok=True)
+    with open(PORT_ALLOC_LOCK, "w") as lf:
+        fcntl.flock(lf.fileno(), fcntl.LOCK_EX)
+        try:
+            taken = _ports_taken_by_active_runtimes()
+            actual_port = _find_free_port(yaml_port, exclude=taken)
+            runtime_path = _write_runtime_file(
+                name=instance_name,
+                port=actual_port,
+                yaml_port_hint=yaml_port,
+                model=model,
+            )
+            return actual_port, runtime_path
+        finally:
+            fcntl.flock(lf.fileno(), fcntl.LOCK_UN)
 
 
 def _instance_name_from_config(config_path: str) -> str:
@@ -183,6 +250,11 @@ def _write_runtime_file(name: str, port: int, yaml_port_hint: int, model: str) -
 
     게이트웨이의 _discover_backends가 이 파일을 우선 참조하여 backends에
     실제 포트를 등록한다. 파일이 없으면 yaml의 port로 fallback.
+
+    원자성: tmp 파일에 dump 후 os.replace로 atomic rename. 직접 open("w")으로
+    쓰면 truncate된 0바이트 상태가 잠시 노출되어, start.sh가 파일 존재만 보고
+    진행하거나 게이트웨이가 partial json을 읽고 yaml port hint로 잘못 fallback하는
+    race가 발생한다 (launcher가 +1 자동 회피한 경우 영구 unhealthy로 굳음).
     """
     os.makedirs(RUNTIME_DIR, exist_ok=True)
     path = _runtime_path(name)
@@ -193,8 +265,18 @@ def _write_runtime_file(name: str, port: int, yaml_port_hint: int, model: str) -
         "model": model,
         "started_at": time.time(),
     }
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    # 동일 디렉토리에 tmp 작성 — os.replace가 동일 파일시스템 내에서만 atomic.
+    fd, tmp_path = tempfile.mkstemp(suffix=".json.tmp", prefix=f"{name}.", dir=RUNTIME_DIR)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        os.replace(tmp_path, path)
+    except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
     logger.info("runtime 기록: %s (port=%d, pid=%d)", path, port, os.getpid())
     return path
 
@@ -222,7 +304,8 @@ def _cleanup_stale_runtime_files() -> None:
     """이전 실행에서 SIGKILL/crash로 남은 runtime 파일을 정리한다.
 
     PID가 살아있지 않은 항목만 삭제하여 동시 실행 중인 다른 인스턴스의
-    runtime 파일은 보존한다.
+    runtime 파일은 보존한다. atomic write 도중 SIGKILL되어 남은 .json.tmp
+    잔재도 함께 정리.
     """
     if not os.path.isdir(RUNTIME_DIR):
         return
@@ -239,6 +322,16 @@ def _cleanup_stale_runtime_files() -> None:
                 os.unlink(path)
             except OSError:
                 pass
+    # atomic write 실패 잔재 (.json.tmp) 정리 — 살아있는 launcher가 진행 중인
+    # 일시적 tmp일 수도 있으므로 1분 이상 묵은 것만 삭제.
+    now = time.time()
+    for tmp_path in glob.glob(os.path.join(RUNTIME_DIR, "*.json.tmp")):
+        try:
+            if now - os.path.getmtime(tmp_path) >= 60:
+                os.unlink(tmp_path)
+                logger.info("stale runtime tmp 정리: %s", tmp_path)
+        except OSError:
+            pass
 
 
 def _raise_keyboard_interrupt(signum, frame):
@@ -300,19 +393,18 @@ def main():
         logger.info("다운로드 완료. 서버를 실행하지 않습니다.")
         sys.exit(0)
 
-    # ── 포트 자동 회피 ──
+    # ── 포트 자동 회피 + runtime 기록 (직렬화) ──
     # yaml의 port는 hint. 사용 중이면 +1 회피하여 비어있는 첫 포트 사용.
     # 결정된 실제 포트는 runtime 파일에 기록 → 게이트웨이가 우선 참조.
+    # 동시 기동 시 같은 port를 둘 다 free로 보는 race를 막기 위해 fcntl.flock으로
+    # port 할당과 runtime 기록을 launcher 간 직렬화한다.
     yaml_port = config.get("port")
     if yaml_port is None:
         logger.error("yaml에 port 키가 없습니다 (port hint 필요): %s", config_path)
         sys.exit(1)
-    actual_port = _find_free_port(yaml_port)
-
-    runtime_path = _write_runtime_file(
-        name=instance_name,
-        port=actual_port,
-        yaml_port_hint=yaml_port,
+    actual_port, runtime_path = _allocate_port_and_register(
+        instance_name=instance_name,
+        yaml_port=yaml_port,
         model=config.get("model", ""),
     )
 
