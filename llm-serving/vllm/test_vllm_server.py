@@ -1,8 +1,19 @@
 #!/usr/bin/env python3
-"""vLLM 서버 QA 테스트 스크립트
+"""vLLM 서버 QA 테스트 스크립트.
 
 vLLM 서버 배포 후 기능 검증을 위한 테스트 스위트.
 외부 의존성 없이 Python 표준 라이브러리만 사용.
+
+테스트 단계:
+  1. 인프라: /health, /v1/models, 잘못된 엔드포인트 응답 확인.
+  2. 기본 추론: 단일 턴, 시스템 프롬프트, 멀티턴 맥락, 잘못된 모델명 확인.
+  3. 스트리밍: SSE 청크, [DONE], stream_options.include_usage 확인.
+  4. 샘플링: temperature/seed, 높은 temperature, max_tokens=1, 잘못된 temperature 확인.
+  5. Thinking: 기본 OFF, 요청 단위 ON reasoning 분리, 명시적 OFF 확인.
+  6. Tool Calling: 단일 tool, 복수 tool, tool 미사용 응답, tool 결과 반영 확인.
+  7. 경계값/스트레스: 빈 입력, 긴 입력, 동시 텍스트 요청, 잘못된 JSON, 필수 필드 누락 확인.
+  8. 프리픽스 캐싱: 동일 시스템 프롬프트 반복 호출의 응답 시간 비교.
+  9. 멀티모달: 단일 이미지, 동시 이미지, 이미지+텍스트 혼합 요청 안정성 확인.
 
 사용법:
     # 기본 (localhost:5015, base-url 포트 → gateways/+instances/에서 모델명 자동 추출)

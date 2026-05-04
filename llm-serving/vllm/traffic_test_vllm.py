@@ -3,6 +3,17 @@
 
 기능 검증용 test_vllm_server.py와 달리 운영 지표를 확인한다.
 기본값은 실제 운영 서버 보호를 우선하여 낮은 강도로 설정한다.
+
+테스트 단계:
+  1. 모델 확인: --model 미지정 시 /v1/models에서 첫 모델명을 자동 추출.
+  2. 사전 스냅샷: /health, /server-status, /v1/models 상태 저장.
+  3. 모드 선택: smoke는 저강도 확인, overload는 429 과부하 차단 확인.
+  4. 요청 방식: 기본은 non-stream, --stream 지정 시 SSE와 TTFT 측정.
+  5. 트래픽 실행: 요청 큐를 만들고 --concurrency 워커가 순차 처리.
+  6. 보호 장치: 허용되지 않은 에러율 또는 연속 실패 기준 초과 시 조기 중단.
+  7. 사후 점검: 테스트 후 /health와 /server-status 생존 여부를 통과 조건에 반영.
+  8. 지표 집계: 성공률, 429 방어 응답, 상태코드, RPS, TPS, latency, TTFT 집계.
+  9. 결과 저장: logs/traffic_*.json 리포트 저장, 통과 기준 미달 시 exit 1.
 """
 
 from __future__ import annotations
@@ -128,6 +139,14 @@ def _chat_once(
     if stream:
         return _stream_once(base_url, body, index, timeout, start)
     return _non_stream_once(base_url, body, index, timeout, start)
+
+
+def _is_overload_rejection(result: RequestResult) -> bool:
+    return result.status == 429
+
+
+def _is_allowed_result(args: argparse.Namespace, result: RequestResult) -> bool:
+    return result.ok or (args.mode == "overload" and _is_overload_rejection(result))
 
 
 def _non_stream_once(
@@ -265,10 +284,12 @@ def _run_traffic(args: argparse.Namespace, model: str) -> tuple[list[RequestResu
     def should_trip() -> bool:
         if len(results) < args.min_requests_before_break:
             return False
-        failures = [r for r in results if not r.ok]
+        failures = [r for r in results if not _is_allowed_result(args, r)]
         if len(failures) >= args.max_consecutive_errors:
             tail = results[-args.max_consecutive_errors :]
-            if len(tail) == args.max_consecutive_errors and all(not r.ok for r in tail):
+            if len(tail) == args.max_consecutive_errors and all(
+                not _is_allowed_result(args, r) for r in tail
+            ):
                 return True
         return len(failures) / len(results) > args.max_error_rate
 
@@ -309,8 +330,10 @@ def _run_traffic(args: argparse.Namespace, model: str) -> tuple[list[RequestResu
     return sorted(results, key=lambda r: r.index), tripped
 
 
-def _summarize(results: list[RequestResult], elapsed_s: float) -> dict[str, Any]:
+def _summarize(args: argparse.Namespace, results: list[RequestResult], elapsed_s: float) -> dict[str, Any]:
     ok_results = [r for r in results if r.ok]
+    rejected_results = [r for r in results if _is_overload_rejection(r)]
+    failed_results = [r for r in results if not _is_allowed_result(args, r)]
     latencies = [r.latency_ms for r in ok_results]
     ttfts = [r.ttft_ms for r in ok_results if r.ttft_ms is not None]
     completion_tokens = [r.completion_tokens or 0 for r in ok_results]
@@ -323,8 +346,10 @@ def _summarize(results: list[RequestResult], elapsed_s: float) -> dict[str, Any]
     return {
         "sent": len(results),
         "ok": len(ok_results),
-        "failed": len(results) - len(ok_results),
-        "error_rate": 0 if not results else (len(results) - len(ok_results)) / len(results),
+        "overload_rejected": len(rejected_results),
+        "allowed": len(results) - len(failed_results),
+        "failed": len(failed_results),
+        "error_rate": 0 if not results else len(failed_results) / len(results),
         "status_counts": status_counts,
         "elapsed_seconds": elapsed_s,
         "requests_per_second": 0 if elapsed_s <= 0 else len(results) / elapsed_s,
@@ -344,6 +369,48 @@ def _summarize(results: list[RequestResult], elapsed_s: float) -> dict[str, Any]
     }
 
 
+def _postcheck(snapshot: dict[str, Any]) -> dict[str, Any]:
+    health_status = snapshot.get("/health", {}).get("status")
+    server_status = snapshot.get("/server-status", {}).get("status")
+    failures = []
+    if health_status != 200:
+        failures.append(f"/health HTTP {health_status}")
+    if server_status != 200:
+        failures.append(f"/server-status HTTP {server_status}")
+    return {
+        "ok": not failures,
+        "health_status": health_status,
+        "server_status": server_status,
+        "failures": failures,
+    }
+
+
+def _evaluate_pass(
+    args: argparse.Namespace,
+    summary: dict[str, Any],
+    tripped: bool,
+    postcheck: dict[str, Any],
+) -> dict[str, Any]:
+    failures = []
+    if tripped:
+        failures.append("회로차단 발생")
+    if summary["failed"] > 0:
+        failures.append(f"허용되지 않은 실패 {summary['failed']}건")
+    if args.require_200 and summary["ok"] == 0:
+        failures.append("HTTP 200 성공 응답 없음")
+    if args.require_429 and summary["overload_rejected"] == 0:
+        failures.append("HTTP 429 과부하 차단 응답 없음")
+    if not postcheck["ok"]:
+        failures.extend(postcheck["failures"])
+    return {
+        "passed": not failures,
+        "mode": args.mode,
+        "require_200": args.require_200,
+        "require_429": args.require_429,
+        "failures": failures,
+    }
+
+
 def _write_report(args: argparse.Namespace, report: dict[str, Any]) -> str:
     os.makedirs(args.output_dir, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -357,19 +424,62 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="vLLM 게이트웨이 보수적 트래픽 테스트")
     p.add_argument("--base-url", default="http://localhost:5015", help="게이트웨이 URL")
     p.add_argument("--model", default=None, help="모델명. 미지정 시 /v1/models에서 자동 추출")
-    p.add_argument("--requests", type=int, default=10, help="총 요청 수")
-    p.add_argument("--concurrency", type=int, default=1, help="동시 요청 수")
-    p.add_argument("--max-tokens", type=int, default=64, help="요청당 최대 생성 토큰")
+    p.add_argument("--mode", choices=("smoke", "overload"), default="smoke", help="테스트 모드")
+    p.add_argument("--requests", type=int, default=None, help="총 요청 수")
+    p.add_argument("--concurrency", type=int, default=None, help="동시 요청 수")
+    p.add_argument("--max-tokens", type=int, default=None, help="요청당 최대 생성 토큰")
     p.add_argument("--timeout", type=float, default=300, help="요청 타임아웃 초")
     p.add_argument("--stream", action="store_true", help="SSE 스트리밍으로 테스트")
-    p.add_argument("--ramp-up-seconds", type=float, default=2, help="워커 시작 분산 시간")
-    p.add_argument("--sleep-seconds", type=float, default=0, help="워커별 요청 사이 휴식")
-    p.add_argument("--max-error-rate", type=float, default=0.05, help="초과 시 조기 중단")
-    p.add_argument("--max-consecutive-errors", type=int, default=2, help="연속 실패 조기 중단 기준")
-    p.add_argument("--min-requests-before-break", type=int, default=3, help="회로차단 판단 최소 요청 수")
+    p.add_argument("--ramp-up-seconds", type=float, default=None, help="워커 시작 분산 시간")
+    p.add_argument("--sleep-seconds", type=float, default=None, help="워커별 요청 사이 휴식")
+    p.add_argument("--max-error-rate", type=float, default=None, help="초과 시 조기 중단")
+    p.add_argument("--max-consecutive-errors", type=int, default=None, help="연속 실패 조기 중단 기준")
+    p.add_argument("--min-requests-before-break", type=int, default=None, help="회로차단 판단 최소 요청 수")
+    p.add_argument(
+        "--require-200",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="HTTP 200 응답을 통과 조건으로 요구",
+    )
+    p.add_argument(
+        "--require-429",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="HTTP 429 과부하 차단 응답을 통과 조건으로 요구",
+    )
     p.add_argument("--output-dir", default="logs", help="결과 JSON 저장 디렉토리")
     args = p.parse_args()
     args.base_url = args.base_url.rstrip("/")
+    defaults = {
+        "smoke": {
+            "requests": 10,
+            "concurrency": 1,
+            "max_tokens": 64,
+            "ramp_up_seconds": 2.0,
+            "sleep_seconds": 0.0,
+            "max_error_rate": 0.05,
+            "max_consecutive_errors": 2,
+            "min_requests_before_break": 3,
+            "require_200": True,
+            "require_429": False,
+        },
+        "overload": {
+            "requests": 16,
+            "concurrency": 10,
+            "max_tokens": 256,
+            "ramp_up_seconds": 0.0,
+            "sleep_seconds": 0.0,
+            "max_error_rate": 0.05,
+            "max_consecutive_errors": 2,
+            "min_requests_before_break": 4,
+            "require_200": True,
+            "require_429": True,
+        },
+    }[args.mode]
+    for key, value in defaults.items():
+        if getattr(args, key) is None:
+            setattr(args, key, value)
+    args.effective_defaults = {key: getattr(args, key) for key in defaults}
     if args.requests < 1:
         raise SystemExit("--requests는 1 이상이어야 합니다")
     if args.concurrency < 1:
@@ -386,6 +496,7 @@ def main() -> None:
     print("vLLM 트래픽 테스트")
     print(f"  서버: {args.base_url}")
     print(f"  모델: {model}")
+    print(f"  모드: {args.mode}")
     print(f"  요청: {args.requests}, 동시성: {args.concurrency}, stream={args.stream}")
 
     before = _snapshot(args.base_url, args.timeout)
@@ -393,12 +504,15 @@ def main() -> None:
     results, tripped = _run_traffic(args, model)
     elapsed_s = time.monotonic() - start
     after = _snapshot(args.base_url, args.timeout)
-    summary = _summarize(results, elapsed_s)
+    summary = _summarize(args, results, elapsed_s)
+    postcheck = _postcheck(after)
+    pass_criteria = _evaluate_pass(args, summary, tripped, postcheck)
 
     report = {
         "config": {
             "base_url": args.base_url,
             "model": model,
+            "mode": args.mode,
             "requests": args.requests,
             "concurrency": args.concurrency,
             "max_tokens": args.max_tokens,
@@ -406,8 +520,13 @@ def main() -> None:
             "stream": args.stream,
             "max_error_rate": args.max_error_rate,
             "max_consecutive_errors": args.max_consecutive_errors,
+            "require_200": args.require_200,
+            "require_429": args.require_429,
         },
+        "effective_defaults": args.effective_defaults,
         "circuit_breaker_tripped": tripped,
+        "pass_criteria": pass_criteria,
+        "postcheck": postcheck,
         "summary": summary,
         "snapshots": {"before": before, "after": after},
         "results": [asdict(r) for r in results],
@@ -417,17 +536,32 @@ def main() -> None:
     print("")
     print("결과")
     print(f"  성공/전체: {summary['ok']}/{summary['sent']}")
+    print(f"  429 방어 응답: {summary['overload_rejected']}")
+    print(f"  허용/전체: {summary['allowed']}/{summary['sent']}")
     print(f"  에러율: {summary['error_rate']:.2%}")
     print(f"  상태코드: {summary['status_counts']}")
     print(f"  RPS: {summary['requests_per_second']:.2f}")
     print(f"  completion TPS: {summary['completion_tokens_per_second']:.2f}")
-    print(f"  latency p50/p95/p99(ms): {summary['latency_ms']['p50']} / {summary['latency_ms']['p95']} / {summary['latency_ms']['p99']}")
+    print(
+        "  latency p50/p95/p99(ms): "
+        f"{summary['latency_ms']['p50']} / "
+        f"{summary['latency_ms']['p95']} / "
+        f"{summary['latency_ms']['p99']}"
+    )
     if args.stream:
         print(f"  TTFT p50/p95(ms): {summary['ttft_ms']['p50']} / {summary['ttft_ms']['p95']}")
     print(f"  회로차단: {tripped}")
+    print(
+        "  사후 생존 확인: "
+        f"{postcheck['ok']} "
+        f"(/health={postcheck['health_status']}, /server-status={postcheck['server_status']})"
+    )
+    print(f"  통과: {pass_criteria['passed']}")
+    if pass_criteria["failures"]:
+        print(f"  실패 사유: {pass_criteria['failures']}")
     print(f"  리포트: {report_path}")
 
-    if tripped or summary["failed"] > 0:
+    if not pass_criteria["passed"]:
         sys.exit(1)
 
 
