@@ -1,14 +1,685 @@
-# vLLM 서버 운영 가이드
+# vLLM SLM API 가이드
+
+> **메인 모델**: `gemma-4-26B-A4B-it` (Google Gemma 4, 멀티모달)
+> **Base URL**: `http://3.38.195.121:5015/v1` (외부)
+> **API 호환**: OpenAI Chat Completions 100% — 기존 OpenAI SDK · LangChain `ChatOpenAI` · `curl` 그대로
+> **인증**: 불필요 (`Authorization` 헤더 생략 가능)
+
+자체 호스팅한 vLLM SLM(Small Language Model)을 **OpenAI API · Claude API 쓰듯** 호출하기 위한 가이드입니다.
+
+처음 호출하는 분은 **Part 1 [API 빠른 시작](#part-1--api-빠른-시작-사용자용)** 만 보면 됩니다. 운영자(서버 기동·튜닝·트러블슈팅)는 **Part 2 [운영 상세 가이드](#part-2--운영-상세-가이드-운영자용)** 로.
+
+---
+
+## 📑 목차
+
+### 🚀 Part 1 — API 빠른 시작 (사용자용)
+
+1. [한눈에 보기](#1-한눈에-보기)
+2. [첫 호출](#2-첫-호출)
+3. [핵심 기능](#3-핵심-기능)
+   - 3.1 스트리밍 (SSE)
+   - 3.2 Thinking 모드 (사고 과정 분리)
+   - 3.3 이미지 멀티모달 (Vision)
+   - 3.4 Tool Calling (함수 호출)
+   - 3.5 멀티턴 대화
+4. [파라미터·응답·에러 레퍼런스](#4-파라미터응답에러-레퍼런스)
+5. [chatbot-poc 통합 (.env)](#5-chatbot-poc-통합-env)
+
+### 🛠️ Part 2 — 운영 상세 가이드 (운영자용)
+
+6. [시스템 구조](#6-시스템-구조)
+7. [서버 기동·중지](#7-서버-기동중지)
+8. [모델 준비 (다운로드)](#8-모델-준비-다운로드)
+9. [설정 파일](#9-설정-파일)
+10. [API 운영 레퍼런스](#10-api-운영-레퍼런스)
+11. [모델 관리](#11-모델-관리)
+12. [Qwen3.6 고급 기능](#12-qwen36-고급-기능)
+13. [트러블슈팅 & 운영 주의](#13-트러블슈팅--운영-주의)
+14. [QA 테스트](#14-qa-테스트)
+15. [참고 자료](#15-참고-자료)
+
+---
+
+# 🚀 Part 1 — API 빠른 시작 (사용자용)
+
+## 1. 한눈에 보기
+
+| 항목 | **Gemma (메인)** | Qwen3.6 (옵션) |
+|------|------------------|----------------|
+| Base URL | `http://3.38.195.121:5015/v1` | `http://3.38.195.121:5016/v1` |
+| 모델명 (`model` 필드) | **`gemma-4-26B-A4B-it`** | `Qwen3.6-35B-A3B-FP8` |
+| API 키 | 불필요 | 불필요 |
+| 멀티모달 (이미지) | ✅ | ✅ |
+| Tool Calling | ✅ | ✅ |
+| 스트리밍 (SSE) | ✅ | ✅ |
+| Thinking 기본값 | OFF (요청에서 활성화) | OFF (요청에서 활성화) |
+| Thinking 활성화 옵션 | `enable_thinking: true` + `skip_special_tokens: false` | `enable_thinking: true` |
+| Thinking 토큰 형식 | `<\|channel>...<channel\|>` (스페셜 토큰) | `<think>...</think>` (일반 토큰) |
+
+> 컨텍스트 길이·동시 이미지 한도 등은 운영 튜닝값에 따라 달라집니다. 현재 값은 `GET /v1/models` 응답의 `max_model_len` 또는 운영자에게 확인.
+
+**API 호환성**: vLLM은 OpenAI Chat Completions API와 **100% 호환**. `OpenAI` SDK · `langchain_openai.ChatOpenAI` · `fetch` · `curl` 어떤 클라이언트도 `base_url`만 바꾸면 그대로 동작합니다.
+
+**엔드포인트 요약**:
+
+| 메서드 | 경로 | 용도 |
+|--------|------|------|
+| POST | `/v1/chat/completions` | **메인 추론 API** (텍스트·이미지·툴 호출 모두) |
+| GET | `/v1/models` | 로드된 모델 목록 |
+| GET | `/health` | 서버 헬스체크 |
+
+---
+
+## 2. 첫 호출
+
+> 호출 전 살아있는지 확인: `curl http://3.38.195.121:5015/health` → `200 OK`.
+
+### 2.1 curl
+
+```bash
+curl http://3.38.195.121:5015/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemma-4-26B-A4B-it",
+    "messages": [
+      {"role": "system", "content": "간결하게 답변해."},
+      {"role": "user",   "content": "대한민국의 수도는?"}
+    ],
+    "max_tokens": 100
+  }'
+```
+
+응답:
+
+```json
+{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "model": "gemma-4-26B-A4B-it",
+  "choices": [{
+    "index": 0,
+    "message": {"role": "assistant", "content": "서울입니다."},
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 25, "completion_tokens": 5, "total_tokens": 30}
+}
+```
+
+### 2.2 Python (OpenAI SDK)
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://3.38.195.121:5015/v1",
+    api_key="not-needed",   # vLLM 기본 인증 없음. 빈 문자열은 SDK가 거부하므로 더미값.
+)
+
+resp = client.chat.completions.create(
+    model="gemma-4-26B-A4B-it",
+    messages=[
+        {"role": "system", "content": "간결하게 답변해."},
+        {"role": "user",   "content": "파이썬이란?"},
+    ],
+    max_tokens=200,
+    temperature=0.7,
+)
+print(resp.choices[0].message.content)
+```
+
+### 2.3 LangChain
+
+```python
+from langchain_openai import ChatOpenAI
+
+llm = ChatOpenAI(
+    base_url="http://3.38.195.121:5015/v1",
+    model="gemma-4-26B-A4B-it",
+    api_key="not-needed",
+    temperature=0.7,
+    max_tokens=200,
+)
+
+print(llm.invoke("대한민국의 수도는?").content)
+```
+
+### 2.4 Node.js (OpenAI SDK)
+
+```javascript
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "http://3.38.195.121:5015/v1",
+  apiKey: "not-needed",
+});
+
+const resp = await client.chat.completions.create({
+  model: "gemma-4-26B-A4B-it",
+  messages: [{ role: "user", content: "안녕" }],
+  max_tokens: 100,
+});
+
+console.log(resp.choices[0].message.content);
+```
+
+### 2.5 모델 목록 확인
+
+```bash
+curl http://3.38.195.121:5015/v1/models
+```
+
+응답에 `served_model_name` (예: `gemma-4-26B-A4B-it`)과 `max_model_len`(현재 컨텍스트 한도)이 들어 있어, 클라이언트에서 모델명·컨텍스트 한도를 자동 감지하는 데 쓸 수 있습니다.
+
+---
+
+## 3. 핵심 기능
+
+### 3.1 스트리밍 (SSE)
+
+`stream: true`를 주면 토큰이 생성되는 즉시 Server-Sent Events로 흘러나옵니다.
+
+**curl**:
+
+```bash
+curl http://3.38.195.121:5015/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemma-4-26B-A4B-it",
+    "messages": [{"role": "user", "content": "긴 시 한 편 써줘"}],
+    "max_tokens": 500,
+    "stream": true,
+    "stream_options": {"include_usage": true}
+  }'
+```
+
+응답 (SSE):
+
+```
+data: {"choices":[{"delta":{"role":"assistant","content":""},"index":0}]}
+data: {"choices":[{"delta":{"content":"봄"},"index":0}]}
+data: {"choices":[{"delta":{"content":"날의"},"index":0}]}
+...
+data: {"choices":[],"usage":{"prompt_tokens":14,"completion_tokens":120,"total_tokens":134}}
+data: [DONE]
+```
+
+- 각 청크는 `data: ` 접두사 + JSON
+- `choices[].delta.content`에 새로 생성된 토큰 텍스트
+- `data: [DONE]`이 스트림 종료 신호
+- `stream_options.include_usage: true`를 넣으면 마지막 청크에 `usage`가 따라옴
+
+**Python 스트리밍**:
+
+```python
+stream = client.chat.completions.create(
+    model="gemma-4-26B-A4B-it",
+    messages=[{"role": "user", "content": "긴 시 한 편"}],
+    max_tokens=500,
+    stream=True,
+)
+for chunk in stream:
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+```
+
+---
+
+### 3.2 Thinking 모드 (사고 과정 분리)
+
+모델이 답변 전에 **"생각"하는 과정**을 `reasoning` 필드로 **분리**해서 받을 수 있습니다. 추론·수학·복잡한 분석 등 사고 과정이 가치 있는 워크로드에 사용.
+
+> 📌 **필드명 주의**: 현재 운영(vLLM 0.19.0+)은 `reasoning` 키를 사용합니다. OpenAI 공식 스펙은 `reasoning_content`이므로 vLLM 버전이 올라가면 키가 바뀔 수 있습니다. 안전한 클라이언트 코드는 `msg.get("reasoning") or msg.get("reasoning_content")` 패턴 권장.
+
+**기본값**: 서버 기본 OFF (챗봇 응답 지연 최소화). 요청 단위로 ON/OFF.
+
+**활성화 방법** (Gemma 4):
+
+```json
+{
+  "chat_template_kwargs": {"enable_thinking": true},
+  "skip_special_tokens": false
+}
+```
+
+> ⚠️ **Gemma 4는 `skip_special_tokens: false` 필수**. Gemma 4의 thinking 토큰(`<|channel>...<channel|>`)은 스페셜 토큰이라 기본값으로는 제거되어 reasoning 분리가 안 됩니다.
+> Qwen3.6은 `<think>...</think>`가 일반 토큰이라 이 옵션 불필요.
+
+**curl 예시**:
+
+```bash
+curl http://3.38.195.121:5015/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemma-4-26B-A4B-it",
+    "messages": [
+      {"role": "user", "content": "한 자리 소수를 모두 나열해줘. 이유도 설명해."}
+    ],
+    "max_tokens": 1000,
+    "chat_template_kwargs": {"enable_thinking": true},
+    "skip_special_tokens": false
+  }'
+```
+
+응답:
+
+```json
+{
+  "choices": [{
+    "message": {
+      "role": "assistant",
+      "content": "한 자리 소수는 2, 3, 5, 7입니다.",
+      "reasoning": "1은 소수가 아니고... 4=2×2, 6=2×3, 8=2³, 9=3²이므로 합성수..."
+    },
+    "finish_reason": "stop"
+  }]
+}
+```
+
+**Python 예시** (OpenAI SDK는 vLLM 전용 옵션을 `extra_body`로 전달):
+
+```python
+resp = client.chat.completions.create(
+    model="gemma-4-26B-A4B-it",
+    messages=[{"role": "user", "content": "12를 소인수분해해줘"}],
+    max_tokens=1500,
+    extra_body={
+        "chat_template_kwargs": {"enable_thinking": True},
+        "skip_special_tokens": False,
+    },
+)
+print("🤔 사고 과정:")
+print(resp.choices[0].message.reasoning)
+print("\n💬 최종 답변:")
+print(resp.choices[0].message.content)
+```
+
+**주의 사항**:
+
+- Thinking ON이면 응답 토큰이 보통 2~4배(2K~4K 추가)로 늘어납니다 → `max_tokens`를 1,000 이상으로 잡으세요.
+- 멀티턴 히스토리에 **사고 과정은 다시 넣지 마세요** — `messages`엔 최종 `content`만 포함. Reasoning은 일회용입니다.
+- Thinking OFF 응답에는 `reasoning` 필드가 `null`.
+
+---
+
+### 3.3 이미지 멀티모달 (Vision)
+
+이미지 + 텍스트를 함께 보내 비전 추론을 받습니다. Gemma 4는 OCR·차트·문서 QA를 지원하는 vision 모델입니다.
+
+**입력 형식 2가지**:
+
+| 형식 | 사용 시 |
+|------|--------|
+| `image_url` | 공개 URL (외부 접근 가능 이미지) |
+| `data URL (base64)` | 로컬 파일, 스크린샷 등 |
+
+> 한 요청당 첨부 가능 이미지 수는 운영 튜닝값(`limit_mm_per_prompt.image`)에 따라 달라집니다. 초과 시 HTTP 422가 반환되니 작게 시작해 늘려보세요. 정확한 현재 한도는 운영자에게 확인.
+
+**curl — URL 입력**:
+
+```bash
+curl http://3.38.195.121:5015/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemma-4-26B-A4B-it",
+    "messages": [{
+      "role": "user",
+      "content": [
+        {"type": "image_url", "image_url": {"url": "https://example.com/cat.jpg"}},
+        {"type": "text",      "text": "이 이미지에 무엇이 보이나요?"}
+      ]
+    }],
+    "max_tokens": 500
+  }'
+```
+
+**curl — Base64 입력**:
+
+```bash
+# Linux (GNU coreutils)
+B64=$(base64 -w0 ./screenshot.png)
+# macOS (BSD base64 — `-w0` 미지원, 기본이 한 줄 출력)
+# B64=$(base64 -i ./screenshot.png | tr -d '\n')
+
+curl http://3.38.195.121:5015/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"model\": \"gemma-4-26B-A4B-it\",
+    \"messages\": [{
+      \"role\": \"user\",
+      \"content\": [
+        {\"type\": \"image_url\", \"image_url\": {\"url\": \"data:image/png;base64,${B64}\"}},
+        {\"type\": \"text\",      \"text\": \"이 화면의 텍스트를 모두 추출해줘.\"}
+      ]
+    }],
+    \"max_tokens\": 1500
+  }"
+```
+
+**Python — 로컬 파일을 base64로**:
+
+```python
+import base64
+from openai import OpenAI
+
+client = OpenAI(base_url="http://3.38.195.121:5015/v1", api_key="not-needed")
+
+with open("./document.png", "rb") as f:
+    b64 = base64.b64encode(f.read()).decode()
+
+resp = client.chat.completions.create(
+    model="gemma-4-26B-A4B-it",
+    messages=[{
+        "role": "user",
+        "content": [
+            {"type": "image_url",
+             "image_url": {"url": f"data:image/png;base64,{b64}"}},
+            {"type": "text",
+             "text": "이 문서의 핵심 내용을 3줄로 요약해줘."},
+        ],
+    }],
+    max_tokens=800,
+)
+print(resp.choices[0].message.content)
+```
+
+**Python — 이미지 + Thinking 동시**:
+
+```python
+resp = client.chat.completions.create(
+    model="gemma-4-26B-A4B-it",
+    messages=[{
+        "role": "user",
+        "content": [
+            {"type": "image_url",
+             "image_url": {"url": f"data:image/png;base64,{b64}"}},
+            {"type": "text", "text": "이 차트가 보여주는 트렌드는?"},
+        ],
+    }],
+    max_tokens=2000,
+    extra_body={
+        "chat_template_kwargs": {"enable_thinking": True},
+        "skip_special_tokens": False,
+    },
+)
+print("사고:", resp.choices[0].message.reasoning)
+print("답변:", resp.choices[0].message.content)
+```
+
+**해상도/사용 팁**:
+
+- 이미지가 너무 작으면 (예: 50×50 아이콘) 모델이 "잘 안 보인다"고 답할 수 있음 → 원본 해상도를 유지해서 보내세요.
+- 동일 요청에 너무 많은 이미지를 묶으면 HTTP 422 (운영 한도 초과). 안전하게 한두 장씩 끊어 보내거나 운영자에게 한도 확인.
+- 디테일이 중요한 문서/차트는 PNG 같은 무손실 포맷 권장 (JPEG는 글자 가장자리 흐림).
+
+---
+
+### 3.4 Tool Calling (함수 호출)
+
+모델이 외부 함수를 **호출하기로 결정**하면 OpenAI 호환 JSON으로 자동 파싱되어 옵니다. `tools` 정의 → 모델이 `tool_calls` 응답 → 클라이언트가 실제 함수 실행 → 결과를 `role: "tool"` 메시지로 다시 전달 → 최종 답변.
+
+**1단계 — Tool 정의 + 사용자 질문**:
+
+```bash
+curl http://3.38.195.121:5015/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemma-4-26B-A4B-it",
+    "messages": [{"role": "user", "content": "서울 날씨 알려줘"}],
+    "tools": [{
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "description": "지정한 도시의 현재 날씨를 조회합니다.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "city": {"type": "string", "description": "도시 이름"}
+          },
+          "required": ["city"]
+        }
+      }
+    }],
+    "max_tokens": 300
+  }'
+```
+
+응답 — 모델이 함수 호출을 결정:
+
+```json
+{
+  "choices": [{
+    "message": {
+      "role": "assistant",
+      "content": null,
+      "tool_calls": [{
+        "id": "chatcmpl-tool-abc",
+        "type": "function",
+        "function": {
+          "name": "get_weather",
+          "arguments": "{\"city\": \"서울\"}"
+        }
+      }]
+    },
+    "finish_reason": "tool_calls"
+  }]
+}
+```
+
+**2단계 — 함수 실행 결과를 다시 전달**:
+
+```bash
+curl http://3.38.195.121:5015/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gemma-4-26B-A4B-it",
+    "messages": [
+      {"role": "user", "content": "서울 날씨 알려줘"},
+      {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [{
+          "id": "call_1",
+          "type": "function",
+          "function": {"name": "get_weather", "arguments": "{\"city\": \"서울\"}"}
+        }]
+      },
+      {
+        "role": "tool",
+        "tool_call_id": "call_1",
+        "content": "{\"temperature\": 22, \"condition\": \"맑음\", \"humidity\": 45}"
+      }
+    ],
+    "max_tokens": 300
+  }'
+```
+
+최종 응답:
+
+```json
+{
+  "choices": [{
+    "message": {
+      "role": "assistant",
+      "content": "현재 서울은 22°C, 맑음이며 습도는 45%입니다."
+    },
+    "finish_reason": "stop"
+  }]
+}
+```
+
+**LangChain `bind_tools`**:
+
+```python
+from langchain_openai import ChatOpenAI
+from langchain_core.tools import tool
+
+@tool
+def get_weather(city: str) -> str:
+    """지정한 도시의 현재 날씨를 조회합니다."""
+    return f"{city}: 22°C, 맑음"
+
+llm = ChatOpenAI(
+    base_url="http://3.38.195.121:5015/v1",
+    model="gemma-4-26B-A4B-it",
+    api_key="not-needed",
+)
+llm_with_tools = llm.bind_tools([get_weather])
+resp = llm_with_tools.invoke("서울 날씨 알려줘")
+print(resp.tool_calls)
+# → [{'name': 'get_weather', 'args': {'city': '서울'}, 'id': 'chatcmpl-tool-...'}]
+```
+
+> Tool이 필요 없다고 모델이 판단하면 `tool_calls` 없이 `content`로 바로 답변합니다.
+
+---
+
+### 3.5 멀티턴 대화
+
+이전 응답을 그대로 `messages`에 누적해 보내면 됩니다. 별도 세션 ID 관리 불필요 (stateless).
+
+```python
+messages = [
+    {"role": "system", "content": "간결한 한국어 비서."},
+    {"role": "user",   "content": "내 이름은 홍길동이야."},
+]
+
+resp1 = client.chat.completions.create(
+    model="gemma-4-26B-A4B-it", messages=messages, max_tokens=100,
+)
+messages.append({"role": "assistant", "content": resp1.choices[0].message.content})
+
+messages.append({"role": "user", "content": "내 이름이 뭐였지?"})
+resp2 = client.chat.completions.create(
+    model="gemma-4-26B-A4B-it", messages=messages, max_tokens=100,
+)
+print(resp2.choices[0].message.content)   # → "홍길동님이라고 하셨습니다."
+```
+
+**역할 (`role`) 규칙**:
+
+| role | 설명 |
+|------|------|
+| `system` | 모델의 역할·톤 지시 (선택, 1개 권장, 맨 앞) |
+| `user` | 사용자 입력 |
+| `assistant` | 모델의 이전 응답 (멀티턴 누적) |
+| `tool` | Tool 실행 결과 (Tool Calling 시) |
+
+**프리픽스 캐싱**: 동일 `system` 프롬프트로 반복 호출하면 vLLM이 KV 캐시를 재사용해 TTFT(첫 토큰 대기시간)를 크게 줄여줍니다 — 챗봇 시나리오에 자동 적용. 별도 옵션 불필요.
+
+---
+
+## 4. 파라미터·응답·에러 레퍼런스
+
+### 4.1 자주 쓰는 요청 파라미터
+
+| 파라미터 | 필수 | 기본값 | 설명 |
+|----------|:----:|--------|------|
+| `model` | O | — | `gemma-4-26B-A4B-it` 또는 `Qwen3.6-35B-A3B-FP8` |
+| `messages` | O | — | 대화 메시지 배열 |
+| `max_tokens` | — | 모델 한계 | 최대 생성 토큰 수. Thinking ON이면 1,000+ 권장 |
+| `temperature` | — | 모델별 | 0=결정적, 1.0=기본. Gemma 4 권장 1.0, Qwen3.6 코딩 0.6 |
+| `top_p` | — | 0.95 | Nucleus sampling |
+| `top_k` | — | 모델별 | Gemma 4: 64, Qwen3.6: 20 |
+| `seed` | — | — | 재현 가능한 출력 (`temperature=0`과 함께) |
+| `stop` | — | — | 생성 중단 토큰(들) |
+| `stream` | — | false | true면 SSE 스트리밍 |
+| `stream_options` | — | — | `{"include_usage": true}`면 스트리밍 마지막 청크에 usage 포함 |
+| `tools` | — | — | Tool Calling 함수 정의 |
+| `chat_template_kwargs` | — | — | 템플릿 인자. `{"enable_thinking": true}` 등 |
+| `skip_special_tokens` | — | true | **Gemma 4 Thinking 시 false 필수** |
+| `presence_penalty` | — | 0 | Qwen3.6 Thinking에선 1.0~1.5 권장 (반복 붕괴 방지) |
+| `extra_body` (Python SDK) | — | — | OpenAI 표준 외 vLLM 옵션 wrapping용 |
+
+### 4.2 응답 형식
+
+```json
+{
+  "id": "chatcmpl-xxx",
+  "object": "chat.completion",
+  "created": 1738200000,
+  "model": "gemma-4-26B-A4B-it",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "...",                  // 텍스트 답변
+      "reasoning": "...",                // (Thinking ON 시) 사고 과정 — vLLM 0.19.0 기준
+      "tool_calls": [...]                // (함수 호출 시)
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 25, "completion_tokens": 120, "total_tokens": 145}
+}
+```
+
+`finish_reason`:
+
+| 값 | 의미 |
+|----|------|
+| `stop` | 자연 종료 (EOS 토큰 생성) |
+| `length` | `max_tokens` 도달로 잘림 — `max_tokens`를 늘리세요 |
+| `tool_calls` | Tool 호출 요청 |
+
+### 4.3 에러 코드
+
+| HTTP | 의미 | 흔한 원인 |
+|------|------|----------|
+| **400** | Bad Request | 파라미터 값 범위 위반 (예: `temperature: -1`) |
+| **404** | Not Found | 잘못된 모델명 또는 엔드포인트 경로 |
+| **422** | Unprocessable | 요청 바디 파싱 실패, 멀티모달 한도 초과 (이미지 3장 등) |
+| **500** | Internal Error | 서버 측 문제 — 잠시 후 재시도, 지속 시 운영자 문의 |
+
+응답 형식:
+
+```json
+{
+  "object": "error",
+  "message": "temperature must be non-negative, got -1.0.",
+  "type": "BadRequestError",
+  "code": 400
+}
+```
+
+### 4.4 모델별 권장 샘플링
+
+| 모델 | 모드 | temperature | top_p | top_k | presence_penalty | 출처 |
+|------|------|:-----------:|:-----:|:-----:|:----------------:|------|
+| Gemma 4 26B-A4B | 일반 | 1.0 | 0.95 | 64 | 0 | 모델 `generation_config.json` 기본값 |
+| Qwen3.6-35B-A3B | Thinking·일반 | 1.0 | 0.95 | 20 | **1.5** | Qwen3.6 모델 카드 |
+| Qwen3.6-35B-A3B | Thinking·코딩 | 0.6 | 0.95 | 20 | 0 | Qwen3.6 모델 카드 |
+| Qwen3.6-35B-A3B | Instruct·일반 | 0.7 | 0.8 | 20 | **1.5** | Qwen3.6 모델 카드 |
+
+> 모델 `generation_config.json`이 자동 적용되므로 보통 명시 생략 가능. 한국어 응답에서 언어 혼합이 보이면 `presence_penalty` 1.0~1.2 권장. 결정적 출력이 필요하면 `temperature: 0` + `seed` 명시.
+
+---
+
+## 5. chatbot-poc 통합 (.env)
+
+LangChain `ChatOpenAI` 기반 chatbot-poc는 `.env`만 바꾸면 즉시 vLLM SLM으로 전환됩니다.
+
+```env
+PROVIDER=huggingface
+HF_BASE_URL=http://3.38.195.121:5015/v1   # Gemma 게이트웨이
+# HF_BASE_URL=http://3.38.195.121:5016/v1 # Qwen 게이트웨이
+CHAT_MODEL=gemma-4-26B-A4B-it             # 또는 Qwen3.6-35B-A3B-FP8
+RERANKER_MODEL=gemma-4-26B-A4B-it
+```
+
+> ⚠️ **`PROVIDER`는 단일 스택** — Chat과 Embedding이 함께 전환됩니다. 임베딩은 OpenAI 유지하면서 Chat만 vLLM으로 쓰려면 provider 분리가 필요합니다.
+
+---
+
+# 🛠️ Part 2 — 운영 상세 가이드 (운영자용)
+
+> **운영자용**: 서버 기동·중지, 설정 튜닝, 모델 교체, 트러블슈팅, QA 테스트.
+> API 호출 사용법은 [Part 1](#-part-1--api-빠른-시작-사용자용) 참고.
 
 > **현재 운영**: 두 모델 격리 페어 (각 게이트웨이 ↔ 단일 vLLM)
 >   - `:5015` ← `instances/gemma.yaml` (Gemma 4 26B A4B, GPU 0, vLLM `:7070`)
 >   - `:5016` ← `instances/qwen.yaml` (Qwen3.6 35B-A3B FP8, GPU 1, vLLM `:7080`)
-> **엔드포인트(외부)**: 게이트웨이 포트만 개방 (`http://3.38.195.121:5015/v1`, `:5016/v1`). vLLM 포트는 내부 전용.
 > **인프라**: AWS L40S 46GB × 4장.
 > **vLLM 버전**: 0.19.0+.
-
-이 문서는 **로컬/온프레미스에서 vLLM으로 SLM(Small Language Model)을 띄우고** chatbot-poc에 연결하는 방법을 설명합니다.
-처음 보는 분은 [1. 빠른 시작](#1-빠른-시작-5분) → [2. 시스템 구조](#2-시스템-구조) 순서로 읽으시면 됩니다.
 
 > 🆕 **2026-04-30 구조 변경**: 단일 `vllm_config.yaml` + `vllm_gateway_config.yaml` → **인스턴스 단위 `instances/<name>.yaml`** + **게이트웨이 단위 `gateways/<port>.yaml`**. 게이트웨이는 인스턴스 yaml의 `gateway_port` 메타 키로 backends를 자동 매칭(`discover_from`). 구식 yaml은 `agent-guide/.archive/2026-04-30_vllm-config-migration/`에 보존.
 >
@@ -16,94 +687,9 @@
 
 ---
 
-## 📑 목차
+## 6. 시스템 구조
 
-1. [빠른 시작 (5분)](#1-빠른-시작-5분)
-2. [시스템 구조](#2-시스템-구조)
-3. [서버 기동·중지](#3-서버-기동중지)
-4. [모델 준비 (다운로드)](#4-모델-준비-다운로드)
-5. [설정 파일](#5-설정-파일)
-6. [API 사용법 (개발자용)](#6-api-사용법-개발자용)
-7. [모델 관리](#7-모델-관리)
-8. [Qwen3.6 고급 기능](#8-qwen36-고급-기능)
-9. [트러블슈팅 & 운영 주의](#9-트러블슈팅--운영-주의)
-10. [QA 테스트](#10-qa-테스트)
-11. [참고 자료](#11-참고-자료)
-
----
-
-## 1. 빠른 시작 (5분)
-
-> 🔰 **전제 조건**
-> - 레포에 `instances/`, `gateways/`, `start.sh`가 모두 포함되어 있습니다. 별도 초기 세팅 없이 바로 기동 가능합니다.
-> - 필요한 것: GPU 가용(기본 프로필은 L40S 46GB × 4), Python 3.10+ 환경, vLLM 0.19.0+ 설치.
-> - 모델은 첫 기동 시 자동으로 다운로드됩니다. 미리 받아두려면 [4장 모델 준비](#4-모델-준비-다운로드) 참고.
-
-### 1.1 이미 서버가 떠 있는 경우 — 호출만 해보기
-
-```bash
-# 게이트웨이 상태 (페어별로 각각)
-curl http://3.38.195.121:5015/health   # Gemma 페어
-curl http://3.38.195.121:5016/health   # Qwen 페어
-
-# 추론 테스트 — Gemma (:5015)
-curl http://3.38.195.121:5015/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "gemma-4-26B-A4B-it",
-    "messages": [{"role":"user","content":"안녕"}],
-    "max_tokens": 50
-  }'
-
-# 추론 테스트 — Qwen (:5016)
-curl http://3.38.195.121:5016/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "Qwen3.6-35B-A3B-FP8",
-    "messages": [{"role":"user","content":"안녕"}],
-    "max_tokens": 50
-  }'
-```
-
-### 1.2 서버 기동
-
-```bash
-cd /workspace/llm-serving/vllm
-
-./start.sh up                # 전체 인스턴스 + 게이트웨이 기동
-./start.sh up gemma          # 인스턴스 단독 (instances/gemma.yaml)
-./start.sh up 5016           # 게이트웨이 단독 (gateways/5016.yaml)
-./start.sh status            # 상태 확인
-./start.sh down              # 전체 중지
-./start.sh down gemma        # 인스턴스 단독 중지
-./start.sh down 5016         # 게이트웨이 단독 중지
-./start.sh restart [name]    # 재시작 (인자 없으면 전체)
-```
-
-`[name]` 인자는 자동 라우팅됩니다: `instances/<name>.yaml`이 존재하면 인스턴스 명령, `gateways/<name>.yaml`이 존재하면 게이트웨이 명령. 둘 다 없으면 즉시 에러로 후보 목록 출력.
-
-`start.sh`는 `instances/*.yaml`과 `gateways/*.yaml`을 자동 순회합니다. 게이트웨이는 인스턴스 yaml의 `gateway_port` 메타 키로 backends를 자동 매칭(`discover_from`)하므로, 인스턴스 추가 시 yaml 한 파일만 추가하면 됩니다.
-
-### 1.3 chatbot-poc에서 사용하기
-
-`.env`에 아래 값을 넣으면 LangChain `ChatOpenAI`로 곧바로 호출됩니다.
-
-```env
-PROVIDER=huggingface
-# 둘 중 원하는 페어의 게이트웨이 포트:
-HF_BASE_URL=http://3.38.195.121:5015/v1   # Gemma 게이트웨이
-# HF_BASE_URL=http://3.38.195.121:5016/v1 # Qwen 게이트웨이
-CHAT_MODEL=gemma-4-26B-A4B-it             # 또는 Qwen3.6-35B-A3B-FP8
-RERANKER_MODEL=gemma-4-26B-A4B-it
-```
-
-> ⚠️ **`PROVIDER`는 단일 스택** — Chat과 Embedding이 함께 전환됩니다. 임베딩은 OpenAI를 유지하면서 Chat만 vLLM으로 쓰려면 provider를 분리해야 합니다.
-
----
-
-## 2. 시스템 구조
-
-### 2.1 전체 구성도
+### 6.1 전체 구성도
 
 ```
 chatbot-poc (.env)
@@ -132,7 +718,7 @@ chatbot-poc (.env)
 - **격리**: 다른 `gateway_port`를 가진 인스턴스끼리는 서로 영향 없음.
 - **외부 노출**: 게이트웨이 포트(:5015, :5016)만 개방. vLLM 포트는 내부 전용.
 
-### 2.2 구성요소 역할
+### 6.2 구성요소 역할
 
 | 구성요소 | 역할 | 파일 |
 |---------|------|------|
@@ -142,7 +728,7 @@ chatbot-poc (.env)
 | **인스턴스 yaml** | vLLM 1대 = 1 yaml. 모델/포트/GPU + `gateway_port` 메타 | `instances/<name>.yaml` |
 | **게이트웨이 yaml** | 게이트웨이 1대 = 1 yaml. `discover_from`으로 백엔드 자동 매칭 | `gateways/<port>.yaml` |
 
-### 2.3 왜 게이트웨이가 있나요?
+### 6.3 왜 게이트웨이가 있나요?
 
 - **단일 엔드포인트**: 클라이언트는 페어 게이트웨이 포트(`:5015` 또는 `:5016`)만 알면 됩니다. 내부에서 vLLM 인스턴스가 몇 개든 상관없습니다.
 - **헬스체크**: 죽은 인스턴스는 라우팅 풀에서 자동 제외.
@@ -154,9 +740,9 @@ chatbot-poc (.env)
 
 ---
 
-## 3. 서버 기동·중지
+## 7. 서버 기동·중지
 
-### 3.1 권장 방법 — start.sh
+### 7.1 권장 방법 — start.sh
 
 가장 쉽고 안전한 방법입니다. `start.sh`가 `instances/*.yaml`과 `gateways/*.yaml`을 자동 순회합니다.
 
@@ -182,7 +768,7 @@ cd /workspace/llm-serving/vllm
 
 > 인스턴스 yaml은 모델명, 게이트웨이 yaml은 포트 숫자로 명명되어 충돌 가능성이 없습니다. 만일 충돌하면(`instances/X.yaml`과 `gateways/X.yaml` 동명) 에러로 멈춥니다.
 
-### 3.2 GPU 배치 규칙
+### 7.2 GPU 배치 규칙
 
 각 인스턴스 yaml의 `gpus` + `tensor_parallel_size` 조합으로 인스턴스 1대의 GPU 점유가 결정됩니다. 멀티 인스턴스/LB는 yaml을 추가하는 방식으로 확장합니다.
 
@@ -198,7 +784,7 @@ DP(Data Parallel) 시나리오는 인스턴스 yaml을 복사해서 `gpus`만 �
 > - **TP (Tensor Parallel)**: 한 모델을 여러 GPU에 쪼개 얹음. 큰 모델을 돌릴 수 있지만 GPU 간 통신 비용 있음.
 > - **DP (Data Parallel)**: GPU마다 똑같은 모델을 올림. 동시 처리량이 늘지만 GPU당 메모리가 충분해야 함. 본 구조에선 인스턴스 yaml을 복사하여 같은 `gateway_port`로 묶음.
 
-### 3.3 기동 순서 (start.sh 내부)
+### 7.3 기동 순서 (start.sh 내부)
 
 1. `instances/*.yaml`(또는 단일 인스턴스 yaml) 파싱 → 인스턴스 단위로 launcher 호출
 2. launcher가 yaml의 메타 키(`gateway_port`, `gpus`, `download_dir`)를 vllm serve 인자에서 제외하고 vLLM 기동
@@ -208,7 +794,7 @@ DP(Data Parallel) 시나리오는 인스턴스 yaml을 복사해서 `gpus`만 �
 6. 게이트웨이가 각 백엔드 `/health` 폴링 → CUDA 웜업 → 프리픽스 캐시 웜업
 7. 최소 1대 ready 시 게이트웨이 포트에서 요청 수신
 
-### 3.4 인스턴스 동적 추가/제거
+### 7.4 인스턴스 동적 추가/제거
 
 **복붙 LB 시나리오 (강력 추천 흐름)**:
 ```bash
@@ -235,7 +821,7 @@ cp instances/gemma.yaml instances/gemma_replica.yaml
 - **수동 오버라이드**: 게이트웨이 yaml에 `backends:` 리스트를 명시하면 `discover_from`보다 우선 (escape hatch / 디버깅용).
 - **runtime 파일 직접 확인**: `cat instances/.runtime/<name>.json` 으로 실제 사용 중 포트와 PID 확인.
 
-### 3.5 개별 기동 (start.sh 없이)
+### 7.5 개별 기동 (start.sh 없이)
 
 ```bash
 cd /workspace/llm-serving/vllm
@@ -254,7 +840,7 @@ nohup python vllm_gateway.py -c gateways/5015.yaml > logs/gateway_5015.log 2>&1 
 nohup python vllm_gateway.py -c gateways/5016.yaml > logs/gateway_5016.log 2>&1 &
 ```
 
-### 3.6 더 로우레벨한 방법 — vllm serve 네이티브
+### 7.6 더 로우레벨한 방법 — vllm serve 네이티브
 
 vLLM v0.18.0+는 YAML config를 네이티브로 지원합니다. 단, **인스턴스 yaml의 메타 키(`gateway_port`, `gpus`, `download_dir`)는 vllm serve가 인식하지 못하므로** 보통은 launcher 사용을 권장합니다(launcher가 자동 필터). 굳이 네이티브로 가야 하면 메타 키를 수동 제거한 임시 yaml을 만들어야 합니다.
 
@@ -267,7 +853,7 @@ CUDA_VISIBLE_DEVICES=0 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
 # (gemma_vllm_only.yaml은 instances/gemma.yaml에서 메타 키 제거 버전)
 ```
 
-### 3.7 3가지 기동 방법 비교
+### 7.7 3가지 기동 방법 비교
 
 | | `vllm serve` 네이티브 | Python 런처 | **`start.sh` (권장)** |
 |---|---|---|---|
@@ -280,7 +866,7 @@ CUDA_VISIBLE_DEVICES=0 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
 | 게이트웨이 | 별도 기동 필요 | 별도 기동 필요 | 함께 기동 |
 | 중지 방법 | `kill` | `kill` | `./start.sh down [name]` |
 
-### 3.8 보안 주의
+### 7.8 보안 주의
 
 게이트웨이 자체에는 **인증 기능이 없습니다**. 공개망에 직접 노출하지 말고 AWS Security Group, 방화벽, nginx 등으로 접근을 제한하세요.
 
@@ -296,15 +882,15 @@ backend_api_key: "your-secret-key"   # vLLM --api-key 값과 일치
 
 ---
 
-## 4. 모델 준비 (다운로드)
+## 8. 모델 준비 (다운로드)
 
-### 4.1 자동 다운로드 (기본)
+### 8.1 자동 다운로드 (기본)
 
 처음 기동할 때 로컬에 모델이 없으면 `vllm_server_launcher.py`가 `huggingface_hub.snapshot_download` API로 자동 다운로드합니다. 별도 명령이 필요 없습니다.
 
 > Qwen3.6 / Gemma 4 모두 Apache 2.0(또는 Gemma 라이선스)이라 **HF 토큰이 필요 없습니다**. Llama처럼 gated 모델은 `HF_TOKEN=hf_xxx`를 환경변수로 넘기세요.
 
-### 4.2 오프라인 이관용 사전 다운로드 (폐쇄망 운영)
+### 8.2 오프라인 이관용 사전 다운로드 (폐쇄망 운영)
 
 ```bash
 cd /workspace/llm-serving/vllm
@@ -322,7 +908,7 @@ python vllm_server_launcher.py -c instances/qwen.yaml --download-only -m Qwen/Qw
 
 > `--download-only`는 내부적으로 `download_model()`을 호출하므로 **실제 서빙과 동일한 경로 규칙**을 씁니다. 안전한 표준 방식입니다.
 
-### 4.3 운영 규칙
+### 8.3 운영 규칙
 
 - 네트워크가 되는 환경에서 `--download-only`로 먼저 받는다.
 - 폐쇄망으로 모델 디렉토리를 이관한다.
@@ -331,7 +917,7 @@ python vllm_server_launcher.py -c instances/qwen.yaml --download-only -m Qwen/Qw
   - config: `model: Qwen/Qwen3.6-35B-A3B-FP8`, `download_dir: /models/LLM`
   - 실제 경로: `/models/LLM/Qwen/Qwen3.6-35B-A3B-FP8`
 
-### 4.4 다운로드 확인
+### 8.4 다운로드 확인
 
 ```bash
 MODEL_DIR="/models/LLM/Qwen/Qwen3.6-35B-A3B-FP8"
@@ -341,7 +927,7 @@ test -f "$MODEL_DIR/tokenizer_config.json"    # 토크나이저
 find "$MODEL_DIR" -maxdepth 1 \( -name '*.safetensors' -o -name '*.bin' \)  # 가중치 파일
 ```
 
-### 4.5 Python 런처 전용 옵션
+### 8.5 Python 런처 전용 옵션
 
 | 옵션 | 설명 |
 |------|------|
@@ -357,7 +943,7 @@ find "$MODEL_DIR" -maxdepth 1 \( -name '*.safetensors' -o -name '*.bin' \)  # �
 
 ---
 
-## 5. 설정 파일
+## 9. 설정 파일
 
 설정은 **인스턴스 단위**(`instances/<name>.yaml`)와 **게이트웨이 단위**(`gateways/<port>.yaml`)로 분리됩니다.
 
@@ -371,7 +957,7 @@ llm-serving/vllm/
     └── 5016.yaml           (gateway.port: 5016, discover_from: ../instances)
 ```
 
-### 5.1 설정 우선순위
+### 9.1 설정 우선순위
 
 ```
 CLI 인자  >  instances/<name>.yaml  >  vLLM 기본값
@@ -385,7 +971,7 @@ CLI 인자  >  instances/<name>.yaml  >  vLLM 기본값
    둘 다 미설정 시 ValueError로 fail-fast.
 ```
 
-### 5.2 인스턴스 yaml (`instances/<name>.yaml`) 주요 설정
+### 9.2 인스턴스 yaml (`instances/<name>.yaml`) 주요 설정
 
 두 인스턴스 yaml(`gemma.yaml`, `qwen.yaml`)은 **주석/섹션 구조 100% 동일**, 모델/리소스 값만 다릅니다(복붙 확장 가능).
 
@@ -420,7 +1006,7 @@ CLI 인자  >  instances/<name>.yaml  >  vLLM 기본값
 | `language_model_only` | 멀티모달 | `false` (이미지 입력 허용) |
 | **안정성** | | |
 | `async_scheduling` | 안정성 | `false` (scheduler ↔ worker race 방지) |
-| ~~`disable_chunked_mm_input`~~ | 안정성 | *(Mamba-hybrid 모델 — 예: Qwen3.6 — 에서 절대 설정 금지)* [9.3](#93-disable_chunked_mm_input이-qwen36에-금지인-이유) |
+| ~~`disable_chunked_mm_input`~~ | 안정성 | *(Mamba-hybrid 모델 — 예: Qwen3.6 — 에서 절대 설정 금지)* [13.3](#133-disable_chunked_mm_input이-qwen36에-금지인-이유) |
 | **캐시** | | |
 | `enable_prefix_caching` | 캐시 | `true` |
 | `kv_cache_dtype` | 캐시 | `auto`. FP8 KV는 `fp8_e4m3`로 변경 시 용량 2배 |
@@ -430,7 +1016,7 @@ CLI 인자  >  instances/<name>.yaml  >  vLLM 기본값
 
 자세한 설명(라인 참조, 크래시 사후 분석, GPU 메모리 매트릭스 등)은 `instances/<name>.yaml` 내 한국어 주석에 있습니다.
 
-### 5.3 게이트웨이 yaml (`gateways/<port>.yaml`) 주요 설정
+### 9.3 게이트웨이 yaml (`gateways/<port>.yaml`) 주요 설정
 
 두 게이트웨이 yaml(`5015.yaml`, `5016.yaml`)도 주석/구조 100% 동일, 포트만 다릅니다.
 
@@ -452,7 +1038,7 @@ CLI 인자  >  instances/<name>.yaml  >  vLLM 기본값
 | `prefix_cache_warmup.system_prompt` | 캐시 웜업 | 웜업 시 KV에 적재할 시스템 프롬프트 (보험 챗봇용) |
 | `http_client.timeout_seconds` | HTTP | `300` (추론 요청 전체 타임아웃) |
 
-### 5.4 .env 설정 (chatbot-poc 측)
+### 9.4 .env 설정 (chatbot-poc 측)
 
 ```env
 PROVIDER=huggingface
@@ -465,7 +1051,7 @@ RERANKER_MODEL=gemma-4-26B-A4B-it
 
 > **`CHAT_MODEL`은 반드시 `served_model_name`(미설정 시 `model`에서 자동 추출)과 일치**해야 vLLM이 요청을 받습니다.
 
-### 5.5 📝 참고: YAML `bool false` 전달 제약 (런처 내부)
+### 9.5 📝 참고: YAML `bool false` 전달 제약 (런처 내부)
 
 > 이건 런처 사용자가 직접 신경 쓸 일은 없지만, 런처 동작 원리가 궁금한 분을 위해 남겨둡니다.
 
@@ -475,299 +1061,43 @@ vLLM의 YAML 파서(`vllm/utils/argparse_utils.py:501-504`)는 `key: true`만 `-
 
 ---
 
-## 6. API 사용법 (개발자용)
+## 10. API 운영 레퍼런스
 
-### 6.1 Base URL & 엔드포인트 요약
+> 사용자(클라이언트) 호출 가이드는 [Part 1 — API 빠른 시작](#-part-1--api-빠른-시작-사용자용)을 참고하세요. 본 섹션은 운영자에게만 의미 있는 **게이트웨이 디버그 엔드포인트**와 **Qwen3.6 모델 검증용 복붙 예시**만 다룹니다.
 
-Base URL: `http://3.38.195.121:5015/v1`
+### 10.1 게이트웨이 전용 엔드포인트
 
-| 메서드 | 경로 | 용도 |
+vLLM 표준 OpenAI API 외에 게이트웨이가 추가로 노출하는 운영용 엔드포인트입니다.
+
+| 메서드 | 경로 | 설명 |
 |--------|------|------|
-| GET | `/health` | 서버 살아있는지 확인 |
-| GET | `/v1/models` | 로드된 모델 목록 |
-| POST | `/v1/chat/completions` | **채팅 추론 (메인 API)** |
-| GET | `/server-status` | (게이트웨이 전용) 백엔드 상태 대시보드 |
-
-> vLLM은 OpenAI Chat Completions API와 **100% 호환**됩니다. 기존 OpenAI SDK, LangChain `ChatOpenAI`, `curl`을 그대로 쓸 수 있습니다.
-> 인증(API Key)은 기본적으로 **필요 없습니다**. vLLM에 `--api-key`를 설정한 경우에만 `Authorization: Bearer <key>` 헤더 필요.
-
-### 6.2 헬스체크 & 모델 목록
+| GET | `/health` | 게이트웨이 자체 + 백엔드 ready 카운터 (`{ready, total}`) |
+| GET | `/server-status` | 백엔드 서버 상세 상태 대시보드 |
 
 ```bash
-curl http://3.38.195.121:5015/health
-# → 200 OK
-
-curl http://3.38.195.121:5015/v1/models
+curl http://3.38.195.121:5015/server-status
 ```
-
-응답:
 
 ```json
 {
-  "object": "list",
-  "data": [
-    {
-      "id": "Qwen3.6-35B-A3B-FP8",
-      "object": "model",
-      "owned_by": "vllm",
-      "root": "Qwen/Qwen3.6-35B-A3B-FP8",
-      "max_model_len": 262144
-    }
-  ]
+  "gateway": {"uptime_seconds": 3600.0},
+  "backends": [{
+    "url": "http://127.0.0.1:7070",
+    "is_healthy": true,
+    "is_ready": true,
+    "active_connections": 2,
+    "consecutive_failures": 0
+  }],
+  "ready_count": 1,
+  "total_count": 1
 }
 ```
 
-### 6.3 가장 간단한 요청 (비스트리밍)
+`is_healthy`(헬스체크 OK) ≠ `is_ready`(웜업 완료) — 둘 다 true여야 라우팅 풀에 포함됩니다. `consecutive_failures`가 누적되면 게이트웨이가 해당 백엔드를 풀에서 제외합니다.
 
-```bash
-curl http://3.38.195.121:5015/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "Qwen3.6-35B-A3B-FP8",
-    "messages": [
-      {"role": "system", "content": "간결하게 답변해."},
-      {"role": "user", "content": "대한민국의 수도는?"}
-    ],
-    "max_tokens": 50,
-    "temperature": 0
-  }'
-```
+### 10.2 Qwen3.6 Thinking 모델 검증용 복붙 예시
 
-응답:
-
-```json
-{
-  "id": "chatcmpl-abc123",
-  "object": "chat.completion",
-  "model": "Qwen3.6-35B-A3B-FP8",
-  "choices": [
-    {
-      "index": 0,
-      "message": {"role": "assistant", "content": "서울입니다."},
-      "finish_reason": "stop"
-    }
-  ],
-  "usage": {"prompt_tokens": 25, "completion_tokens": 5, "total_tokens": 30}
-}
-```
-
-### 6.4 주요 요청 파라미터
-
-| 파라미터 | 필수 | 기본값 | 설명 |
-|---------|:----:|--------|------|
-| `model` | O | — | `served_model_name`과 일치 |
-| `messages` | O | — | 대화 메시지 배열 |
-| `max_tokens` | — | 모델 한계 | 최대 생성 토큰 수 |
-| `temperature` | — | 모델별 | 0이면 결정적. Qwen3.6 Thinking: 1.0, 코딩: 0.6 |
-| `top_p` | — | 0.95 | Nucleus sampling |
-| `top_k` | — | 모델별 | Qwen3.6: 20, Gemma 4: 64 |
-| `presence_penalty` | — | 0 | Qwen3.6 Thinking 권장 1.5 (반복 붕괴 방지) |
-| `stream` | — | false | SSE 스트리밍 |
-| `stream_options` | — | — | `{"include_usage": true}`면 스트리밍에서도 usage 반환 |
-| `tools` | — | — | Tool Calling |
-| `chat_template_kwargs` | — | — | 템플릿 인자 (Thinking, preserve_thinking 등) |
-| `seed` | — | — | 재현 가능한 출력 |
-| `stop` | — | — | 생성 중단 토큰 |
-
-> `temperature`/`top_k`/`top_p` 기본값은 모델의 `generation_config.json`에서 자동 적용됩니다. 이유 없이 오버라이드하지 않아도 됩니다.
-
-### 6.5 messages 배열 구조
-
-```json
-[
-  {"role": "system",    "content": "시스템 프롬프트"},
-  {"role": "user",      "content": "사용자 메시지"},
-  {"role": "assistant", "content": "이전 응답"},
-  {"role": "user",      "content": "후속 질문"}
-]
-```
-
-| role | 설명 |
-|------|------|
-| `system` | 모델의 역할·톤 지시 (선택, 1개 권장) |
-| `user` | 사용자 입력 |
-| `assistant` | 모델의 이전 응답 (멀티턴) |
-| `tool` | Tool 실행 결과 (Tool Calling 시) |
-
-### 6.6 `finish_reason` 해석
-
-| 값 | 의미 |
-|----|------|
-| `stop` | 자연 종료 (EOS 토큰 생성) |
-| `length` | `max_tokens` 도달로 잘림 |
-| `tool_calls` | Tool 호출 요청 |
-
-### 6.7 스트리밍 (SSE)
-
-```bash
-curl http://3.38.195.121:5015/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "Qwen3.6-35B-A3B-FP8",
-    "messages": [{"role": "user", "content": "안녕"}],
-    "max_tokens": 50,
-    "stream": true,
-    "stream_options": {"include_usage": true}
-  }'
-```
-
-응답 (Server-Sent Events):
-
-```
-data: {"id":"chatcmpl-abc","choices":[{"delta":{"role":"assistant","content":""},"index":0}]}
-
-data: {"id":"chatcmpl-abc","choices":[{"delta":{"content":"안녕"},"index":0}]}
-
-data: {"id":"chatcmpl-abc","choices":[{"delta":{"content":"하세요"},"index":0}]}
-
-data: {"id":"chatcmpl-abc","choices":[],"usage":{"prompt_tokens":14,"completion_tokens":8,"total_tokens":22}}
-
-data: [DONE]
-```
-
-- 각 청크는 `data: ` 접두사 + JSON.
-- `choices[].delta.content`에 새로 생성된 토큰 텍스트.
-- `data: [DONE]`이 스트림 종료 신호.
-- `stream_options.include_usage: true`를 넣으면 마지막 청크에 usage가 따라옵니다.
-
-### 6.8 Tool Calling (함수 호출)
-
-vLLM은 모델의 tool call 출력을 OpenAI 호환 JSON으로 자동 파싱합니다. `instances/<name>.yaml`에 `enable_auto_tool_choice: true` + 모델별 `tool_call_parser`(`gemma4`, `qwen3_xml` 등)가 설정돼 있어야 합니다.
-
-**1단계 — Tool 정의 + 사용자 질문**:
-
-```bash
-curl http://3.38.195.121:5015/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "Qwen3.6-35B-A3B-FP8",
-    "messages": [{"role": "user", "content": "서울 날씨 알려줘"}],
-    "tools": [{
-      "type": "function",
-      "function": {
-        "name": "get_weather",
-        "description": "지정한 도시의 현재 날씨를 조회합니다.",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "city": {"type": "string", "description": "도시 이름"}
-          },
-          "required": ["city"]
-        }
-      }
-    }],
-    "max_tokens": 200
-  }'
-```
-
-**응답 — 모델이 Tool 호출을 결정**:
-
-```json
-{
-  "choices": [{
-    "message": {
-      "role": "assistant",
-      "content": null,
-      "tool_calls": [{
-        "id": "chatcmpl-tool-abc",
-        "type": "function",
-        "function": {
-          "name": "get_weather",
-          "arguments": "{\"city\": \"서울\"}"
-        }
-      }]
-    },
-    "finish_reason": "tool_calls"
-  }]
-}
-```
-
-**2단계 — Tool 실행 결과를 다시 모델에 전달**:
-
-```bash
-curl http://3.38.195.121:5015/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "Qwen3.6-35B-A3B-FP8",
-    "messages": [
-      {"role": "user", "content": "서울 날씨 알려줘"},
-      {
-        "role": "assistant",
-        "content": null,
-        "tool_calls": [{
-          "id": "call_1",
-          "type": "function",
-          "function": {"name": "get_weather", "arguments": "{\"city\": \"서울\"}"}
-        }]
-      },
-      {
-        "role": "tool",
-        "tool_call_id": "call_1",
-        "content": "{\"temperature\": 22, \"condition\": \"맑음\", \"humidity\": 45}"
-      }
-    ],
-    "max_tokens": 200
-  }'
-```
-
-**최종 응답**:
-
-```json
-{
-  "choices": [{
-    "message": {
-      "role": "assistant",
-      "content": "현재 서울의 날씨는 기온 22°C, 맑음이며 습도는 45%입니다."
-    },
-    "finish_reason": "stop"
-  }]
-}
-```
-
-> Tool이 필요 없다고 모델이 판단하면 `tool_calls` 없이 `content`로 바로 답변합니다.
-
-### 6.9 Thinking 모드 (사고 과정 분리)
-
-모델이 답변 전에 "생각"하는 과정을 `reasoning_content` 필드로 **분리**해서 받을 수 있습니다.
-
-**서버 기본값**: `enable_thinking: false` (챗봇 응답 지연 최소화).
-**요청 단위 ON/OFF**: `chat_template_kwargs.enable_thinking` 전달.
-
-```bash
-# Thinking ON
-curl http://3.38.195.121:5015/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "Qwen3.6-35B-A3B-FP8",
-    "messages": [{"role": "user", "content": "15의 소인수를 구해줘"}],
-    "max_tokens": 500,
-    "chat_template_kwargs": {"enable_thinking": true}
-  }'
-```
-
-응답 (`reasoning_parser: qwen3` 활성 덕에 자동 분리):
-
-```json
-{
-  "choices": [{
-    "message": {
-      "role": "assistant",
-      "content": "15의 소인수는 3과 5입니다.",
-      "reasoning_content": "15를 소인수분해하면... 15 = 3 × 5이므로..."
-    },
-    "finish_reason": "stop"
-  }]
-}
-```
-
-**규칙 요약**:
-
-- Thinking OFF면 `reasoning_content`는 `null`.
-- 멀티턴 히스토리에 사고 과정은 **넣지 마세요** (최종 답변만 포함). Qwen3.6는 `preserve_thinking: true` 옵션으로 vLLM이 자동 유지해줍니다 ([8.2](#82-preserve_thinking-에이전트-반복-루프-최적화)).
-- Qwen 3/3.5/3.6은 `<think>...</think>`가 일반 토큰이라 `skip_special_tokens: false`가 **불필요**합니다.
-- Gemma 4로 교체 운영 시에는 `<|channel>...<channel|>` 경계 토큰이 스페셜 토큰이라 `"skip_special_tokens": false`를 요청에 추가해야 reasoning이 분리됩니다.
-
-### 6.10 Qwen3.6 Thinking 복붙용 curl 예시
+> Qwen3.6 인스턴스(`:5016`) 단독 검증/디버그 시 사용. 사용자 일반 호출 가이드는 [§3.2](#32-thinking-모드-사고-과정-분리), [§4.4](#44-모델별-권장-샘플링) 참고.
 
 **Qwen3.6 공식 권장 샘플링 파라미터** (모델 카드 기준):
 
@@ -797,7 +1127,7 @@ cat > /tmp/qwen_req.json <<'EOF'
 }
 EOF
 
-curl http://3.38.195.121:5015/v1/chat/completions \
+curl http://3.38.195.121:5016/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d @/tmp/qwen_req.json
 ```
@@ -805,7 +1135,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 **한 줄 명령**:
 
 ```bash
-curl -sS http://3.38.195.121:5015/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"Qwen3.6-35B-A3B-FP8","messages":[{"role":"system","content":"자세하게 답변해줘."},{"role":"user","content":"미국인과 한국인의 차이점 비교 설명해줘"}],"max_tokens":10000,"temperature":1.0,"presence_penalty":1.0,"chat_template_kwargs":{"enable_thinking":true}}'
+curl -sS http://3.38.195.121:5016/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"Qwen3.6-35B-A3B-FP8","messages":[{"role":"system","content":"자세하게 답변해줘."},{"role":"user","content":"미국인과 한국인의 차이점 비교 설명해줘"}],"max_tokens":10000,"temperature":1.0,"presence_penalty":1.0,"chat_template_kwargs":{"enable_thinking":true}}'
 ```
 
 **Thinking OFF — 빠른 응답**:
@@ -825,7 +1155,7 @@ cat > /tmp/qwen_req_nothink.json <<'EOF'
 }
 EOF
 
-curl http://3.38.195.121:5015/v1/chat/completions \
+curl http://3.38.195.121:5016/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d @/tmp/qwen_req_nothink.json
 ```
@@ -834,12 +1164,12 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 
 ```bash
 # 사고 과정 + 최종 답변 모두
-curl -sS http://3.38.195.121:5015/v1/chat/completions \
+curl -sS http://3.38.195.121:5016/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d @/tmp/qwen_req.json | jq '.choices[0].message | {reasoning_content, content}'
+  -d @/tmp/qwen_req.json | jq '.choices[0].message | {reasoning, content}'
 
 # 최종 답변만
-curl -sS http://3.38.195.121:5015/v1/chat/completions \
+curl -sS http://3.38.195.121:5016/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d @/tmp/qwen_req.json | jq -r '.choices[0].message.content'
 ```
@@ -847,123 +1177,34 @@ curl -sS http://3.38.195.121:5015/v1/chat/completions \
 **자주 하는 실수**:
 
 - `\` 줄바꿈 뒤에 **공백이 붙으면** 이어쓰기가 깨져서 첫 줄만 GET으로 가 `{"detail":"Method Not Allowed"}`가 돌아옵니다. **파일 방식(`-d @`)을 권장**합니다.
-- `chat_template_kwargs`는 **top-level 필드**입니다. `extra_body` 래핑 불필요.
+- `chat_template_kwargs`는 **top-level 필드**입니다. `extra_body` 래핑 불필요 (단, OpenAI Python SDK는 `extra_body`로 wrapping해야 전달됨).
 - Thinking 토큰이 쉽게 2~4K를 먹으므로 복잡한 질의엔 `max_tokens`를 10,000 이상 잡으세요.
 
-### 6.11 Python (OpenAI SDK) 예시
+### 10.3 vLLM 인스턴스 직접 호출 (게이트웨이 우회)
 
-```python
-from openai import OpenAI
-
-client = OpenAI(
-    base_url="http://3.38.195.121:5015/v1",
-    api_key="not-needed",   # vLLM 기본 인증 없음
-)
-
-# 기본 요청
-response = client.chat.completions.create(
-    model="Qwen3.6-35B-A3B-FP8",
-    messages=[
-        {"role": "system", "content": "간결하게 답변해."},
-        {"role": "user", "content": "파이썬이란?"},
-    ],
-    max_tokens=200,
-    temperature=0,
-)
-print(response.choices[0].message.content)
-
-# 스트리밍
-stream = client.chat.completions.create(
-    model="Qwen3.6-35B-A3B-FP8",
-    messages=[{"role": "user", "content": "안녕"}],
-    max_tokens=100,
-    stream=True,
-)
-for chunk in stream:
-    if chunk.choices[0].delta.content:
-        print(chunk.choices[0].delta.content, end="", flush=True)
-```
-
-### 6.12 LangChain 예시
-
-```python
-from langchain_openai import ChatOpenAI
-
-llm = ChatOpenAI(
-    base_url="http://3.38.195.121:5015/v1",
-    model="Qwen3.6-35B-A3B-FP8",
-    api_key="not-needed",
-    temperature=0,
-    max_tokens=200,
-)
-
-# 기본 호출
-response = llm.invoke("대한민국의 수도는?")
-print(response.content)
-
-# Tool Calling
-from langchain_core.tools import tool
-
-@tool
-def get_weather(city: str) -> str:
-    """지정한 도시의 현재 날씨를 조회합니다."""
-    return f"{city}: 22°C, 맑음"
-
-llm_with_tools = llm.bind_tools([get_weather])
-response = llm_with_tools.invoke("서울 날씨 알려줘")
-print(response.tool_calls)
-```
-
-### 6.13 에러 응답
-
-| HTTP 코드 | 의미 |
-|-----------|------|
-| **400** | 잘못된 요청 (필수 필드 누락, 유효하지 않은 파라미터) |
-| **404** | 존재하지 않는 모델명 또는 엔드포인트 |
-| **422** | 요청 바디 파싱 실패 |
-| **500** | 서버 내부 오류 |
-
-응답 형식:
-
-```json
-{
-  "object": "error",
-  "message": "temperature must be non-negative, got -1.0.",
-  "type": "BadRequestError",
-  "code": 400
-}
-```
-
-### 6.14 게이트웨이 전용 엔드포인트
-
-| 메서드 | 경로 | 설명 |
-|--------|------|------|
-| GET | `/server-status` | 백엔드 서버 상태 대시보드 |
+게이트웨이 디버깅 시 vLLM 인스턴스에 직접 붙어 게이트웨이 계층(LB·웜업·헬스체크) 영향을 배제할 수 있습니다.
 
 ```bash
-curl http://3.38.195.121:5015/server-status
+# Gemma 인스턴스 직접 (내부 포트 :7070)
+curl http://127.0.0.1:7070/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"gemma-4-26B-A4B-it","messages":[{"role":"user","content":"ping"}],"max_tokens":20}'
+
+# Qwen 인스턴스 직접 (내부 포트 :7080)
+curl http://127.0.0.1:7080/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"Qwen3.6-35B-A3B-FP8","messages":[{"role":"user","content":"ping"}],"max_tokens":20}'
 ```
 
-```json
-{
-  "gateway": {"uptime_seconds": 3600.0},
-  "backends": [{
-    "url": "http://127.0.0.1:7070",
-    "is_healthy": true,
-    "is_ready": true,
-    "active_connections": 2,
-    "consecutive_failures": 0
-  }],
-  "ready_count": 1,
-  "total_count": 1
-}
-```
+> ⚠️ vLLM 포트는 **외부 비개방**이라 운영계 호스트 안에서만 접근됩니다. 외부에서 접근하려면 게이트웨이를 거쳐야 합니다.
+>
+> 🆕 launcher 자동 포트 회피로 실제 포트가 hint와 다를 수 있습니다. 정확한 포트는 `instances/.runtime/<name>.json` 또는 `./start.sh status`로 확인.
 
 ---
 
-## 7. 모델 관리
+## 11. 모델 관리
 
-### 7.1 지원 모델 비교
+### 11.1 지원 모델 비교
 
 | | **Qwen3.6-35B-A3B-FP8 (현재)** | Qwen3.5-27B-FP8 | Gemma 4 26B-A4B-it | Gemma 4 31B-it |
 |---|---|---|---|---|
@@ -988,7 +1229,7 @@ curl http://3.38.195.121:5015/server-status
 
 > 두 Qwen3.5 vs 3.6, Gemma 4 vs Qwen 3.6 상세 비교는 [`slm_research/comparison.md`](slm_research/comparison.md) 참고.
 
-### 7.2 모델 교체 퀵 가이드
+### 11.2 모델 교체 퀵 가이드
 
 기존 인스턴스를 다른 모델로 교체하려면 해당 `instances/<name>.yaml`의 모델 관련 키만 바꾸면 됩니다(포트·GPU는 모델 무관). **새 모델을 추가**하는 경우엔 `instances/<new>.yaml`을 복사하여 만들고 게이트웨이를 재기동하면 자동 디스커버리됩니다.
 
@@ -1016,7 +1257,7 @@ mm_processor_cache_type: shm
 # served_model_name: [gemma-4-26B-A4B-it]
 # tool_call_parser: gemma4
 # reasoning_parser: gemma4
-# # 비전 토큰 예산(기본 280 → 560 권장, 문서/차트 QA 최소선). 상세는 §7.4 참고.
+# # 비전 토큰 예산(기본 280 → 560 권장, 문서/차트 QA 최소선). 상세는 §11.4 참고.
 # mm_processor_kwargs:
 #   max_soft_tokens: 560
 # limit_mm_per_prompt:
@@ -1030,7 +1271,7 @@ mm_processor_cache_type: shm
 # served_model_name: [gemma-4-31B-it]
 # tool_call_parser: gemma4
 # reasoning_parser: gemma4
-# # 비전 토큰 예산(기본 280 → 560 권장, 문서/차트 QA 최소선). 상세는 §7.4 참고.
+# # 비전 토큰 예산(기본 280 → 560 권장, 문서/차트 QA 최소선). 상세는 §11.4 참고.
 # mm_processor_kwargs:
 #   max_soft_tokens: 560
 # limit_mm_per_prompt:
@@ -1046,7 +1287,7 @@ mm_processor_cache_type: shm
 > - `mm_processor_cache_type: shm` — **모델 독립 글로벌 파라미터**(`vllm/multimodal/registry.py:276-328`). Gemma 4에서도 동일하게 IPC 중복 제거 효과 → 그대로 **유지 권장**.
 > - `async_scheduling: false` — Qwen3.6 Mamba-hybrid + `mamba_cache_mode=align` 조합의 encoder cache race 방어선이 구체적 사유. Gemma 4에서는 `align` 모드가 없으므로 기본값(`true`)으로 되돌려 TPS 5~15% 회수 가능. 단, 다중 이미지 동시성이 높으면 안전하게 `false` 유지도 가능.
 
-### 7.3 GPU 메모리 참고
+### 11.3 GPU 메모리 참고
 
 `gpu_memory_utilization` 기준. 현재 0.9 (Mamba-hybrid KV 추정 오차 대비 보수).
 
@@ -1070,7 +1311,7 @@ mm_processor_cache_type: shm
 
 > ⚠️ vLLM KV cache profiler가 Mamba-hybrid 구조에서 ~7배 과잉추정(vllm-project/vllm [#37121](https://github.com/vllm-project/vllm/issues/37121))되는 이슈가 있습니다. 기동 로그의 실제 `num_gpu_blocks`를 확인해 튜닝하세요.
 
-### 7.4 Gemma 4 비전 토큰 예산 튜닝
+### 11.4 Gemma 4 비전 토큰 예산 튜닝
 
 Gemma 4 비전 인코더는 이미지당 **soft token 고정 예산** 방식으로 가변 해상도를 처리합니다. 기본값 280은 챗봇 썸네일급(≈ 645K 픽셀)에 맞춰져 있어 문서·차트·스크린샷 QA 같은 고해상도 이미지에서는 디테일 손실이 발생합니다. 공식 허용값과 대응 픽셀 면적은 다음과 같습니다 (transformers `Gemma4ImageProcessor` 공식).
 
@@ -1147,9 +1388,9 @@ vllm serve google/gemma-4-31B-it \
 
 ---
 
-## 8. Qwen3.6 고급 기능
+## 12. Qwen3.6 고급 기능
 
-### 8.1 MTP Speculative Decoding
+### 12.1 MTP Speculative Decoding
 
 Qwen3.6-35B-A3B는 Multi-Token Prediction으로 사전·사후 학습됐습니다. vLLM Speculative Decoding으로 **2토큰 예측**을 활성화하면 처리량이 향상됩니다 (B200 기준 실측 ~96K tokens/s, 수락률 90%).
 
@@ -1163,7 +1404,7 @@ vllm serve Qwen/Qwen3.6-35B-A3B-FP8 \
 
 > ⚠️ **MTP method 표기 차이**: vLLM recipes는 `"method": "mtp"`, HF 모델 카드는 `"method": "qwen3_next_mtp"`. 두 문자열 모두 동일 MTP 경로지만 vLLM 버전마다 허용 값이 다를 수 있습니다. **운영 투입 전 실제 vLLM 0.19.0에서 시도 후 채택**하세요.
 
-### 8.2 preserve_thinking (에이전트 반복 루프 최적화)
+### 12.2 preserve_thinking (에이전트 반복 루프 최적화)
 
 Qwen3.6 고유 신규 옵션. 멀티턴 대화에서 **이전 턴 reasoning**을 자동으로 히스토리에 유지해, 복잡한 에이전트 루프의 토큰 재사용 효율을 높입니다.
 
@@ -1181,7 +1422,7 @@ Qwen3.6 고유 신규 옵션. 멀티턴 대화에서 **이전 턴 reasoning**을
 > - Qwen3.5, Gemma 4는 이 옵션 **미지원**. 교체 시 필드를 제거해야 합니다.
 > - `/think`·`/nothink` 소프트 스위치는 **공식 미지원** (Qwen3 계열과의 분기점).
 
-### 8.3 컨텍스트 1M 확장 (YaRN)
+### 12.3 컨텍스트 1M 확장 (YaRN)
 
 Qwen3.6는 YaRN으로 `max_model_len`을 1,010,000까지 확장할 수 있습니다. 다만 KV cache 부담이 폭증해 **현재 L40S×2 프로필에서는 비권장**합니다.
 
@@ -1192,7 +1433,7 @@ VLLM_ALLOW_LONG_MAX_MODEL_LEN=1 vllm serve Qwen/Qwen3.6-35B-A3B-FP8 \
   --max-model-len 1010000
 ```
 
-### 8.4 Thinking 모드 제어 (서버 vs 요청)
+### 12.4 Thinking 모드 제어 (서버 vs 요청)
 
 | 레벨 | 설정 방법 | 용도 |
 |------|----------|------|
@@ -1219,9 +1460,9 @@ default_chat_template_kwargs:
 
 ---
 
-## 9. 트러블슈팅 & 운영 주의
+## 13. 트러블슈팅 & 운영 주의
 
-### 9.1 멀티모달 Encoder Cache — 가장 주의할 포인트
+### 13.1 멀티모달 Encoder Cache — 가장 주의할 포인트
 
 vLLM V1의 **encoder cache**는 멀티모달 모델의 비전 인코더 출력(embedding)을 보관합니다. 이미지 1장이 패치 분할 후 만드는 encoder output 토큰 수를 단위로 동작합니다.
 
@@ -1239,7 +1480,7 @@ encoder cache 수용 이미지 수 ≈ max_num_batched_tokens ÷ (이미지 1장
 
 Qwen3.6-VL 계열 기준 이미지 1장 ≈ 16,384 encoder 토큰. 현재 `max_num_batched_tokens: 163840` → 약 10장 수용.
 
-### 9.2 `Encoder cache miss for <hash>` 크래시 대응
+### 13.2 `Encoder cache miss for <hash>` 크래시 대응
 
 **증상**: 정상 동작하다가 worker가 assertion으로 죽고 APIServer도 shutdown.
 
@@ -1264,7 +1505,7 @@ AssertionError: Encoder cache miss for <hash>.
 
 현재 `instances/qwen.yaml`(Qwen 챗봇 운영 가정)에 3가지가 모두 반영돼 있습니다. 트래픽이 더 늘면 `max_num_batched_tokens`와 `max_num_seqs`를 비례 증가하세요.
 
-### 9.3 `disable_chunked_mm_input`이 Qwen3.6에 금지인 이유
+### 13.3 `disable_chunked_mm_input`이 Qwen3.6에 금지인 이유
 
 > ⚠️ **`disable_chunked_mm_input: true`를 Qwen3.6에서 절대 설정하지 마세요.**
 
@@ -1276,7 +1517,7 @@ Qwen3.6-35B-A3B는 Mamba-hybrid 구조라서, `enable_prefix_caching: true`가 �
 
 일반 VL 모델 가이드에서 이 옵션을 권장하는 글이 많지만, Mamba-hybrid에서는 반대로 동작합니다. 이 모델의 encoder cache 방어선은 `async_scheduling: false` + `max_num_seqs` 상한 + `max_num_batched_tokens` 조합으로 충분하도록 설계되어 있습니다.
 
-### 9.4 동시 요청이 `max_num_seqs`를 초과하면?
+### 13.4 동시 요청이 `max_num_seqs`를 초과하면?
 
 vLLM scheduler가 FCFS(First-Come-First-Served)로 자동 큐잉합니다:
 
@@ -1291,7 +1532,7 @@ vLLM scheduler가 FCFS(First-Come-First-Served)로 자동 큐잉합니다:
 Engine 000: ... Running: 5 reqs, Waiting: 3 reqs, ...
 ```
 
-### 9.5 좀비 Worker 프로세스 주의
+### 13.5 좀비 Worker 프로세스 주의
 
 engine crash 시 APIServer는 shutdown되지만 **Worker 프로세스가 좀비로 남아 GPU 메모리를 계속 점유**하는 경우가 있습니다. `start.sh`의 `/health` 폴링은 이걸 감지 못해 `[SKIP] 실행 중 아님`으로 오판합니다.
 
@@ -1311,7 +1552,7 @@ kill <좀비 PID들>
 kill -9 <좀비 PID들>
 ```
 
-### 9.6 알려진 vLLM 이슈 (운영 영향도)
+### 13.6 알려진 vLLM 이슈 (운영 영향도)
 
 | 이슈 | 요약 | 현재 방어선 |
 |------|------|------------|
@@ -1321,7 +1562,7 @@ kill -9 <좀비 PID들>
 | [vllm #40124](https://github.com/vllm-project/vllm/issues/40124) | TurboQuant KV + Hybrid MoE가 Ampere(SM 80-86)에서 실패 | **L40S(Ada Lovelace, SM 89) 무영향** — GPU 교체 시에만 주의 |
 | 자체 Bug 2026-04-18 | `Encoder cache miss` assertion | `async_scheduling: false` + `max_num_seqs` 상한. 상세는 [bugfix/2026-04-18_vllm_multimodal_encoder_cache.md](bugfix/2026-04-18_vllm_multimodal_encoder_cache.md) |
 
-### 9.7 운영 환경 튜닝 백로그
+### 13.7 운영 환경 튜닝 백로그
 
 #### Gemma 4 26B-A4B (E=128, N=352, fp8_w8a8) fused MoE config 부재
 
@@ -1364,11 +1605,11 @@ cp E=128,N=352,device_name=NVIDIA_RTX_PRO_6000_Blackwell_Workstation_Edition,dty
 
 ---
 
-## 10. QA 테스트
+## 14. QA 테스트
 
 서버 배포 후 기능 검증을 자동화하는 스크립트. Python 표준 라이브러리만 사용합니다.
 
-### 10.1 기본 사용법
+### 14.1 기본 사용법
 
 ```bash
 cd /workspace/llm-serving/vllm
@@ -1432,7 +1673,7 @@ grep -B1 -A20 "FAIL " logs/test_20260430_144909.log
 
 > 백그라운드/CI 실행, 긴 출력 스크롤 등으로 콘솔 확인이 어려울 때 이 파일이 단일 진실 소스입니다.
 
-### 10.2 테스트 카테고리
+### 14.2 테스트 카테고리
 
 | 카테고리 | 키 | 테스트 수 | 검증 내용 |
 |---------|-----|----------|----------|
@@ -1446,7 +1687,7 @@ grep -B1 -A20 "FAIL " logs/test_20260430_144909.log
 | 캐싱 | `caching` | 1 | 프리픽스 캐싱 TTFT 비교 |
 | 멀티모달 | `multimodal` | 4 | 단일 이미지, 동시 5/10개, 이미지+텍스트 혼합 (Encoder cache 안정성) |
 
-### 10.3 테스트 항목 상세
+### 14.3 테스트 항목 상세
 
 #### 서버 기동 / 인프라 (`infra`)
 
@@ -1486,7 +1727,7 @@ grep -B1 -A20 "FAIL " logs/test_20260430_144909.log
 | ID | 테스트 | 판정 기준 |
 |----|-------|----------|
 | 5.1 | OFF 기본 | content에 `<think>` 미포함 |
-| 5.2 | 요청 단위 ON | `reasoning_content` 필드 존재 |
+| 5.2 | 요청 단위 ON | `reasoning` (또는 `reasoning_content`) 필드 존재 |
 | 5.3 | 요청 단위 OFF 명시적 전달 | content에 `<think>` 미포함 |
 
 > Qwen3.6 `<think>...</think>`는 일반 토큰이라 `skip_special_tokens: false` 불필요.
@@ -1531,9 +1772,9 @@ grep -B1 -A20 "FAIL " logs/test_20260430_144909.log
 
 ---
 
-## 11. 참고 자료
+## 15. 참고 자료
 
-### 11.1 프로젝트 파일 구성
+### 15.1 프로젝트 파일 구성
 
 ```
 llm-serving/vllm/
@@ -1563,7 +1804,7 @@ llm-serving/vllm/
 
 > 구식 단일 yaml(`vllm_config.yaml`, `vllm_gateway_config.yaml`)은 2026-04-30 새 구조 도입 시 `agent-guide/.archive/2026-04-30_vllm-config-migration/`로 이관됨.
 
-### 11.2 관련 문서
+### 15.2 관련 문서
 
 - [slm_research/qwen36.md](slm_research/qwen36.md) — Qwen3.6 모델 상세 스펙·벤치마크·운영 메모
 - [slm_research/qwen35.md](slm_research/qwen35.md) — Qwen3.5 조사
@@ -1571,7 +1812,7 @@ llm-serving/vllm/
 - [slm_research/comparison.md](slm_research/comparison.md) — Gemma 4 vs Qwen 3.6 비교
 - [bugfix/2026-04-18_vllm_multimodal_encoder_cache.md](bugfix/2026-04-18_vllm_multimodal_encoder_cache.md) — encoder cache race 해결 기록
 
-### 11.3 외부 링크
+### 15.3 외부 링크
 
 - [vLLM 공식 문서](https://docs.vllm.ai/)
 - [Qwen3.6 HuggingFace 모델 카드](https://huggingface.co/Qwen/Qwen3.6-35B-A3B-FP8)

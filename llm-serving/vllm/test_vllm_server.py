@@ -1098,7 +1098,7 @@ def parse_args():
               python test_vllm_server.py --base-url http://gpu-server:5015
         """),
     )
-    p.add_argument("--base-url", default="http://localhost:5016", help="vLLM 서버 URL (기본: http://localhost:5015)")
+    p.add_argument("--base-url", default="http://localhost:5015", help="vLLM 서버 URL (기본: http://localhost:5015)")
     p.add_argument(
         "--model", default=None,
         help="모델명 (미지정 시 자동 추출: 1) base-url의 /v1/models API → 2) 로컬 gateways/<port>.yaml + instances/<name>.yaml fallback)",

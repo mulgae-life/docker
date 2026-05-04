@@ -125,6 +125,14 @@ class HttpClientConfig(BaseModel):
     max_connections: int = 100
 
 
+class OverloadConfig(BaseModel):
+    enabled: bool = True
+    max_inflight_requests: int = 2
+    max_queue_size: int = 4
+    queue_timeout_seconds: float = 3.0
+    retry_after_seconds: int = 5
+
+
 class GatewayConfig(BaseModel):
     gateway: GatewayServerConfig = GatewayServerConfig()
     discover_from: str = ""                # 인스턴스 yaml 디렉토리 (gateway_port 매칭)
@@ -134,6 +142,7 @@ class GatewayConfig(BaseModel):
     warmup: WarmupConfig = WarmupConfig()
     prefix_cache_warmup: PrefixCacheWarmupConfig = PrefixCacheWarmupConfig()
     http_client: HttpClientConfig = HttpClientConfig()
+    overload: OverloadConfig = OverloadConfig()
 
 
 def _resolve_actual_port(instance_dir: str, yaml_path: str, yaml_port: int) -> tuple[int, str]:
@@ -317,6 +326,95 @@ class LoadBalancer:
     @property
     def ready_count(self) -> int:
         return sum(1 for s in self._servers if s.is_ready)
+
+
+# ═══════════════════════════════════════════════════════
+# AdmissionController — 게이트웨이 과부하 차단
+# ═══════════════════════════════════════════════════════
+
+
+class AdmissionRejected(Exception):
+    def __init__(self, reason: str, retry_after_seconds: int) -> None:
+        self.reason = reason
+        self.retry_after_seconds = retry_after_seconds
+        super().__init__(reason)
+
+
+class AdmissionController:
+    """vLLM으로 넘길 동시 요청과 대기열 길이를 게이트웨이에서 제한한다."""
+
+    def __init__(self, config: OverloadConfig) -> None:
+        self._enabled = config.enabled
+        self._max_inflight = max(1, config.max_inflight_requests)
+        self._max_queue = max(0, config.max_queue_size)
+        self._queue_timeout = max(0.0, config.queue_timeout_seconds)
+        self._retry_after = max(1, config.retry_after_seconds)
+        self._condition = asyncio.Condition()
+        self._inflight = 0
+        self._queued = 0
+        self._accepted_total = 0
+        self._rejected_total = 0
+        self._queue_timeout_total = 0
+
+    async def acquire(self) -> None:
+        """슬롯을 확보한다. 대기열이 꽉 차거나 대기 시간이 초과되면 429 대상."""
+        if not self._enabled:
+            return
+
+        async with self._condition:
+            if self._inflight < self._max_inflight:
+                self._inflight += 1
+                self._accepted_total += 1
+                return
+
+            if self._queued >= self._max_queue:
+                self._rejected_total += 1
+                raise AdmissionRejected("queue_full", self._retry_after)
+
+            self._queued += 1
+            try:
+                deadline = time.monotonic() + self._queue_timeout
+                while self._inflight >= self._max_inflight:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        self._rejected_total += 1
+                        self._queue_timeout_total += 1
+                        raise AdmissionRejected("queue_timeout", self._retry_after)
+                    try:
+                        await asyncio.wait_for(self._condition.wait(), timeout=remaining)
+                    except asyncio.TimeoutError as e:
+                        self._rejected_total += 1
+                        self._queue_timeout_total += 1
+                        raise AdmissionRejected("queue_timeout", self._retry_after) from e
+
+                self._inflight += 1
+                self._accepted_total += 1
+            finally:
+                self._queued = max(0, self._queued - 1)
+
+    async def release(self) -> None:
+        """요청 종료 시 슬롯을 반환한다."""
+        if not self._enabled:
+            return
+
+        async with self._condition:
+            self._inflight = max(0, self._inflight - 1)
+            self._condition.notify(1)
+
+    async def snapshot(self) -> dict:
+        async with self._condition:
+            return {
+                "enabled": self._enabled,
+                "max_inflight_requests": self._max_inflight,
+                "max_queue_size": self._max_queue,
+                "queue_timeout_seconds": self._queue_timeout,
+                "retry_after_seconds": self._retry_after,
+                "inflight_requests": self._inflight,
+                "queued_requests": self._queued,
+                "accepted_total": self._accepted_total,
+                "rejected_total": self._rejected_total,
+                "queue_timeout_total": self._queue_timeout_total,
+            }
 
 
 # ═══════════════════════════════════════════════════════
@@ -599,13 +697,14 @@ class HealthChecker:
 _lb: LoadBalancer
 _client: httpx.AsyncClient
 _health_checker: HealthChecker
+_admission: AdmissionController
 _start_time: float
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """앱 수명주기: 기동 시 웜업/헬스체크, 종료 시 정리."""
-    global _lb, _client, _health_checker, _start_time
+    global _lb, _client, _health_checker, _admission, _start_time
 
     # ── 설정 로드 ──
     config_path = os.environ.get("VLLM_GATEWAY_CONFIG")
@@ -633,6 +732,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     servers = [BackendServer(config=bc) for bc in config.backends]
     _lb = LoadBalancer(servers)
     logger.info("백엔드 %d개 등록: %s", len(servers), [s.label for s in servers])
+
+    # ── 과부하 차단 ──
+    _admission = AdmissionController(config.overload)
+    logger.info("과부하 차단 설정: %s", await _admission.snapshot())
 
     # ── 웜업 (백그라운드) ──
     # backend ready를 lifespan startup에서 await하면 첫 backend가 뜰 때까지 uvicorn이
@@ -735,10 +838,27 @@ async def chat_completions(request: Request) -> JSONResponse | StreamingResponse
 
     is_stream = payload.get("stream", False)
 
+    try:
+        await _admission.acquire()
+    except AdmissionRejected as e:
+        logger.warning("요청 거절: %s", e.reason)
+        return JSONResponse(
+            content={
+                "error": {
+                    "message": "서버가 바쁩니다. 잠시 후 다시 시도해주세요.",
+                    "type": "rate_limit_error",
+                    "code": e.reason,
+                }
+            },
+            status_code=429,
+            headers={"Retry-After": str(e.retry_after_seconds)},
+        )
+
     # 서버 선택
     try:
         server = await _lb.acquire()
     except RuntimeError:
+        await _admission.release()
         return JSONResponse(
             content={"error": {"message": "사용 가능한 백엔드 서버가 없습니다", "type": "server_error"}},
             status_code=503,
@@ -776,6 +896,7 @@ async def _proxy_non_streaming(
         return JSONResponse(content={"error": "백엔드 연결 실패"}, status_code=502)
     finally:
         await _lb.release(server)
+        await _admission.release()
 
 
 async def _proxy_streaming(
@@ -792,10 +913,12 @@ async def _proxy_streaming(
     except httpx.TimeoutException:
         logger.error("[%s] 스트리밍 연결 타임아웃", server.label)
         await _lb.release(server)
+        await _admission.release()
         return JSONResponse(content={"error": "백엔드 타임아웃"}, status_code=504)
     except httpx.HTTPError as e:
         logger.error("[%s] 스트리밍 연결 실패: %s", server.label, e)
         await _lb.release(server)
+        await _admission.release()
         return JSONResponse(content={"error": "백엔드 연결 실패"}, status_code=502)
 
     # 백엔드 에러 시 상태 코드를 정확히 전달
@@ -803,6 +926,7 @@ async def _proxy_streaming(
         error_body = await resp.aread()
         await resp.aclose()
         await _lb.release(server)
+        await _admission.release()
         try:
             return JSONResponse(content=json.loads(error_body), status_code=resp.status_code)
         except (json.JSONDecodeError, UnicodeDecodeError):
@@ -820,6 +944,7 @@ async def _proxy_streaming(
         finally:
             await resp.aclose()
             await _lb.release(server)
+            await _admission.release()
 
     return StreamingResponse(
         _stream(),
@@ -847,6 +972,7 @@ async def server_status() -> JSONResponse:
     return JSONResponse(content={
         "gateway": {"uptime_seconds": round(uptime, 1)},
         "backends": backends,
+        "overload": await _admission.snapshot(),
         "ready_count": _lb.ready_count,
         "total_count": len(_lb.servers),
     })

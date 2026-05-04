@@ -21,18 +21,24 @@
 
 
 # ── 게이트웨이 서버 ──────────────────────────────────
+# host: 게이트웨이 바인딩 주소. 외부 접속 허용은 0.0.0.0, 로컬 전용은 127.0.0.1.
+# port: 클라이언트가 접속하는 게이트웨이 포트. 방화벽/보안그룹 오픈 대상.
+# log_level: 게이트웨이 로그 레벨. 일반 운영은 info, 상세 진단은 debug.
 gateway:
   host: "0.0.0.0"
-  port: 5015                    # 클라이언트가 접근하는 포트 (방화벽 오픈 대상)
+  port: 5015
   log_level: "info"
 
 # ── 백엔드 디스커버리 ────────────────────────────────
-# 이 yaml 파일 기준 상대 경로. instances/*.yaml 중
-# gateway_port == 자기 게이트웨이 포트인 항목만 backends로 등록한다.
-# (수동 오버라이드가 필요하면 backends: 리스트를 직접 명시 — 그쪽이 우선)
+# discover_from: 이 파일 기준 상대 경로. gateway_port가 이 게이트웨이 포트와 같은
+#   instances/*.yaml만 백엔드로 자동 등록한다. 수동 backends가 있으면 그쪽이 우선이다.
 discover_from: "../instances"
 
 # ── 헬스체크 ─────────────────────────────────────────
+# interval_seconds: 백엔드 /health 확인 주기(초).
+# timeout_seconds: /health 요청 1회 타임아웃(초).
+# unhealthy_threshold: 연속 실패가 이 값에 도달하면 unhealthy로 전환.
+# healthy_threshold: unhealthy 상태에서 연속 성공이 이 값에 도달하면 healthy로 복구.
 health_check:
   interval_seconds: 10
   timeout_seconds: 3
@@ -40,17 +46,27 @@ health_check:
   healthy_threshold: 1
 
 # ── 서버 웜업 (CUDA 예열) ────────────────────────────
+# enabled: 시작/복구 시 더미 추론으로 CUDA 커널을 예열할지 여부.
+# boot_poll.interval_seconds: 백엔드가 /health를 반환할 때까지 재시도하는 간격(초).
+# boot_poll.timeout_seconds: 모델 로딩을 포함한 백엔드 기동 대기 상한(초).
+# inference.prompt: 예열용 더미 프롬프트. 운영 응답에는 노출되지 않는다.
+# inference.max_tokens: 예열 추론의 최대 생성 토큰 수.
+# inference.timeout_seconds: 예열 추론 요청 타임아웃(초).
 warmup:
   enabled: true
   boot_poll:
     interval_seconds: 5
-    timeout_seconds: 900        # 모델 로딩 시간 포함 상한
+    timeout_seconds: 900
   inference:
     prompt: "자동차보험 대인배상 담보에 대해 상세히 설명해주세요."
     max_tokens: 256
     timeout_seconds: 120
 
 # ── 프리픽스 캐시 웜업 ───────────────────────────────
+# enabled: 공통 시스템 프롬프트를 미리 넣어 KV 캐시 적중률을 높일지 여부.
+# max_tokens: 캐시 적재 확인용 생성 토큰 수. 보통 1이면 충분하다.
+# timeout_seconds: 프리픽스 캐시 웜업 요청 타임아웃(초).
+# system_prompt: 서비스 공통 시스템 프롬프트. 변경 시 재시작 후 재웜업된다.
 prefix_cache_warmup:
   enabled: true
   max_tokens: 1
@@ -60,11 +76,27 @@ prefix_cache_warmup:
     보험 상품, 담보, 청구 절차 등에 대해 정확하고 친절하게 답변합니다.
 
 # ── 백엔드 인증 ──────────────────────────────────────
-# vLLM에 --api-key를 설정한 경우, 게이트웨이가 내부 요청에 이 키를 사용한다.
+# backend_api_key: vLLM --api-key 사용 시 게이트웨이의 내부 웜업 요청에 사용할 키.
 # backend_api_key: "your-secret-key"
 
 # ── HTTP 클라이언트 ──────────────────────────────────
+# timeout_seconds: 백엔드 추론 요청 전체 타임아웃(초). 긴 답변을 고려해 넉넉하게 둔다.
+# connect_timeout_seconds: 백엔드 TCP 연결 수립 타임아웃(초).
+# max_connections: 백엔드 연결 풀 상한. 실제 동시 추론 제한은 overload가 담당한다.
 http_client:
   timeout_seconds: 300
   connect_timeout_seconds: 5
   max_connections: 100
+
+# ── 과부하 차단 ──────────────────────────────────────
+# enabled: chat/completions 요청에 동시 처리량과 대기열 제한을 적용할지 여부.
+# max_inflight_requests: 동시에 백엔드로 넘길 최대 요청 수. 단일 vLLM max_num_seqs 이하 권장.
+# max_queue_size: 동시 처리 한도 초과 시 게이트웨이에 대기시킬 최대 요청 수.
+# queue_timeout_seconds: 대기열에서 슬롯을 기다릴 최대 시간(초). 초과 시 429 queue_timeout.
+# retry_after_seconds: 429 응답의 Retry-After 헤더 값(초).
+overload:
+  enabled: true
+  max_inflight_requests: 2
+  max_queue_size: 4
+  queue_timeout_seconds: 3
+  retry_after_seconds: 5
