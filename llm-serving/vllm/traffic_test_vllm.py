@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""vLLM 게이트웨이 보수적 트래픽 테스트.
+"""vLLM 게이트웨이 하드 트래픽 테스트.
 
 기능 검증용 test_vllm_server.py와 달리 운영 지표를 확인한다.
-기본값은 실제 운영 서버 보호를 우선하여 낮은 강도로 설정한다.
+기본값은 동시 20명과 장문 출력 부하를 기준으로 설정한다.
 
 테스트 단계:
   1. 모델 확인: --model 미지정 시 /v1/models에서 첫 모델명을 자동 추출.
   2. 사전 스냅샷: /health, /server-status, /v1/models 상태 저장.
-  3. 모드 선택: smoke는 저강도 확인, overload는 429 과부하 차단 확인.
+  3. 조건 확정: 요청 수, 동시성, 생성 토큰 수, 타임아웃을 CLI 인자로 확정.
   4. 요청 방식: 기본은 non-stream, --stream 지정 시 SSE와 TTFT 측정.
   5. 트래픽 실행: 요청 큐를 만들고 --concurrency 워커가 순차 처리.
   6. 보호 장치: 허용되지 않은 에러율 또는 연속 실패 기준 초과 시 조기 중단.
   7. 사후 점검: 테스트 후 /health와 /server-status 생존 여부를 통과 조건에 반영.
-  8. 지표 집계: 성공률, 429 방어 응답, 상태코드, RPS, TPS, latency, TTFT 집계.
+  8. 지표 집계: 200 성공, 429 방어 응답, 상태코드, RPS, TPS, latency, TTFT 집계.
   9. 결과 저장: logs/traffic_*.json 리포트 저장, 통과 기준 미달 시 exit 1.
 """
 
@@ -34,11 +34,37 @@ from typing import Any
 
 
 PROMPTS = [
-    "자동차보험 대인배상 담보를 한 문단으로 설명해주세요.",
-    "실손보험 청구 절차를 단계별로 짧게 정리해주세요.",
-    "화재보험에서 자주 묻는 보장 제외 항목을 알려주세요.",
-    "운전자보험과 자동차보험의 차이를 간단히 비교해주세요.",
+    {
+        "content": "집에서 전기요금을 아끼기 위해 오늘부터 실천할 수 있는 방법을 약 250자 분량으로 설명해주세요. 최종 답변만 작성해주세요.",
+        "enable_thinking": True,
+    },
+    {
+        "content": "비 오는 날 아이와 함께 집에서 보내기 좋은 활동을 약 500자 분량으로 추천해주세요. 준비물, 진행 방법, 주의할 점을 포함하고 최종 답변만 작성해주세요.",
+        "enable_thinking": True,
+    },
+    {
+        "content": "처음 자취를 시작하는 사람이 한 달 생활비를 관리하는 방법을 약 750자 분량으로 설명해주세요. 월세, 식비, 공과금, 비상금, 소비 습관을 포함해주세요.",
+        "enable_thinking": False,
+    },
+    {
+        "content": "부모님과 함께 1박 2일 국내 여행을 계획할 때 숙소, 이동, 식사, 일정, 예산을 어떻게 잡으면 좋은지 약 1000자 분량으로 설명해주세요.",
+        "enable_thinking": False,
+    },
 ]
+
+DEFAULT_TRAFFIC_CONFIG = {
+    "requests": 40,
+    "concurrency": 20,
+    "max_tokens": 4096,
+    "timeout": 900,
+    "ramp_up_seconds": 0.0,
+    "sleep_seconds": 0.0,
+    "max_error_rate": 0.05,
+    "max_consecutive_errors": 3,
+    "min_requests_before_break": 10,
+    "require_200": True,
+    "require_429": False,
+}
 
 
 @dataclass
@@ -124,13 +150,18 @@ def _chat_once(
     max_tokens: int,
     timeout: float,
 ) -> RequestResult:
-    prompt = PROMPTS[index % len(PROMPTS)]
+    prompt_config = PROMPTS[index % len(PROMPTS)]
+    prompt = str(prompt_config["content"])
+    enable_thinking = bool(prompt_config["enable_thinking"])
     body = {
         "model": model,
         "messages": [{"role": "user", "content": prompt}],
         "max_tokens": max_tokens,
         "temperature": 0,
+        "chat_template_kwargs": {"enable_thinking": enable_thinking},
     }
+    if enable_thinking:
+        body["skip_special_tokens"] = False
     if stream:
         body["stream"] = True
         body["stream_options"] = {"include_usage": True}
@@ -145,8 +176,8 @@ def _is_overload_rejection(result: RequestResult) -> bool:
     return result.status == 429
 
 
-def _is_allowed_result(args: argparse.Namespace, result: RequestResult) -> bool:
-    return result.ok or (args.mode == "overload" and _is_overload_rejection(result))
+def _is_allowed_result(result: RequestResult) -> bool:
+    return result.ok or _is_overload_rejection(result)
 
 
 def _non_stream_once(
@@ -284,11 +315,11 @@ def _run_traffic(args: argparse.Namespace, model: str) -> tuple[list[RequestResu
     def should_trip() -> bool:
         if len(results) < args.min_requests_before_break:
             return False
-        failures = [r for r in results if not _is_allowed_result(args, r)]
+        failures = [r for r in results if not _is_allowed_result(r)]
         if len(failures) >= args.max_consecutive_errors:
             tail = results[-args.max_consecutive_errors :]
             if len(tail) == args.max_consecutive_errors and all(
-                not _is_allowed_result(args, r) for r in tail
+                not _is_allowed_result(r) for r in tail
             ):
                 return True
         return len(failures) / len(results) > args.max_error_rate
@@ -330,10 +361,10 @@ def _run_traffic(args: argparse.Namespace, model: str) -> tuple[list[RequestResu
     return sorted(results, key=lambda r: r.index), tripped
 
 
-def _summarize(args: argparse.Namespace, results: list[RequestResult], elapsed_s: float) -> dict[str, Any]:
+def _summarize(results: list[RequestResult], elapsed_s: float) -> dict[str, Any]:
     ok_results = [r for r in results if r.ok]
     rejected_results = [r for r in results if _is_overload_rejection(r)]
-    failed_results = [r for r in results if not _is_allowed_result(args, r)]
+    failed_results = [r for r in results if not _is_allowed_result(r)]
     latencies = [r.latency_ms for r in ok_results]
     ttfts = [r.ttft_ms for r in ok_results if r.ttft_ms is not None]
     completion_tokens = [r.completion_tokens or 0 for r in ok_results]
@@ -404,7 +435,6 @@ def _evaluate_pass(
         failures.extend(postcheck["failures"])
     return {
         "passed": not failures,
-        "mode": args.mode,
         "require_200": args.require_200,
         "require_429": args.require_429,
         "failures": failures,
@@ -421,14 +451,14 @@ def _write_report(args: argparse.Namespace, report: dict[str, Any]) -> str:
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="vLLM 게이트웨이 보수적 트래픽 테스트")
+    p = argparse.ArgumentParser(description="vLLM 게이트웨이 하드 트래픽 테스트")
     p.add_argument("--base-url", default="http://localhost:5015", help="게이트웨이 URL")
     p.add_argument("--model", default=None, help="모델명. 미지정 시 /v1/models에서 자동 추출")
-    p.add_argument("--mode", choices=("smoke", "overload"), default="smoke", help="테스트 모드")
+    p.add_argument("--mode", choices=("smoke", "overload"), default=None, help=argparse.SUPPRESS)
     p.add_argument("--requests", type=int, default=None, help="총 요청 수")
     p.add_argument("--concurrency", type=int, default=None, help="동시 요청 수")
     p.add_argument("--max-tokens", type=int, default=None, help="요청당 최대 생성 토큰")
-    p.add_argument("--timeout", type=float, default=300, help="요청 타임아웃 초")
+    p.add_argument("--timeout", type=float, default=None, help="요청 타임아웃 초")
     p.add_argument("--stream", action="store_true", help="SSE 스트리밍으로 테스트")
     p.add_argument("--ramp-up-seconds", type=float, default=None, help="워커 시작 분산 시간")
     p.add_argument("--sleep-seconds", type=float, default=None, help="워커별 요청 사이 휴식")
@@ -450,36 +480,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--output-dir", default="logs", help="결과 JSON 저장 디렉토리")
     args = p.parse_args()
     args.base_url = args.base_url.rstrip("/")
-    defaults = {
-        "smoke": {
-            "requests": 10,
-            "concurrency": 1,
-            "max_tokens": 64,
-            "ramp_up_seconds": 2.0,
-            "sleep_seconds": 0.0,
-            "max_error_rate": 0.05,
-            "max_consecutive_errors": 2,
-            "min_requests_before_break": 3,
-            "require_200": True,
-            "require_429": False,
-        },
-        "overload": {
-            "requests": 16,
-            "concurrency": 10,
-            "max_tokens": 256,
-            "ramp_up_seconds": 0.0,
-            "sleep_seconds": 0.0,
-            "max_error_rate": 0.05,
-            "max_consecutive_errors": 2,
-            "min_requests_before_break": 4,
-            "require_200": True,
-            "require_429": True,
-        },
-    }[args.mode]
-    for key, value in defaults.items():
+    for key, value in DEFAULT_TRAFFIC_CONFIG.items():
         if getattr(args, key) is None:
             setattr(args, key, value)
-    args.effective_defaults = {key: getattr(args, key) for key in defaults}
+    args.effective_defaults = {key: getattr(args, key) for key in DEFAULT_TRAFFIC_CONFIG}
     if args.requests < 1:
         raise SystemExit("--requests는 1 이상이어야 합니다")
     if args.concurrency < 1:
@@ -496,7 +500,6 @@ def main() -> None:
     print("vLLM 트래픽 테스트")
     print(f"  서버: {args.base_url}")
     print(f"  모델: {model}")
-    print(f"  모드: {args.mode}")
     print(f"  요청: {args.requests}, 동시성: {args.concurrency}, stream={args.stream}")
 
     before = _snapshot(args.base_url, args.timeout)
@@ -504,7 +507,7 @@ def main() -> None:
     results, tripped = _run_traffic(args, model)
     elapsed_s = time.monotonic() - start
     after = _snapshot(args.base_url, args.timeout)
-    summary = _summarize(args, results, elapsed_s)
+    summary = _summarize(results, elapsed_s)
     postcheck = _postcheck(after)
     pass_criteria = _evaluate_pass(args, summary, tripped, postcheck)
 
@@ -512,7 +515,6 @@ def main() -> None:
         "config": {
             "base_url": args.base_url,
             "model": model,
-            "mode": args.mode,
             "requests": args.requests,
             "concurrency": args.concurrency,
             "max_tokens": args.max_tokens,

@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-04-30 (5차 세션 — start.sh 운영 견고성 + launcher fcntl/atomic)
+last-updated: 2026-05-04 (vLLM 5015 안정성/트래픽 테스트)
 ---
 
 # 세션 상태
@@ -24,6 +24,8 @@ last-updated: 2026-04-30 (5차 세션 — start.sh 운영 견고성 + launcher f
 
 | 우선순위 | 작업 | 상태 |
 |---------|------|------|
+| P1 | **5015 Gemma 운영 프로파일 확정**: 현재 라이브 게이트웨이는 `max_inflight_requests=20`, `max_queue_size=20`으로 동작. 로컬 `gateways/5015.yaml`은 단일 인스턴스 안전값 `2/18`에 운영 후보 `20/40` 주석이 붙어 있으므로, 재시작 전 실제 GPU/`max_num_seqs` 기준으로 값 확정 필요. | Todo |
+| P1 | **5015 Gemma 장문 트래픽 검증**: 단문 smoke/동시 20/24 요청은 통과. 운영 전 `max_tokens >= 512` 또는 실제 평균 프롬프트/출력 길이로 latency, queue timeout, 429 비율 확인 필요. | Todo |
 | P1 | **vLLM Qwen 본체 :7080 이전**: `instances/qwen.yaml`의 `port: 7080`이 의도된 다음 운영 포트. 게이트웨이 :5016은 메모리상 :7071 보유 중이라 즉시 영향 없으나, 다음 게이트웨이 재기동 시 yaml 기준(:7080)으로 디스커버리하므로 그 시점 전에 vLLM 본체를 :7080으로 옮겨야 정합. | Todo |
 | P1 | `llm-serving/sglang/` 디렉토리 골격 (운영 가이드 + 런처 + 설정 + 테스트) | Todo |
 | P1 | **`llm-serving/stt/` PoC**: 시나리오 D 확정 — **Qwen3-ASR-1.7B + Whisper-large-v3** 동시 서빙(GPU 0/1 분리, port 7170/7171, transcription endpoint). 인프라(start.sh + 모델별 config 2종 + README) 구현 완료. 다음 단계: 실제 기동(LLM 인스턴스 stop 필요) → 한국어 벤치(`test_stt.py`, WER/RTF/latency) → 게이트웨이 통합 | In progress (인프라 구축 완료, 기동/벤치 대기) |
@@ -34,11 +36,49 @@ last-updated: 2026-04-30 (5차 세션 — start.sh 운영 견고성 + launcher f
 
 ## 기타 이슈
 
-- `llm-serving/DEPLOY_GUIDE.md` 1·3절 미커밋 변경: `cd /workspace/...` 후 상대경로 → 절대경로 단일화 (외부 동기화 산출물로 추정, 이번 세션에서 의도된 변경 아님). commit/유지 여부 대표님 판단
+- 5015 라이브 런타임 overload 값(`20/20`)과 로컬 `gateways/5015.yaml` 값(`2/18`, 운영 후보 주석 `20/40`)이 다름. 게이트웨이 재시작 전 운영 목표값 확정 필요.
 
 ---
 
 ## 최근 세션
+
+### 2026-05-04 (vLLM 5015 안정성/트래픽 테스트)
+
+#### 세션 목표
+- 5015 Gemma 게이트웨이를 실제 운영 트래픽 기준으로 보호할 수 있는지 점검
+- 과부하 시 서버가 내려가지 않도록 동시 처리량 제한, 대기열, 429 방어 응답을 구성
+- 운영 전 사용할 보수적 트래픽 테스트 스크립트와 라이브 검증 결과를 확보
+
+#### 변경 파일
+| 파일 | 변경 유형 | 요약 |
+|------|----------|------|
+| `llm-serving/vllm/vllm_gateway.py` | 기능 보강 | `AdmissionController` 추가. `/v1/chat/completions` 앞단에서 동시 처리 슬롯과 대기열을 제한하고, 대기열 포화/시간 초과 시 429 + `Retry-After` 반환. `/server-status`에 overload 스냅샷 포함 |
+| `llm-serving/vllm/gateways/5015.yaml` | 설정 보강 | `overload` 설정과 변수 설명 정리. 현재 로컬 값은 단일 인스턴스 안전값 `max_inflight_requests=2`, `max_queue_size=18`; 운영 `max_num_seqs=20` 전환 시 `20/40` 후보 주석 보존 |
+| `llm-serving/vllm/gateways/5016.yaml` | 설정 보강 | 5016 게이트웨이에도 동일한 `overload` 설정 구조와 설명 추가 |
+| `llm-serving/vllm/traffic_test_vllm.py` | 테스트 보강 | `smoke`/`overload` 모드, 429 허용 판정, 사후 `/health`·`/server-status` 생존 확인, 통과 기준, 리포트 저장 추가 |
+| `llm-serving/vllm/test_vllm_server.py` | 문서 보강 | 테스트 단계 설명 docstring 추가 |
+| `.archive/2026-05-04_vllm-5015-traffic-test/logs/` | 산출물 보존 | 라이브 트래픽 테스트 리포트 3건 보존 |
+| `README.md`, `llm-serving/README.md`, `agent-guide/PROJECT.md`, `llm-serving/VLLM_OPS_GUIDE.md`, `agent-guide/SESSION.md` | 문서 갱신 | 운영 가이드 경로 정정, 과부하 차단/트래픽 테스트 설명, 본 세션 로그 반영 |
+
+#### 결정 사항
+- 게이트웨이의 `max_inflight_requests`는 vLLM의 `max_num_seqs` 이하로 맞춘다. 초과 요청은 `max_queue_size`만큼 게이트웨이에서 대기하고, 대기열 포화 또는 `queue_timeout_seconds` 초과 시에만 429로 차단한다.
+- 단일 5015 인스턴스(`gemma.yaml` 현재 `max_num_seqs=2`)는 `2 inflight + 18 queued = 총 20명 수용`이 안전 기준이다.
+- 실제 운영에서 GPU를 늘리고 `gemma.yaml max_num_seqs=20`을 검증한 뒤에는 `5015.yaml`을 `max_inflight_requests=20`, `max_queue_size=40`, `queue_timeout_seconds=180`, `retry_after_seconds=10` 기준으로 올리는 구성이 적합하다.
+- `traffic_test_vllm.py --mode overload`에서는 HTTP 429를 실패가 아니라 방어 응답으로 집계한다. 단, `smoke` 모드에서는 429를 실패로 본다.
+- 작업 중 `work-verify`로 "보강 완료" 선언과 실제 코드 반영 불일치를 발견했고, 이후 `traffic_test_vllm.py`에 실제 overload 판정/사후 점검/통과 기준을 반영했다.
+
+#### 라이브 테스트 결과
+| 대상 | 조건 | 결과 | 주요 지표 |
+|------|------|------|----------|
+| `http://3.38.195.121:5015` | 10 요청 / 동시 2 / `max_tokens=64` | 10/10 성공 | p95 889ms, 에러 0% |
+| `http://3.38.195.121:5015` | 20 요청 / 동시 20 / `max_tokens=32` | 20/20 성공 | p95 4.36s, 에러 0% |
+| `http://3.38.195.121:5015` | 24 요청 / 동시 24 / `max_tokens=16` | 24/24 성공 | p95 3.09s, 에러 0% |
+
+#### 현재 상태
+- 라이브 5015 최종 상태: `/health=200`, ready `1/1`, `active_connections=0`, `queued_requests=0`, `rejected_total=0`, `queue_timeout_total=0`.
+- 현재 라이브 게이트웨이 overload 값은 `max_inflight_requests=20`, `max_queue_size=20`, `queue_timeout_seconds=60`, `retry_after_seconds=5`.
+- 로컬 `gateways/5015.yaml` 값과 라이브 런타임 값이 다르므로, 다음 게이트웨이 재시작 전에 운영 목표값을 확정해야 한다.
+- 잔존 검증: 장문 출력(`max_tokens >= 512`)과 실제 서비스 프롬프트 길이 기준 트래픽 테스트.
 
 ### 2026-04-30 (5차 세션 — start.sh 운영 견고성 + launcher fcntl/atomic)
 

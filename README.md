@@ -18,7 +18,8 @@
 |--------------|----------|
 | 로컬 PC에 풀스택 dev/GPU 컨테이너 띄우기 | [`my-docker-server/README.md`](my-docker-server/README.md) |
 | AWS GPU 인스턴스에 vLLM 베이스 + 다중 사용자 운영 환경 셋업 | [`aws/SETUP_GUIDE.md`](aws/SETUP_GUIDE.md) |
-| vLLM 서버 + 멀티 GPU 게이트웨이 띄우기 | [`llm-serving/vllm/VLLM_OPS_GUIDE.md`](llm-serving/vllm/VLLM_OPS_GUIDE.md) |
+| vLLM API 호출 (사용자) | [`llm-serving/VLLM_API_GUIDE.md`](llm-serving/VLLM_API_GUIDE.md) |
+| vLLM 서버 + 멀티 GPU 게이트웨이 띄우기 (운영자) | [`llm-serving/VLLM_OPS_GUIDE.md`](llm-serving/VLLM_OPS_GUIDE.md) |
 | 새 LLM 서빙 프레임워크(SGLang/STT 등) 추가 | [`llm-serving/README.md`](llm-serving/README.md) |
 
 ## 🧭 디렉토리 분리 원칙

@@ -80,7 +80,7 @@ ls -lt logs/test_*.log | head -3
 grep -B1 -A20 "FAIL " logs/test_20260430_144909.log     # 실패만 추출
 ```
 
-> 실패/예외 시 detail에 **요청 method·URL·body + 응답 status·body + (예외 시) 전체 traceback**이 자동 부착됩니다. 상세 우선순위/포맷은 [`vllm/VLLM_OPS_GUIDE.md`](vllm/VLLM_OPS_GUIDE.md) §14.1.
+> 실패/예외 시 detail에 **요청 method·URL·body + 응답 status·body + (예외 시) 전체 traceback**이 자동 부착됩니다. 상세 우선순위/포맷은 [`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md) §14.1.
 
 ---
 
@@ -111,7 +111,7 @@ cd llm-serving/vllm && ./start.sh restart        # 또는 stt (단일 재시작�
 | `Unable to locate credentials` | EC2 IAM Role 미부여 또는 `aws configure` 미실행 |
 | `Permission denied: ./start.sh` | `sudo chmod +x llm-serving/*/start.sh` |
 | 모델 다운로드 401/403 | gated 모델 + HF_TOKEN 미설정. `~/aws/.env` 의 `HF_TOKEN` 확인 후 `docker compose up -d --force-recreate` |
-| 모델 다운로드 timeout (폐쇄망) | EC2 외부망 차단. 외부망 PC에서 사전 다운로드 → S3 → `/volume/models/` 로 이관. 절차는 [`vllm/VLLM_OPS_GUIDE.md`](vllm/VLLM_OPS_GUIDE.md) §8.2 참조 |
+| 모델 다운로드 timeout (폐쇄망) | EC2 외부망 차단. 외부망 PC에서 사전 다운로드 → S3 → `/volume/models/` 로 이관. 절차는 [`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md) §8.2 참조 |
 | 코드 수정이 반영 안 됨 | `__pycache__` 캐시. `find /workspace/llm-serving -name __pycache__ -exec rm -rf {} +` 후 재시작 |
 | GPU OOM | `vllm/instances/<name>.yaml` 의 `gpu_memory_utilization` 낮추기, 또는 다른 인스턴스 stop (`./start.sh down <name>`) |
 
@@ -120,5 +120,6 @@ cd llm-serving/vllm && ./start.sh restart        # 또는 stt (단일 재시작�
 ## 참고
 
 - 인프라/컨테이너: [`../aws/SETUP_GUIDE.md`](../aws/SETUP_GUIDE.md)
-- vLLM 운영 상세 (모델 교체, 메모리 표 등): [`vllm/VLLM_OPS_GUIDE.md`](vllm/VLLM_OPS_GUIDE.md)
+- vLLM API 호출 (사용자): [`VLLM_API_GUIDE.md`](VLLM_API_GUIDE.md)
+- vLLM 운영 상세 (모델 교체, 메모리 표 등): [`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md)
 - STT PoC: [`stt/README.md`](stt/README.md), [`stt/MODEL_STUDY.md`](stt/MODEL_STUDY.md)

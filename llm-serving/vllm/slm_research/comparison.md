@@ -318,4 +318,5 @@ chatbot-poc는 현재 Qwen 3.6로 운영 중이며, Mamba-hybrid 전용 방어�
 - [qwen36.md](qwen36.md) — Qwen 3.6 벤치마크·아키텍처·서빙·알려진 이슈 전문
 - [qwen35.md](qwen35.md) — Qwen 3.5 전 라인업 (Qwen 3.6 전신)
 - [gemma4.md](gemma4.md) — Gemma 4 전 라인업·Thinking 모드·운영 플래그
-- [../VLLM_OPS_GUIDE.md](../VLLM_OPS_GUIDE.md) — 현재 운영 가이드 (Qwen 3.6 기반)
+- [../../VLLM_API_GUIDE.md](../../VLLM_API_GUIDE.md) — 사용자용 API 가이드 (호출 예시)
+- [../../VLLM_OPS_GUIDE.md](../../VLLM_OPS_GUIDE.md) — 현재 운영 가이드 (Qwen 3.6 기반)

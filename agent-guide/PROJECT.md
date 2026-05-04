@@ -1,7 +1,7 @@
 ---
 name: project
 description: docker 레포 핵심 요약. 서버·운영 구성 자산 모음으로 디렉토리 분리 원칙과 기술 스택 파악용.
-last-updated: 2026-04-30
+last-updated: 2026-05-04
 ---
 
 # 프로젝트 개요
@@ -63,11 +63,12 @@ docker/
 └── llm-serving/                      # LLM 서빙 프레임워크 모음
     ├── README.md                     # 프레임워크 인덱스
     ├── DEPLOY_GUIDE.md               # 서빙 인프라 배포 가이드
+    ├── VLLM_API_GUIDE.md             # vLLM 사용자용 API 가이드 (호출 예시·파라미터)
+    ├── VLLM_OPS_GUIDE.md             # vLLM 운영자용 가이드 (기동·튜닝·트러블슈팅)
     └── vllm/                         # 운영 중 (격리 페어 + 자동 디스커버리)
-        ├── VLLM_OPS_GUIDE.md         # 운영 가이드 (핵심)
         ├── start.sh                  # 빠른 기동 (instances/+gateways/ 자동 순회)
         ├── vllm_server_launcher.py   # 단일 vLLM 기동 + 포트 자동 회피
-        ├── vllm_gateway.py           # OpenAI 호환 게이트웨이 + 자동 디스커버리
+        ├── vllm_gateway.py           # OpenAI 호환 게이트웨이 + 자동 디스커버리 + 과부하 차단
         ├── instances/                # 인스턴스 yaml (모델/포트/GPU)
         │   ├── gemma.yaml            #   ├ gateway_port: 5015 → :5015 페어
         │   └── qwen.yaml             #   └ gateway_port: 5016 → :5016 페어
@@ -75,6 +76,7 @@ docker/
         │   ├── 5015.yaml
         │   └── 5016.yaml
         ├── test_vllm_server.py       # 서버 헬스/추론 테스트
+        ├── traffic_test_vllm.py      # 보수적 트래픽/과부하 테스트
         ├── slm_research/             # SLM 비교 (Gemma, Qwen)
         └── bugfix/                   # 운영 중 발견 이슈 기록
 ```
@@ -89,7 +91,7 @@ docker/
 | **베이스 OS** | Ubuntu 24.04, NVIDIA CUDA 12.6.3-devel-ubuntu24.04 |
 | **GPU 호스트** | NVIDIA Open Driver, NVIDIA Container Toolkit, Fabric Manager (H100/H200/A100/B100/B200) |
 | **클라우드** | AWS EC2 (g6e/p4/p5), EBS, IAM/S3, SSM Session Manager |
-| **서빙** | vLLM, FastAPI 게이트웨이 (OpenAI 호환) — 향후 SGLang, STT(Whisper) 추가 예정 |
+| **서빙** | vLLM, FastAPI 게이트웨이 (OpenAI 호환 + 대기열 기반 과부하 차단) — 향후 SGLang, STT(Whisper) 추가 예정 |
 | **런타임** | Python 3.12, Node.js LTS (nvm) |
 | **개발 도구** | Claude Code, OpenAI Codex, GitHub CLI, tmux, fzf, ripgrep |
 | **풀스택 SDK** | Next.js, FastAPI, LangChain, ChromaDB, Supabase CLI, Playwright |
@@ -109,8 +111,10 @@ docker/
 | `aws/Dockerfile.llm` | vLLM 베이스 + SSH. dev/prd 모드 분기 |
 | `aws/docker-compose.yml` | 메인 컨테이너 정의 (`.env`로 GPU/메모리/포트 제어) |
 | `llm-serving/vllm/vllm_server_launcher.py` | 다중 vLLM 서버 기동 (GPU 분할) |
-| `llm-serving/vllm/vllm_gateway.py` | OpenAI 호환 + 모델 라우팅 게이트웨이 |
-| `llm-serving/vllm/VLLM_OPS_GUIDE.md` | vLLM 운영 가이드 (핵심 참조 문서) |
+| `llm-serving/vllm/vllm_gateway.py` | OpenAI 호환 + 모델 라우팅 + 과부하 차단 게이트웨이 |
+| `llm-serving/vllm/traffic_test_vllm.py` | 운영 서버 보호를 우선한 smoke/overload 트래픽 테스트 |
+| `llm-serving/VLLM_API_GUIDE.md` | vLLM 사용자용 API 가이드 (§1~§5: 호출·파라미터·`.env`) |
+| `llm-serving/VLLM_OPS_GUIDE.md` | vLLM 운영자용 가이드 (§6~§15: 기동·튜닝·트러블슈팅·QA) |
 
 ---
 
@@ -139,7 +143,7 @@ cd llm-serving/vllm
 python test_vllm_server.py # 추론/스트리밍/툴콜 QA
 ```
 
-> 자세한 절차/트러블슈팅은 각 디렉토리의 README 또는 `llm-serving/vllm/VLLM_OPS_GUIDE.md` 참조.
+> 자세한 절차/트러블슈팅은 각 디렉토리의 README 또는 `llm-serving/VLLM_OPS_GUIDE.md`(운영) / `llm-serving/VLLM_API_GUIDE.md`(API 호출) 참조.
 
 ---
 
@@ -153,4 +157,5 @@ python test_vllm_server.py # 추론/스트리밍/툴콜 QA
 | [../my-docker-server/README.md](../my-docker-server/README.md) | 로컬 dev/GPU 환경 사용법 |
 | [../aws/SETUP_GUIDE.md](../aws/SETUP_GUIDE.md) | EC2 셋업·다중 사용자·dev/prd 모드 |
 | [../llm-serving/README.md](../llm-serving/README.md) | 서빙 프레임워크 인덱스 |
-| [../llm-serving/vllm/VLLM_OPS_GUIDE.md](../llm-serving/vllm/VLLM_OPS_GUIDE.md) | vLLM 운영 가이드 |
+| [../llm-serving/VLLM_API_GUIDE.md](../llm-serving/VLLM_API_GUIDE.md) | vLLM 사용자용 API 가이드 |
+| [../llm-serving/VLLM_OPS_GUIDE.md](../llm-serving/VLLM_OPS_GUIDE.md) | vLLM 운영자용 가이드 |
