@@ -205,33 +205,38 @@
 ### 6.2 PoC 절차 (시나리오 D 기준)
 
 1. **모델 다운로드** — `vllm/vllm_server_launcher.py` 가 첫 기동 시 자동 다운로드 (`/models/STT/<HF_ID>/`)
-2. **vLLM 기동 설정** — `configs/{qwen3_asr,whisper_v3}.yaml` (모델별 분리, 각자 GPU/포트/`task: transcription` 명시) ✅ 완료
-3. **인스턴스 동시 기동** — `start.sh` 가 `configs/*.yaml` 순회하여 모델별 단일 GPU 인스턴스 기동 ✅ 완료
-4. **벤치 스크립트** — `test_stt.py` (예정):
+2. **vLLM 기동 설정** — `instances/{voxtral,qwen3_asr,whisper_v3}.yaml` (모델별 분리) ✅ 완료
+3. **인스턴스 동시 기동** — `start.sh` 가 `instances/*.yaml` + `gateways/*.yaml` 페어 자동 순회 ✅ 완료
+4. **메인 운영 모델** — Voxtral-Mini-4B-Realtime-2602 (게이트웨이 :5017, 한국어 ✅, transcription/realtime 동시 지원) ✅ 완료
+5. **벤치 스크립트** — `test_stt.py` (예정):
    - 한국어 샘플 (다양한 길이/화자/잡음)에 대해 WER, RTF, latency 측정
    - 정성 평가 (고유명사·숫자·전문용어)
-5. **결과 비교** — Qwen3-ASR-1.7B vs Whisper-large-v3 한국어 정량 비교
-6. **게이트웨이 통합** (후속) — `vllm_gateway_config.yaml` 확장하여 transcription 엔드포인트 라우팅 추가
+6. **결과 비교** — Voxtral-Mini-4B-Realtime + Qwen3-ASR-1.7B + Whisper-large-v3 한국어 정량 비교
+7. **게이트웨이 통합** ✅ 완료 — `vllm/vllm_gateway.py` 본체에 `/v1/audio/transcriptions` (POST) + `/v1/realtime` (WS) 라우트 추가, STT 게이트웨이 :5017이 본체 재사용
 
-### 6.3 디렉토리 구조 (구현 완료)
+### 6.3 디렉토리 구조 (구현 완료, 2026-05-04 페어 구조 도입)
 
 ```
 llm-serving/stt/
 ├── MODEL_STUDY.md            # 본 문서
-├── README.md                 # 운영 가이드 (사용법 / 트러블슈팅)  ✅
-├── start.sh                  # 인스턴스 기동/중지/상태             ✅
-├── configs/
-│   ├── qwen3_asr.yaml        # Qwen3-ASR-1.7B (GPU 0, :7170)       ✅
-│   └── whisper_v3.yaml       # Whisper-large-v3 (GPU 1, :7171)     ✅
-├── logs/                     # 인스턴스 stdout/stderr (gitignore)
+├── README.md                 # 운영 가이드 (사용법 / 트러블슈팅)
+├── start.sh                  # vllm/start.sh 패턴 풀 도입 (instances/+gateways/ 페어 자동 순회)
+├── instances/
+│   ├── voxtral.yaml          # Voxtral-Mini-4B-Realtime (GPU 2, gateway_port: 5017, 내부 :7172)  ✅ 운영
+│   ├── qwen3_asr.yaml        # Qwen3-ASR-1.7B (GPU 0, :7170, 비교 PoC)
+│   └── whisper_v3.yaml       # Whisper-large-v3 (GPU 1, :7171, 비교 PoC)
+├── gateways/
+│   └── 5017.yaml             # discover_from: ../instances, warmup 비활성화, audio timeout 600s
+├── logs/                     # 인스턴스/게이트웨이 stdout/stderr (gitignore)
 ├── samples/                  # 테스트 오디오 (gitignore, 예정)
 └── test_stt.py               # 한국어 벤치 (예정)
 ```
 
 > 설계 변경 사항 (초안 대비):
 > - **`stt_server_launcher.py` 미작성** → `vllm/vllm_server_launcher.py` 그대로 재사용 (HF 다운로드 / 오프라인 모드 / 임시 config 처리 등 자산 재활용)
-> - **`stt_config.yaml` 단일** → `configs/*.yaml` 모델별 분리 (이질 모델 2종 동시 서빙용)
-> - **`STT_OPS_GUIDE.md`** → `README.md` 로 통일 (PoC 단계라 가이드 분리 불필요)
+> - **`stt_config.yaml` 단일** → `instances/*.yaml` 모델별 분리 (이질 모델 동시 서빙용)
+> - **STT 운영 가이드** — `STT_API_GUIDE.md` (사용자) + `STT_OPS_GUIDE.md` (운영자) 2종으로 분리 (vllm 가이드와 일관성).
+> - **게이트웨이** — vllm 패턴 동일하게 `gateways/5017.yaml` 도입. 본체 코드는 `vllm/vllm_gateway.py` 재사용 (chat + audio + realtime 라우트 모두 제공).
 
 ### 6.4 고려해야 할 운영 이슈
 
@@ -290,3 +295,4 @@ llm-serving/stt/
 | 2026-04-29 (1차 정정) | **모델카드 본문 직접 fetch 검증 후 대규모 정정**. (1) Voxtral Small 24B / Mini 3B → 모델카드 본문은 한국어 미명시 (8개 언어만) → 후보군에서 비교군으로 강등. (2) "Qwen3-ASR-Flash" 별도 모델 미존재 확인 → DashScope API 명칭. Qwen3-ASR-0.6B 자매 모델 추가. (3) Qwen3-Omni 파라미터 35B total로 정정. (4) Whisper turbo 라이선스/파라미터/출시 정정. (5) 시나리오 A·D 추천 모델 변경. (6) Sources를 본문 검증 / 검색 요약 두 그룹으로 분리. **교훈**: 검색 엔진 요약은 모델카드 본문과 자주 어긋남 → 사실 진술은 반드시 본문 fetch로 확정. |
 | 2026-04-29 (2차 정정) | 자기 일관성 보강. (1) Qwen3-ASR-0.6B를 시나리오 D 1순위로 추천하면서 보조 표에 두던 분류 모순 해결 → **3.1 핵심 후보로 승격** (1.7B와 같은 시리즈/라이선스/언어 지원). (2) 6.4 GPU 분할 가이드에서 "Voxtral Small 24B"(비교군)를 우리 후보 라인업(Qwen3-Omni 30B-A3B)으로 교체. |
 | 2026-04-29 (PoC 진입) | 시나리오 D 확정 + 인프라 구현 반영. (1) §6.1 시나리오 확정 (Qwen3-ASR-1.7B + Whisper-large-v3 비교, baseline은 turbo 아닌 large-v3 — 무게 매칭). (2) §6.2 PoC 절차를 actual 진행 상태로 갱신 (인프라 ✅, 벤치/게이트웨이 통합 예정). (3) §6.3 디렉토리 구조를 actual로 갱신 (`stt_server_launcher.py` 미작성/`vllm` 런처 재사용, `configs/` 모델별 분리, `STT_OPS_GUIDE.md` → `README.md`). |
+| 2026-05-04 (Voxtral 도입 + 페어 구조) | (1) Voxtral-Mini-4B-Realtime-2602를 메인 STT 모델로 도입 (GPU 2, gateway :5017, 한국어 ✅). (2) `configs/` → `instances/` 마이그레이션 + `gateways/5017.yaml` 신규로 vllm 페어 패턴 도입. (3) `vllm_gateway.py` 본체에 `/v1/audio/transcriptions` (POST) + `/v1/realtime` (WS) 라우트 추가 — STT 게이트웨이는 본체 재사용. (4) `vllm_server_launcher.py`의 RUNTIME_DIR을 yaml dirname 기준으로 동적 결정 (STT/LLM runtime 격리). (5) STT_API_GUIDE / STT_OPS_GUIDE 2종 분리 작성. (6) 메모리 핏: `gpu_memory_utilization: 0.50 → 0.35`, `max_num_seqs: 4 → 1` (단일 세션 PoC). |

@@ -13,11 +13,13 @@
 #   ./start.sh up                # 전체 인스턴스 + 모든 게이트웨이 기동
 #   ./start.sh up gemma          # instances/gemma.yaml 단독 기동 (게이트웨이 미터치)
 #   ./start.sh up 5015           # gateways/5015.yaml 단독 기동 (인스턴스 미터치)
-#   ./start.sh down              # 전체 중지 (게이트웨이 → 인스턴스 순)
-#   ./start.sh down qwen         # instances/qwen.yaml 단독 중지
-#   ./start.sh down 5016         # gateways/5016.yaml 단독 중지
+#   ./start.sh down qwen         # instances/qwen.yaml 단독 중지 (※ 이름 명시 필수)
+#   ./start.sh down 5016         # gateways/5016.yaml 단독 중지 (※ 이름 명시 필수)
 #   ./start.sh status            # 상태 확인
-#   ./start.sh restart [name]    # 재시작 ([name] 동일 자동 감지)
+#   ./start.sh restart <name>    # 재시작 (※ 이름 명시 필수, 내부적으로 down→up)
+#
+# 안전 정책: down/restart는 인자 없이 호출되면 거부된다 (다른 모델/게이트웨이 영향 방지).
+# 전체 중지가 필요하면 인스턴스/게이트웨이를 하나씩 명시적으로 호출한다.
 #
 # 라우팅 규칙:
 #   [name]이 instances/<name>.yaml로 존재 → 인스턴스 명령
@@ -271,15 +273,17 @@ stop_gateway() {
     local yaml_path="$1"
     eval "$(parse_gateway_yaml "$yaml_path")"
 
+    # set -e 환경에서 caller(cmd_down)가 비제로 반환에 의해 조기 종료되지 않도록
+    # 함수 내 모든 return은 명시적으로 return 0 (line 292의 함정 사고 학습).
     if [ -z "$GW_PORT" ]; then
-        return
+        return 0
     fi
 
     local pid
     pid=$(get_pid "$GW_PORT")
     if [ -z "$pid" ]; then
         echo "[SKIP]  Gateway $GW_NAME (:$GW_PORT) — 실행 중 아님"
-        return
+        return 0
     fi
 
     echo "[STOP]  Gateway $GW_NAME (:$GW_PORT) PID $pid"
@@ -287,9 +291,14 @@ stop_gateway() {
 
     # 종료 폴링 — 직후 cmd_up이 [SKIP]로 잘못 판정하는 사고 방지.
     # uvicorn lifespan 종료(헬스체크 stop + httpx aclose)는 보통 1~2초.
+    #
+    # 주의: `return`은 인자 없으면 직전 명령(kill -0)의 종료코드를 그대로 반환한다.
+    # 프로세스가 죽었으면 kill -0이 1을 반환 → return 1 → set -e 환경에서 caller(cmd_down)가
+    # 비제로 반환을 만나 즉시 종료되어 다음 단계(인스턴스 stop loop)가 건너뛰어졌다.
+    # 정상 종료는 명시적으로 `return 0`.
     local i
     for i in $(seq 1 10); do
-        kill -0 "$pid" 2>/dev/null || return
+        kill -0 "$pid" 2>/dev/null || return 0
         sleep 1
     done
 
@@ -367,7 +376,19 @@ cmd_up() {
 }
 
 cmd_down() {
+    # down 명령은 다른 모델/게이트웨이 운영에 영향이 가지 않도록 yaml 이름을 명시적으로 요구한다.
+    # (인자 없는 전체 중지는 운영 중 다른 인스턴스를 실수로 stop시키는 사고 방지를 위해 폐기.)
     local target="${1:-}"
+    if [ -z "$target" ]; then
+        echo "ERROR: down 명령은 인스턴스 또는 게이트웨이 이름이 필수입니다 (전체 중지 자동화는 폐기됨)." >&2
+        echo "  ./start.sh down <인스턴스명>   # 예: ./start.sh down qwen3" >&2
+        echo "  ./start.sh down <게이트웨이명> # 예: ./start.sh down 5015" >&2
+        echo "" >&2
+        echo "  사용 가능한 인스턴스: $(ls "$INSTANCES_DIR"/*.yaml 2>/dev/null | xargs -n1 basename | sed 's/\.yaml$//' | tr '\n' ' ')" >&2
+        echo "  사용 가능한 게이트웨이: $(ls "$GATEWAYS_DIR"/*.yaml 2>/dev/null | xargs -n1 basename | sed 's/\.yaml$//' | tr '\n' ' ')" >&2
+        exit 1
+    fi
+
     local kind
     kind=$(detect_target_kind "$target") || exit 1
 
@@ -381,20 +402,6 @@ cmd_down() {
             echo "═══ 게이트웨이 단독 중지: $target (인스턴스 미터치) ═══"
             echo ""
             stop_gateway "$GATEWAYS_DIR/${target}.yaml"
-            ;;
-        all)
-            echo "═══ vLLM 클러스터 전체 중지 ═══"
-            echo ""
-            # 게이트웨이 먼저 → 인스턴스 (트래픽 차단 후 모델 종료)
-            while IFS= read -r yaml_path; do
-                [ -z "$yaml_path" ] && continue
-                stop_gateway "$yaml_path"
-            done < <(list_gateway_yamls)
-            echo ""
-            while IFS= read -r yaml_path; do
-                [ -z "$yaml_path" ] && continue
-                stop_instance "$yaml_path"
-            done < <(list_instance_yamls)
             ;;
     esac
     echo ""
@@ -475,6 +482,6 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         down|stop)    shift || true; cmd_down "${1:-}" ;;
         status)       cmd_status ;;
         restart)      shift || true; cmd_restart "${1:-}" ;;
-        *)            echo "사용법: $0 {up|down|status|restart} [name]"; exit 1 ;;
+        *)            echo "사용법: $0 {up [name] | down <name> | restart <name> | status}"; exit 1 ;;
     esac
 fi

@@ -60,25 +60,37 @@ docker/
 │   ├── ssh-config-sample
 │   └── README.md
 │
-└── llm-serving/                      # LLM 서빙 프레임워크 모음
+└── llm-serving/                      # LLM/STT 서빙 프레임워크 모음
     ├── README.md                     # 프레임워크 인덱스
-    ├── DEPLOY_GUIDE.md               # 서빙 인프라 배포 가이드
+    ├── DEPLOY_GUIDE.md               # 서빙 인프라 배포 가이드 (LLM+STT 공용)
     ├── VLLM_API_GUIDE.md             # vLLM 사용자용 API 가이드 (호출 예시·파라미터)
     ├── VLLM_OPS_GUIDE.md             # vLLM 운영자용 가이드 (기동·튜닝·트러블슈팅)
-    └── vllm/                         # 운영 중 (격리 페어 + 자동 디스커버리)
-        ├── start.sh                  # 빠른 기동 (instances/+gateways/ 자동 순회)
-        ├── vllm_server_launcher.py   # 단일 vLLM 기동 + 포트 자동 회피
-        ├── vllm_gateway.py           # OpenAI 호환 게이트웨이 + 자동 디스커버리 + 과부하 차단
-        ├── instances/                # 인스턴스 yaml (모델/포트/GPU)
-        │   ├── gemma.yaml            #   ├ gateway_port: 5015 → :5015 페어
-        │   └── qwen.yaml             #   └ gateway_port: 5016 → :5016 페어
-        ├── gateways/                 # 게이트웨이 yaml (포트/디스커버리)
-        │   ├── 5015.yaml
-        │   └── 5016.yaml
-        ├── test_vllm_server.py       # 서버 헬스/추론 테스트
-        ├── traffic_test_vllm.py      # 보수적 트래픽/과부하 테스트
-        ├── slm_research/             # SLM 비교 (Gemma, Qwen)
-        └── bugfix/                   # 운영 중 발견 이슈 기록
+    ├── STT_API_GUIDE.md              # STT 사용자용 API 가이드 (transcription·realtime·통합)
+    ├── STT_OPS_GUIDE.md              # STT 운영자용 가이드 (시스템 구조·메모리 핏·의존성)
+    ├── vllm/                         # LLM 운영 중 (격리 페어 + 자동 디스커버리)
+    │   ├── start.sh                  # 빠른 기동 (instances/+gateways/ 자동 순회)
+    │   ├── vllm_server_launcher.py   # 단일 vLLM 기동 + 포트 자동 회피 + yaml-relative runtime
+    │   ├── vllm_gateway.py           # OpenAI 호환 게이트웨이 (chat + audio + realtime)
+    │   ├── instances/                # 인스턴스 yaml (모델/포트/GPU)
+    │   │   ├── gemma.yaml            #   ├ gateway_port: 5015 → :5015 페어
+    │   │   └── qwen.yaml             #   └ gateway_port: 5016 → :5016 페어
+    │   ├── gateways/                 # 게이트웨이 yaml (포트/디스커버리)
+    │   │   ├── 5015.yaml
+    │   │   └── 5016.yaml
+    │   ├── test_vllm_server.py       # 서버 헬스/추론 테스트
+    │   ├── traffic_test_vllm.py      # 보수적 트래픽/과부하 테스트
+    │   ├── slm_research/             # SLM 비교 (Gemma, Qwen)
+    │   └── bugfix/                   # 운영 중 발견 이슈 기록
+    └── stt/                          # STT 운영 중 (vllm 페어 패턴 동일, launcher/gateway 본체 재사용)
+        ├── README.md
+        ├── MODEL_STUDY.md            # 후보 모델 비교 / 시나리오
+        ├── start.sh                  # vllm/start.sh 패턴 풀 도입 (../vllm 코드 재사용)
+        ├── instances/
+        │   ├── voxtral.yaml          # gateway_port: 5017 → :5017 페어 (GPU 2, 내부 :7172)
+        │   ├── qwen3_asr.yaml        # 비교용 PoC (gateway_port 미지정, :7170 직접)
+        │   └── whisper_v3.yaml       # 비교용 PoC (gateway_port 미지정, :7171 직접)
+        └── gateways/
+            └── 5017.yaml             # discover_from: ../instances, warmup 비활성화, audio timeout 600s
 ```
 
 ---
@@ -91,7 +103,7 @@ docker/
 | **베이스 OS** | Ubuntu 24.04, NVIDIA CUDA 12.6.3-devel-ubuntu24.04 |
 | **GPU 호스트** | NVIDIA Open Driver, NVIDIA Container Toolkit, Fabric Manager (H100/H200/A100/B100/B200) |
 | **클라우드** | AWS EC2 (g6e/p4/p5), EBS, IAM/S3, SSM Session Manager |
-| **서빙** | vLLM, FastAPI 게이트웨이 (OpenAI 호환 + 대기열 기반 과부하 차단) — 향후 SGLang, STT(Whisper) 추가 예정 |
+| **서빙** | vLLM (chat + audio + realtime), FastAPI 게이트웨이 (OpenAI 호환 + 대기열 기반 과부하 차단). LLM(Gemma/Qwen :5015/:5016) + STT(Voxtral :5017). 향후 SGLang 추가 예정 |
 | **런타임** | Python 3.12, Node.js LTS (nvm) |
 | **개발 도구** | Claude Code, OpenAI Codex, GitHub CLI, tmux, fzf, ripgrep |
 | **풀스택 SDK** | Next.js, FastAPI, LangChain, ChromaDB, Supabase CLI, Playwright |
@@ -110,11 +122,16 @@ docker/
 | `aws/user.sh` | 사용자별 독립 컨테이너 + 포트 자동 할당(`up`/`down`/`list`/`rebuild`) |
 | `aws/Dockerfile.llm` | vLLM 베이스 + SSH. dev/prd 모드 분기 |
 | `aws/docker-compose.yml` | 메인 컨테이너 정의 (`.env`로 GPU/메모리/포트 제어) |
-| `llm-serving/vllm/vllm_server_launcher.py` | 다중 vLLM 서버 기동 (GPU 분할) |
-| `llm-serving/vllm/vllm_gateway.py` | OpenAI 호환 + 모델 라우팅 + 과부하 차단 게이트웨이 |
+| `llm-serving/vllm/vllm_server_launcher.py` | 다중 vLLM 서버 기동 (GPU 분할, yaml-relative runtime json) — LLM/STT 공용 |
+| `llm-serving/vllm/vllm_gateway.py` | OpenAI 호환 게이트웨이 (chat/completions + audio/transcriptions + realtime WebSocket) — LLM/STT 공용 |
 | `llm-serving/vllm/traffic_test_vllm.py` | 운영 서버 보호를 우선한 smoke/overload 트래픽 테스트 |
 | `llm-serving/VLLM_API_GUIDE.md` | vLLM 사용자용 API 가이드 (§1~§5: 호출·파라미터·`.env`) |
 | `llm-serving/VLLM_OPS_GUIDE.md` | vLLM 운영자용 가이드 (§6~§15: 기동·튜닝·트러블슈팅·QA) |
+| `llm-serving/STT_API_GUIDE.md` | STT 사용자용 API 가이드 (§1~§5: transcription·realtime·통합) |
+| `llm-serving/STT_OPS_GUIDE.md` | STT 운영자용 가이드 (§6~§12: 시스템 구조·메모리 핏·의존성·트러블슈팅·QA) |
+| `llm-serving/stt/start.sh` | STT 클러스터 기동 (vllm/start.sh 패턴 풀 도입, ../vllm 코드 재사용) |
+| `llm-serving/stt/instances/voxtral.yaml` | Voxtral 인스턴스 (gateway_port 5017, GPU 2, 내부 :7172) |
+| `llm-serving/stt/gateways/5017.yaml` | STT 게이트웨이 (warmup 비활성화, audio timeout 600s) |
 
 ---
 
@@ -136,14 +153,20 @@ sudo ./setup-ec2.sh        # Phase 1 → 자동 reboot → Phase 2
 docker compose up -d --build
 sudo ./user.sh up jin --password 1234 --gpus 0,1   # 추가 사용자
 
-# 3) vLLM 서빙
+# 3) vLLM 서빙 (LLM)
 cd llm-serving/vllm
 ./start.sh up              # instances/+gateways/ 자동 순회 (포트 충돌 시 자동 회피)
 ./start.sh status          # 인스턴스/게이트웨이 상태 확인
 python test_vllm_server.py # 추론/스트리밍/툴콜 QA
+
+# 4) STT 서빙 (Voxtral, vllm 페어 패턴 동일)
+cd ../stt
+./start.sh up              # instances/voxtral.yaml ↔ gateways/5017.yaml 페어 자동
+./start.sh status          # voxtral(:7172) + Gateway 5017 (ready 1/1)
+curl http://localhost:5017/health   # 게이트웨이 health
 ```
 
-> 자세한 절차/트러블슈팅은 각 디렉토리의 README 또는 `llm-serving/VLLM_OPS_GUIDE.md`(운영) / `llm-serving/VLLM_API_GUIDE.md`(API 호출) 참조.
+> 자세한 절차/트러블슈팅은 각 디렉토리의 README 또는 `llm-serving/{VLLM,STT}_{OPS,API}_GUIDE.md` 참조.
 
 ---
 
@@ -159,3 +182,6 @@ python test_vllm_server.py # 추론/스트리밍/툴콜 QA
 | [../llm-serving/README.md](../llm-serving/README.md) | 서빙 프레임워크 인덱스 |
 | [../llm-serving/VLLM_API_GUIDE.md](../llm-serving/VLLM_API_GUIDE.md) | vLLM 사용자용 API 가이드 |
 | [../llm-serving/VLLM_OPS_GUIDE.md](../llm-serving/VLLM_OPS_GUIDE.md) | vLLM 운영자용 가이드 |
+| [../llm-serving/STT_API_GUIDE.md](../llm-serving/STT_API_GUIDE.md) | STT 사용자용 API 가이드 (transcription·realtime) |
+| [../llm-serving/STT_OPS_GUIDE.md](../llm-serving/STT_OPS_GUIDE.md) | STT 운영자용 가이드 |
+| [../llm-serving/stt/README.md](../llm-serving/stt/README.md) | STT 디렉토리 안내 |

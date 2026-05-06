@@ -8,12 +8,13 @@
   1. 모델 확인: --model 미지정 시 /v1/models에서 첫 모델명을 자동 추출.
   2. 사전 스냅샷: /health, /server-status, /v1/models 상태 저장.
   3. 조건 확정: 요청 수, 동시성, 생성 토큰 수, 타임아웃을 CLI 인자로 확정.
-  4. 요청 방식: 기본은 non-stream, --stream 지정 시 SSE와 TTFT 측정.
-  5. 트래픽 실행: 요청 큐를 만들고 --concurrency 워커가 순차 처리.
-  6. 보호 장치: 허용되지 않은 에러율 또는 연속 실패 기준 초과 시 조기 중단.
-  7. 사후 점검: 테스트 후 /health와 /server-status 생존 여부를 통과 조건에 반영.
-  8. 지표 집계: 200 성공, 429 방어 응답, 상태코드, RPS, TPS, latency, TTFT 집계.
-  9. 결과 저장: logs/traffic_*.json 리포트 저장, 통과 기준 미달 시 exit 1.
+  4. 진행 화면: 기본으로 로컬 URL에서 요청별 생성 상태 표시.
+  5. 요청 방식: 진행 화면은 stream, --no-ui 지정 시 --stream 여부에 따름.
+  6. 트래픽 실행: 요청 큐를 만들고 --concurrency 워커가 순차 처리.
+  7. 보호 장치: 허용되지 않은 에러율 또는 연속 실패 기준 초과 시 조기 중단.
+  8. 사후 점검: 테스트 후 /health와 /server-status 생존 여부를 통과 조건에 반영.
+  9. 지표 집계: 200 성공, 429 방어 응답, 상태코드, RPS, TPS, latency, TTFT 집계.
+ 10. 결과 저장: logs/traffic_*.json 리포트 저장, 통과 기준 미달 시 exit 1.
 """
 
 from __future__ import annotations
@@ -30,7 +31,8 @@ import urllib.error
 import urllib.request
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Any
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any, Callable
 
 
 PROMPTS = [
@@ -66,6 +68,8 @@ DEFAULT_TRAFFIC_CONFIG = {
     "require_429": False,
 }
 
+MAX_DASHBOARD_TEXT_CHARS = 20000
+
 
 @dataclass
 class RequestResult:
@@ -80,6 +84,655 @@ class RequestResult:
     error: str
 
 
+class DashboardState:
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._started_at = time.time()
+        self._completed_at: float | None = None
+        self._status = "준비 중"
+        self._config: dict[str, Any] = {}
+        self._model: str | None = None
+        self._requests: dict[int, dict[str, Any]] = {}
+        self._summary: dict[str, Any] = {}
+        self._postcheck: dict[str, Any] = {}
+        self._pass_criteria: dict[str, Any] = {}
+        self._report_path = ""
+        self._error = ""
+
+    def configure(self, args: argparse.Namespace, model: str | None = None) -> None:
+        with self._lock:
+            self._config = {
+                "base_url": args.base_url,
+                "requests": args.requests,
+                "concurrency": args.concurrency,
+                "max_tokens": args.max_tokens,
+                "timeout": args.timeout,
+                "stream": args.stream,
+            }
+            self._model = model
+            self._status = "테스트 준비 중"
+
+    def set_status(self, status: str) -> None:
+        with self._lock:
+            self._status = status
+
+    def set_error(self, error: str) -> None:
+        with self._lock:
+            self._status = "오류"
+            self._error = error
+            self._completed_at = time.time()
+
+    def start_request(self, index: int, prompt_config: dict[str, Any]) -> None:
+        with self._lock:
+            self._requests[index] = {
+                "index": index + 1,
+                "prompt": str(prompt_config["content"]),
+                "enable_thinking": bool(prompt_config["enable_thinking"]),
+                "status": "진행 중",
+                "started_at": time.time(),
+                "finished_at": None,
+                "answer": "",
+                "thinking": "",
+                "result": None,
+            }
+
+    def append_text(self, index: int, kind: str, text: str) -> None:
+        if not text:
+            return
+        field = "thinking" if kind == "thinking" else "answer"
+        with self._lock:
+            item = self._requests.get(index)
+            if not item:
+                return
+            item[field] = f"{item.get(field, '')}{text}"[-MAX_DASHBOARD_TEXT_CHARS:]
+
+    def finish_request(self, result: RequestResult) -> None:
+        with self._lock:
+            item = self._requests.setdefault(
+                result.index,
+                {
+                    "index": result.index + 1,
+                    "prompt": "",
+                    "enable_thinking": False,
+                    "started_at": None,
+                    "answer": "",
+                    "thinking": "",
+                },
+            )
+            if result.ok:
+                status = "완료"
+            elif _is_overload_rejection(result):
+                status = "429 방어"
+            else:
+                status = "실패"
+            item["status"] = status
+            item["finished_at"] = time.time()
+            item["latency_ms"] = result.latency_ms
+            item["result"] = asdict(result)
+
+    def complete(
+        self,
+        *,
+        summary: dict[str, Any],
+        postcheck: dict[str, Any],
+        pass_criteria: dict[str, Any],
+        report_path: str,
+    ) -> None:
+        with self._lock:
+            self._summary = summary
+            self._postcheck = postcheck
+            self._pass_criteria = pass_criteria
+            self._report_path = report_path
+            self._completed_at = time.time()
+            self._status = "완료" if pass_criteria["passed"] else "실패"
+
+    def snapshot(self) -> dict[str, Any]:
+        with self._lock:
+            return {
+                "started_at": self._started_at,
+                "completed_at": self._completed_at,
+                "status": self._status,
+                "config": dict(self._config),
+                "model": self._model,
+                "requests": [dict(item) for _, item in sorted(self._requests.items())],
+                "summary": dict(self._summary),
+                "postcheck": dict(self._postcheck),
+                "pass_criteria": dict(self._pass_criteria),
+                "report_path": self._report_path,
+                "error": self._error,
+            }
+
+
+_DASHBOARD_HTML = """<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>vLLM 트래픽 진행 화면</title>
+  <style>
+    :root {
+      --orange: #F37321;
+      --orange-dark: #C75E14;
+      --navy: #1A2B4A;
+      --navy-soft: #273A5B;
+      --bg: #F7F9FC;
+      --surface: #FFFFFF;
+      --surface-2: #EEF2F7;
+      --line: #D8E0EA;
+      --text: #14213D;
+      --muted: #64748B;
+      --success: #16A34A;
+      --warning: #B45309;
+      --danger: #DC2626;
+      --info: #3B82F6;
+      --shadow: 0 14px 36px rgba(26, 43, 74, 0.14);
+      --request-card-height: 560px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "HanwhaGothic", "IBM Plex Sans", "AtoZ", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    .topbar {
+      background: var(--navy);
+      color: white;
+      border-bottom: 4px solid var(--orange);
+    }
+    .topbar-inner {
+      width: min(1440px, 100%);
+      margin: 0 auto;
+      padding: 22px 28px;
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: center;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .mark {
+      width: 52px;
+      height: 36px;
+      border-radius: 12px;
+      background: var(--orange);
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: white;
+      box-shadow: 0 10px 24px rgba(243, 115, 33, 0.26);
+    }
+    h1 {
+      margin: 0;
+      font-family: "Hanwha", "HanwhaGothic", system-ui, sans-serif;
+      font-size: 24px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+    .target {
+      margin-top: 6px;
+      color: #DDE6F2;
+      font-size: 13px;
+      word-break: break-all;
+    }
+    .status {
+      min-width: 108px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 12px;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.08);
+      color: white;
+      font-weight: 700;
+      text-align: center;
+      white-space: nowrap;
+    }
+    main {
+      width: min(1440px, 100%);
+      margin: 0 auto;
+      padding: 24px 28px 32px;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(130px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .metric, .panel, .request {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .metric {
+      border-radius: 16px;
+      padding: 15px 16px;
+      min-height: 84px;
+    }
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+    .metric strong {
+      display: block;
+      color: var(--navy);
+      font-size: 25px;
+      line-height: 1.1;
+      overflow-wrap: anywhere;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .panel {
+      border-radius: 16px;
+      padding: 16px;
+      position: sticky;
+      top: 16px;
+    }
+    .panel h2 {
+      margin: 0 0 14px;
+      font-family: "Hanwha", "HanwhaGothic", system-ui, sans-serif;
+      font-size: 16px;
+      letter-spacing: 0;
+    }
+    .kv {
+      display: grid;
+      grid-template-columns: 108px minmax(0, 1fr);
+      gap: 10px 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .kv b {
+      color: var(--text);
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+    .progress {
+      height: 12px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      margin-top: 16px;
+    }
+    .progress div {
+      height: 100%;
+      width: 0%;
+      background: var(--orange);
+      transition: width 250ms ease;
+    }
+    .requests {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-rows: var(--request-card-height);
+      gap: 12px;
+    }
+    .request {
+      border-radius: 16px;
+      overflow: hidden;
+      min-width: 0;
+      height: var(--request-card-height);
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .request-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      background: #FBFCFE;
+      border-bottom: 1px solid var(--line);
+      flex: 0 0 auto;
+    }
+    .request-title {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      min-width: 0;
+      font-weight: 800;
+      color: var(--navy);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 3px 8px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: white;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .badge.done { color: var(--success); border-color: rgba(22, 163, 74, 0.36); }
+    .badge.fail { color: var(--danger); border-color: rgba(220, 38, 38, 0.36); }
+    .badge.wait { color: var(--warning); border-color: rgba(180, 83, 9, 0.36); }
+    .prompt {
+      margin: 0;
+      padding: 12px 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+      border-bottom: 1px solid var(--line);
+      flex: 0 0 88px;
+      overflow: auto;
+    }
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: "IBM Plex Sans", "HanwhaGothic", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      line-height: 1.55;
+      font-size: 13px;
+    }
+    .thinking {
+      border-bottom: 1px solid var(--line);
+      background: rgba(59, 130, 246, 0.06);
+      flex: 0 0 132px;
+      min-height: 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .thinking-title {
+      padding: 10px 14px;
+      color: var(--info);
+      font-size: 13px;
+      font-weight: 800;
+      flex: 0 0 auto;
+    }
+    .thinking pre {
+      padding: 0 14px 12px;
+      color: #284A7A;
+      flex: 1 1 auto;
+      min-height: 0;
+      height: 0;
+      overflow: auto;
+      overscroll-behavior: contain;
+    }
+    .answer {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+      overscroll-behavior: contain;
+      padding: 14px;
+      color: var(--text);
+      background: white;
+    }
+    .empty {
+      color: var(--muted);
+    }
+    @media (max-width: 1100px) {
+      .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .layout { grid-template-columns: 1fr; }
+      .panel { position: static; }
+    }
+    @media (max-width: 760px) {
+      :root { --request-card-height: 620px; }
+      .topbar-inner, main { padding-left: 18px; padding-right: 18px; }
+      .topbar-inner { align-items: flex-start; flex-direction: column; }
+      .metrics, .requests { grid-template-columns: 1fr; }
+      .status { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="mark">vLLM</div>
+        <div>
+          <h1>vLLM 트래픽 진행 화면</h1>
+          <div class="target" id="target">대상 서버 확인 중</div>
+        </div>
+      </div>
+      <div class="status" id="status">준비 중</div>
+    </div>
+  </header>
+  <main>
+    <section class="metrics" id="metrics"></section>
+    <section class="layout">
+      <aside class="panel">
+        <h2>실행 설정</h2>
+        <div class="kv" id="config"></div>
+        <div class="progress"><div id="bar"></div></div>
+      </aside>
+      <section class="requests" id="requests"></section>
+    </section>
+  </main>
+  <script>
+    const metricsEl = document.getElementById('metrics');
+    const requestsEl = document.getElementById('requests');
+    const configEl = document.getElementById('config');
+    const statusEl = document.getElementById('status');
+    const targetEl = document.getElementById('target');
+    const barEl = document.getElementById('bar');
+
+    function esc(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      }[ch]));
+    }
+
+    function fixed(value, digits = 2) {
+      return Number.isFinite(value) ? value.toFixed(digits) : '-';
+    }
+
+    function requestSeconds(request) {
+      return Number.isFinite(request.latency_ms) ? request.latency_ms / 1000 : null;
+    }
+
+    function requestTps(request) {
+      const seconds = Number.isFinite(request.latency_ms) && Number.isFinite(request.result?.ttft_ms)
+        ? (request.latency_ms - request.result.ttft_ms) / 1000
+        : null;
+      const tokens = request.result?.completion_tokens;
+      if (!seconds || !Number.isFinite(tokens)) return null;
+      return tokens / seconds;
+    }
+
+    function metric(label, value) {
+      return `<div class="metric"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`;
+    }
+
+    function badgeClass(status) {
+      if (status === '완료') return 'done';
+      if (status === '실패') return 'fail';
+      if (status === '429 방어') return 'wait';
+      return '';
+    }
+
+    function renderRequest(request) {
+      const status = request.status || '대기';
+      const thinking = request.thinking
+        ? `<div class="thinking"><div class="thinking-title">생각 과정</div><pre data-scroll-key="thinking-${esc(request.index)}">${esc(request.thinking)}</pre></div>`
+        : '';
+      const answer = request.answer
+        ? esc(request.answer)
+        : '<span class="empty">응답 대기 중</span>';
+      const seconds = requestSeconds(request);
+      const tps = requestTps(request);
+      return `
+        <article class="request">
+          <div class="request-head">
+            <div class="request-title">
+              <span>#${esc(request.index)}</span>
+              <span class="badge">${request.enable_thinking ? '생각 켬' : '생각 끔'}</span>
+            </div>
+            <div>
+              <span class="badge ${badgeClass(status)}">${esc(status)}</span>
+              ${seconds ? `<span class="badge">${esc(fixed(seconds, 1))}s</span>` : ''}
+              ${tps ? `<span class="badge">${esc(fixed(tps, 1))} tok/s</span>` : ''}
+            </div>
+          </div>
+          <p class="prompt">${esc(request.prompt)}</p>
+          ${thinking}
+          <pre class="answer" data-scroll-key="answer-${esc(request.index)}">${answer}</pre>
+        </article>
+      `;
+    }
+
+    function collectScrollState() {
+      const state = new Map();
+      document.querySelectorAll('[data-scroll-key]').forEach((el) => {
+        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+        state.set(el.dataset.scrollKey, {
+          top: el.scrollTop,
+          stickToBottom: distanceFromBottom <= 24,
+        });
+      });
+      return state;
+    }
+
+    function syncGeneratedTextScroll(previousScroll) {
+      const scroll = () => {
+        document.querySelectorAll('[data-scroll-key]').forEach((el) => {
+          const previous = previousScroll.get(el.dataset.scrollKey);
+          if (!previous || previous.stickToBottom) {
+            el.scrollTop = el.scrollHeight;
+            return;
+          }
+          el.scrollTop = Math.min(previous.top, el.scrollHeight);
+        });
+      };
+      requestAnimationFrame(() => {
+        scroll();
+        requestAnimationFrame(scroll);
+      });
+    }
+
+    function render(state) {
+      const scrollState = collectScrollState();
+      const config = state.config || {};
+      const summary = state.summary || {};
+      const requests = state.requests || [];
+      const finished = summary.sent ?? requests.filter((item) => item.result).length;
+      const total = config.requests || requests.length || 0;
+      const ok = summary.ok ?? requests.filter((item) => item.status === '완료').length;
+      const rejected = summary.overload_rejected ?? requests.filter((item) => item.status === '429 방어').length;
+      const failed = summary.failed ?? requests.filter((item) => item.status === '실패').length;
+      const progress = total > 0 ? Math.min(100, Math.round((finished / total) * 100)) : 0;
+
+      statusEl.textContent = state.status || '준비 중';
+      targetEl.textContent = `${config.base_url || '-'} · ${state.model || '모델 확인 중'}`;
+      barEl.style.width = `${progress}%`;
+
+      metricsEl.innerHTML = [
+        metric('진행률', `${finished}/${total}`),
+        metric('성공', ok),
+        metric('429 방어', rejected),
+        metric('실패', failed),
+        metric('RPS', fixed(summary.requests_per_second)),
+        metric('서버 TPS', fixed(summary.completion_tokens_per_second)),
+        metric('실제 TPS p50', fixed(summary.decode_tokens_per_second?.p50)),
+      ].join('');
+
+      configEl.innerHTML = [
+        ['요청 수', config.requests],
+        ['동시성', config.concurrency],
+        ['최대 토큰', config.max_tokens],
+        ['타임아웃', `${config.timeout ?? '-'}초`],
+        ['스트리밍', config.stream ? '사용' : '미사용'],
+        ['리포트', state.report_path || '-'],
+      ].map(([key, value]) => `<span>${esc(key)}</span><b>${esc(value)}</b>`).join('');
+
+      if (state.error) {
+        requestsEl.innerHTML = `<article class="request"><pre class="answer" data-scroll-key="error">${esc(state.error)}</pre></article>`;
+        syncGeneratedTextScroll(scrollState);
+        return;
+      }
+      requestsEl.innerHTML = requests.length
+        ? requests.map(renderRequest).join('')
+        : '<article class="request"><pre class="answer empty" data-scroll-key="empty">요청 준비 중</pre></article>';
+      syncGeneratedTextScroll(scrollState);
+    }
+
+    async function refresh() {
+      try {
+        const res = await fetch('/state', { cache: 'no-store' });
+        render(await res.json());
+      } catch (error) {
+        statusEl.textContent = '연결 대기';
+      }
+    }
+
+    refresh();
+    setInterval(refresh, 500);
+  </script>
+</body>
+</html>
+"""
+
+
+def _make_dashboard_handler(state: DashboardState) -> type[BaseHTTPRequestHandler]:
+    class DashboardHandler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            path = self.path.split("?", 1)[0]
+            if path == "/":
+                self._send_bytes(_DASHBOARD_HTML.encode("utf-8"), "text/html; charset=utf-8")
+                return
+            if path == "/state":
+                payload = json.dumps(state.snapshot(), ensure_ascii=False).encode("utf-8")
+                self._send_bytes(payload, "application/json; charset=utf-8")
+                return
+            self.send_error(404)
+
+        def log_message(self, format: str, *args: Any) -> None:
+            return
+
+        def _send_bytes(self, body: bytes, content_type: str) -> None:
+            self.send_response(200)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body)
+
+    return DashboardHandler
+
+
+def _start_dashboard_server(
+    host: str,
+    port: int,
+    state: DashboardState,
+) -> tuple[ThreadingHTTPServer, str]:
+    server = ThreadingHTTPServer((host, port), _make_dashboard_handler(state))
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    bound_host, bound_port = server.server_address[:2]
+    display_host = "127.0.0.1" if bound_host in ("0.0.0.0", "::") else bound_host
+    return server, f"http://{display_host}:{bound_port}"
+
+
+def _wait_for_dashboard_shutdown(server: ThreadingHTTPServer, url: str) -> None:
+    print("")
+    print(f"진행 화면 유지 중: {url}")
+    print("종료하려면 Ctrl+C를 누르세요.")
+    try:
+        while True:
+            time.sleep(3600)
+    except KeyboardInterrupt:
+        print("")
+        print("진행 화면 종료")
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
 def _percentile(values: list[float], pct: float) -> float | None:
     if not values:
         return None
@@ -90,6 +743,18 @@ def _percentile(values: list[float], pct: float) -> float | None:
     if lo == hi:
         return ordered[lo]
     return ordered[lo] + (ordered[hi] - ordered[lo]) * (pos - lo)
+
+
+def _format_float(value: Any) -> str:
+    if value is None:
+        return "-"
+    return f"{float(value):.2f}"
+
+
+def _format_ms_as_seconds(value: Any) -> str:
+    if value is None:
+        return "-"
+    return f"{float(value) / 1000:.2f}s"
 
 
 def _request_json(
@@ -141,6 +806,38 @@ def _resolve_model(base_url: str, model: str | None, timeout: float) -> str:
     return models[0]["id"]
 
 
+def _prompt_for_index(index: int) -> dict[str, Any]:
+    return PROMPTS[index % len(PROMPTS)]
+
+
+def _coerce_text(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        parts = []
+        for item in value:
+            if isinstance(item, dict):
+                parts.append(str(item.get("text") or item.get("content") or ""))
+            else:
+                parts.append(str(item))
+        return "".join(parts)
+    return str(value)
+
+
+def _extract_message_text(payload: Any) -> tuple[str, str]:
+    if not isinstance(payload, dict):
+        return "", ""
+    choices = payload.get("choices") or []
+    if not choices:
+        return "", ""
+    message = choices[0].get("message") or {}
+    answer = _coerce_text(message.get("content"))
+    thinking = _coerce_text(message.get("reasoning_content") or message.get("reasoning"))
+    return answer, thinking
+
+
 def _chat_once(
     *,
     base_url: str,
@@ -149,8 +846,9 @@ def _chat_once(
     stream: bool,
     max_tokens: int,
     timeout: float,
+    token_callback: Callable[[int, str, str], None] | None = None,
 ) -> RequestResult:
-    prompt_config = PROMPTS[index % len(PROMPTS)]
+    prompt_config = _prompt_for_index(index)
     prompt = str(prompt_config["content"])
     enable_thinking = bool(prompt_config["enable_thinking"])
     body = {
@@ -168,8 +866,8 @@ def _chat_once(
 
     start = time.monotonic()
     if stream:
-        return _stream_once(base_url, body, index, timeout, start)
-    return _non_stream_once(base_url, body, index, timeout, start)
+        return _stream_once(base_url, body, index, timeout, start, token_callback)
+    return _non_stream_once(base_url, body, index, timeout, start, token_callback)
 
 
 def _is_overload_rejection(result: RequestResult) -> bool:
@@ -186,6 +884,7 @@ def _non_stream_once(
     index: int,
     timeout: float,
     start: float,
+    token_callback: Callable[[int, str, str], None] | None,
 ) -> RequestResult:
     try:
         status, payload = _request_json(
@@ -198,6 +897,10 @@ def _non_stream_once(
         usage = payload.get("usage", {}) if isinstance(payload, dict) else {}
         ok = status == 200
         error = "" if ok else _short_error(payload)
+        if ok and token_callback:
+            answer, thinking = _extract_message_text(payload)
+            token_callback(index, "thinking", thinking)
+            token_callback(index, "answer", answer)
         return RequestResult(
             index=index,
             ok=ok,
@@ -219,6 +922,7 @@ def _stream_once(
     index: int,
     timeout: float,
     start: float,
+    token_callback: Callable[[int, str, str], None] | None,
 ) -> RequestResult:
     headers = {"Accept": "text/event-stream", "Content-Type": "application/json"}
     data = json.dumps(body, ensure_ascii=False).encode("utf-8")
@@ -246,10 +950,17 @@ def _stream_once(
                 if chunk.get("usage"):
                     usage = chunk["usage"]
                 choices = chunk.get("choices") or []
-                if choices and first_token_at is None:
+                if choices:
                     delta = choices[0].get("delta") or {}
-                    if delta.get("content"):
+                    answer_text = _coerce_text(delta.get("content"))
+                    thinking_text = _coerce_text(
+                        delta.get("reasoning_content") or delta.get("reasoning")
+                    )
+                    if first_token_at is None and (answer_text or thinking_text):
                         first_token_at = time.monotonic()
+                    if token_callback:
+                        token_callback(index, "thinking", thinking_text)
+                        token_callback(index, "answer", answer_text)
             latency_ms = (time.monotonic() - start) * 1000
             ttft_ms = None if first_token_at is None else (first_token_at - start) * 1000
             return RequestResult(
@@ -302,7 +1013,11 @@ def _short_error(payload: Any, max_len: int = 500) -> str:
     return text[:max_len]
 
 
-def _run_traffic(args: argparse.Namespace, model: str) -> tuple[list[RequestResult], bool]:
+def _run_traffic(
+    args: argparse.Namespace,
+    model: str,
+    dashboard: DashboardState | None = None,
+) -> tuple[list[RequestResult], bool]:
     work: queue.Queue[int] = queue.Queue()
     for i in range(args.requests):
         work.put(i)
@@ -331,6 +1046,8 @@ def _run_traffic(args: argparse.Namespace, model: str) -> tuple[list[RequestResu
                 idx = work.get_nowait()
             except queue.Empty:
                 return
+            if dashboard:
+                dashboard.start_request(idx, _prompt_for_index(idx))
             result = _chat_once(
                 base_url=args.base_url,
                 model=model,
@@ -338,7 +1055,10 @@ def _run_traffic(args: argparse.Namespace, model: str) -> tuple[list[RequestResu
                 stream=args.stream,
                 max_tokens=args.max_tokens,
                 timeout=args.timeout,
+                token_callback=dashboard.append_text if dashboard else None,
             )
+            if dashboard:
+                dashboard.finish_request(result)
             with lock:
                 results.append(result)
                 if should_trip():
@@ -369,6 +1089,13 @@ def _summarize(results: list[RequestResult], elapsed_s: float) -> dict[str, Any]
     ttfts = [r.ttft_ms for r in ok_results if r.ttft_ms is not None]
     completion_tokens = [r.completion_tokens or 0 for r in ok_results]
     total_completion_tokens = sum(completion_tokens)
+    decode_tokens_per_second = [
+        r.completion_tokens / ((r.latency_ms - r.ttft_ms) / 1000)
+        for r in ok_results
+        if r.completion_tokens
+        and r.ttft_ms is not None
+        and r.latency_ms > r.ttft_ms
+    ]
     status_counts: dict[str, int] = {}
     for r in results:
         key = str(r.status)
@@ -385,6 +1112,19 @@ def _summarize(results: list[RequestResult], elapsed_s: float) -> dict[str, Any]
         "elapsed_seconds": elapsed_s,
         "requests_per_second": 0 if elapsed_s <= 0 else len(results) / elapsed_s,
         "completion_tokens_per_second": 0 if elapsed_s <= 0 else total_completion_tokens / elapsed_s,
+        "decode_tokens_per_second": {
+            "avg": (
+                sum(decode_tokens_per_second) / len(decode_tokens_per_second)
+                if decode_tokens_per_second
+                else None
+            ),
+            "p50": statistics.median(decode_tokens_per_second)
+            if decode_tokens_per_second
+            else None,
+            "p95": _percentile(decode_tokens_per_second, 0.95),
+            "min": min(decode_tokens_per_second) if decode_tokens_per_second else None,
+            "max": max(decode_tokens_per_second) if decode_tokens_per_second else None,
+        },
         "latency_ms": {
             "min": min(latencies) if latencies else None,
             "p50": statistics.median(latencies) if latencies else None,
@@ -478,6 +1218,14 @@ def parse_args() -> argparse.Namespace:
         help="HTTP 429 과부하 차단 응답을 통과 조건으로 요구",
     )
     p.add_argument("--output-dir", default="logs", help="결과 JSON 저장 디렉토리")
+    p.add_argument(
+        "--ui",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="로컬 진행 화면 URL을 띄우고 요청별 생성 내용을 표시",
+    )
+    p.add_argument("--ui-host", default="127.0.0.1", help="진행 화면 바인딩 주소")
+    p.add_argument("--ui-port", type=int, default=0, help="진행 화면 포트. 0은 자동 할당")
     args = p.parse_args()
     args.base_url = args.base_url.rstrip("/")
     for key, value in DEFAULT_TRAFFIC_CONFIG.items():
@@ -490,12 +1238,38 @@ def parse_args() -> argparse.Namespace:
         raise SystemExit("--concurrency는 1 이상이어야 합니다")
     if args.concurrency > args.requests:
         args.concurrency = args.requests
+    if args.ui_port < 0:
+        raise SystemExit("--ui-port는 0 이상이어야 합니다")
     return args
 
 
 def main() -> None:
     args = parse_args()
-    model = _resolve_model(args.base_url, args.model, args.timeout)
+    if args.ui and not args.stream:
+        args.stream = True
+
+    dashboard = DashboardState() if args.ui else None
+    dashboard_server: ThreadingHTTPServer | None = None
+    dashboard_url = ""
+    if dashboard:
+        dashboard.configure(args)
+        dashboard_server, dashboard_url = _start_dashboard_server(
+            args.ui_host,
+            args.ui_port,
+            dashboard,
+        )
+        print(f"진행 화면: {dashboard_url}")
+
+    try:
+        model = _resolve_model(args.base_url, args.model, args.timeout)
+    except Exception as e:
+        if dashboard and dashboard_server:
+            dashboard.set_error(f"{type(e).__name__}: {e}")
+            _wait_for_dashboard_shutdown(dashboard_server, dashboard_url)
+            sys.exit(1)
+        raise
+    if dashboard:
+        dashboard.configure(args, model)
 
     print("vLLM 트래픽 테스트")
     print(f"  서버: {args.base_url}")
@@ -503,9 +1277,13 @@ def main() -> None:
     print(f"  요청: {args.requests}, 동시성: {args.concurrency}, stream={args.stream}")
 
     before = _snapshot(args.base_url, args.timeout)
+    if dashboard:
+        dashboard.set_status("트래픽 실행 중")
     start = time.monotonic()
-    results, tripped = _run_traffic(args, model)
+    results, tripped = _run_traffic(args, model, dashboard)
     elapsed_s = time.monotonic() - start
+    if dashboard:
+        dashboard.set_status("결과 집계 중")
     after = _snapshot(args.base_url, args.timeout)
     summary = _summarize(results, elapsed_s)
     postcheck = _postcheck(after)
@@ -524,6 +1302,7 @@ def main() -> None:
             "max_consecutive_errors": args.max_consecutive_errors,
             "require_200": args.require_200,
             "require_429": args.require_429,
+            "ui": args.ui,
         },
         "effective_defaults": args.effective_defaults,
         "circuit_breaker_tripped": tripped,
@@ -534,6 +1313,13 @@ def main() -> None:
         "results": [asdict(r) for r in results],
     }
     report_path = _write_report(args, report)
+    if dashboard:
+        dashboard.complete(
+            summary=summary,
+            postcheck=postcheck,
+            pass_criteria=pass_criteria,
+            report_path=report_path,
+        )
 
     print("")
     print("결과")
@@ -542,16 +1328,26 @@ def main() -> None:
     print(f"  허용/전체: {summary['allowed']}/{summary['sent']}")
     print(f"  에러율: {summary['error_rate']:.2%}")
     print(f"  상태코드: {summary['status_counts']}")
-    print(f"  RPS: {summary['requests_per_second']:.2f}")
-    print(f"  completion TPS: {summary['completion_tokens_per_second']:.2f}")
+    print(f"  RPS: {_format_float(summary['requests_per_second'])}")
+    print(f"  server TPS: {_format_float(summary['completion_tokens_per_second'])}")
     print(
-        "  latency p50/p95/p99(ms): "
-        f"{summary['latency_ms']['p50']} / "
-        f"{summary['latency_ms']['p95']} / "
-        f"{summary['latency_ms']['p99']}"
+        "  실제 생성 TPS avg/p50/p95: "
+        f"{_format_float(summary['decode_tokens_per_second']['avg'])} / "
+        f"{_format_float(summary['decode_tokens_per_second']['p50'])} / "
+        f"{_format_float(summary['decode_tokens_per_second']['p95'])}"
+    )
+    print(
+        "  latency p50/p95/p99: "
+        f"{_format_ms_as_seconds(summary['latency_ms']['p50'])} / "
+        f"{_format_ms_as_seconds(summary['latency_ms']['p95'])} / "
+        f"{_format_ms_as_seconds(summary['latency_ms']['p99'])}"
     )
     if args.stream:
-        print(f"  TTFT p50/p95(ms): {summary['ttft_ms']['p50']} / {summary['ttft_ms']['p95']}")
+        print(
+            "  TTFT p50/p95: "
+            f"{_format_ms_as_seconds(summary['ttft_ms']['p50'])} / "
+            f"{_format_ms_as_seconds(summary['ttft_ms']['p95'])}"
+        )
     print(f"  회로차단: {tripped}")
     print(
         "  사후 생존 확인: "
@@ -562,6 +1358,9 @@ def main() -> None:
     if pass_criteria["failures"]:
         print(f"  실패 사유: {pass_criteria['failures']}")
     print(f"  리포트: {report_path}")
+
+    if dashboard_server:
+        _wait_for_dashboard_shutdown(dashboard_server, dashboard_url)
 
     if not pass_criteria["passed"]:
         sys.exit(1)

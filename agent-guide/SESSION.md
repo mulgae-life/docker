@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-05-04 (vLLM 5015 안정성/트래픽 테스트)
+last-updated: 2026-05-04 (STT Voxtral 페어 구조 도입 + 게이트웨이 5017 + 가이드 작성)
 ---
 
 # 세션 상태
@@ -28,7 +28,9 @@ last-updated: 2026-05-04 (vLLM 5015 안정성/트래픽 테스트)
 | P1 | **5015 Gemma 장문 트래픽 검증**: 단문 smoke/동시 20/24 요청은 통과. 운영 전 `max_tokens >= 512` 또는 실제 평균 프롬프트/출력 길이로 latency, queue timeout, 429 비율 확인 필요. | Todo |
 | P1 | **vLLM Qwen 본체 :7080 이전**: `instances/qwen.yaml`의 `port: 7080`이 의도된 다음 운영 포트. 게이트웨이 :5016은 메모리상 :7071 보유 중이라 즉시 영향 없으나, 다음 게이트웨이 재기동 시 yaml 기준(:7080)으로 디스커버리하므로 그 시점 전에 vLLM 본체를 :7080으로 옮겨야 정합. | Todo |
 | P1 | `llm-serving/sglang/` 디렉토리 골격 (운영 가이드 + 런처 + 설정 + 테스트) | Todo |
-| P1 | **`llm-serving/stt/` PoC**: 시나리오 D 확정 — **Qwen3-ASR-1.7B + Whisper-large-v3** 동시 서빙(GPU 0/1 분리, port 7170/7171, transcription endpoint). 인프라(start.sh + 모델별 config 2종 + README) 구현 완료. 다음 단계: 실제 기동(LLM 인스턴스 stop 필요) → 한국어 벤치(`test_stt.py`, WER/RTF/latency) → 게이트웨이 통합 | In progress (인프라 구축 완료, 기동/벤치 대기) |
+| P1 | **`llm-serving/stt/` 한국어 정성 비교 (PoC 잔여)**: Voxtral-Mini-4B-Realtime(:5017 운영) + Qwen3-ASR-1.7B(:7170, LLM stop 후) + Whisper-large-v3(:7171, LLM stop 후) 한국어 벤치. `test_stt.py`(WER/RTF/latency/정성평가) 작성 + 결과 정리(`MODEL_STUDY.md` 부록). | Todo (인프라/메인 운영 ✅, 비교 모델 벤치 대기) |
+| P2 | **STT 동시 N 세션 운영 전환 (현재 단일 PoC)**: `instances/voxtral.yaml`의 `gpu_memory_utilization 0.35 → 0.40~0.50`, `max_num_seqs 1 → 2~4`, `gateways/5017.yaml`의 `max_inflight_requests/max_queue_size` 동기 상향. 동시 stream 목표 결정 후 진행. | Todo |
+| P2 | **운영계 컨테이너에 STT 의존성 반영 + 모델 동기화**: `aws/requirements.txt`에 추가된 `soundfile/soxr/librosa` 가 운영계 컨테이너 빌드에 반영되도록 재배포. Voxtral 17GB는 외부망 PC → S3 → `/models/STT/` 사전 동기화 (폐쇄망 대비). | Todo |
 | P2 | **RTX PRO 6000 Blackwell 운영 이전 후 fused MoE 튜닝**: `benchmark_moe.py`로 `E=128,N=352,device_name=NVIDIA_RTX_PRO_6000_Blackwell_Workstation_Edition,dtype=fp8_w8a8.json` 생성 → site-packages `vllm/model_executor/layers/fused_moe/configs/`에 배치 → 가능하면 vLLM 본가 PR. 트리거: 운영 환경 셋업 완료 시점 | Todo |
 | P3 | `agent-guide/` MCP 도구 섹션 채우기 (필요 시) | Todo |
 
@@ -41,6 +43,56 @@ last-updated: 2026-05-04 (vLLM 5015 안정성/트래픽 테스트)
 ---
 
 ## 최근 세션
+
+### 2026-05-04 (STT Voxtral 페어 구조 도입 + 게이트웨이 5017 + 가이드 작성)
+
+#### 세션 목표
+- vLLM의 `instances/+gateways/` 페어 패턴을 STT에도 도입하여 운영 표면 단일화 (외부 노출 :5017 게이트웨이 + 내부 :7172 인스턴스).
+- `vllm_gateway.py` 본체에 `/v1/audio/transcriptions` (POST) + `/v1/realtime` (WS) 라우트 추가 — STT 게이트웨이는 별도 코드 없이 본체 재사용.
+- Voxtral-Mini-4B-Realtime-2602 메모리 핏 (단일 세션 PoC 0.35 + max_num_seqs=1).
+- 사용자/운영자 분리 가이드 2종(`STT_API_GUIDE.md`, `STT_OPS_GUIDE.md`) 작성 + 외부 참조 일괄 갱신.
+
+#### 변경 파일
+| 파일 | 변경 유형 | 요약 |
+|------|----------|------|
+| `llm-serving/vllm/vllm_gateway.py` | 기능 추가 | `POST /v1/audio/transcriptions` (multipart proxy, timeout 600s, admission/LB 적용) + `WS /v1/realtime` (양방향 frame relay, close code 4429/4503/4500 매핑). websockets/fastapi WebSocket import 추가 |
+| `llm-serving/vllm/vllm_server_launcher.py` | 동작 변경 | `_LAUNCHER_KEYS`에 `env` 추가 + yaml의 env dict를 subprocess 환경에 머지. `RUNTIME_DIR`을 yaml dirname 기준으로 동적 결정 (STT/LLM runtime 격리) |
+| `llm-serving/stt/start.sh` | 풀 도입 | vllm/start.sh 패턴 그대로 복사 후 launcher/gateway 경로만 `../vllm/`으로 변경 + 헤더/사용법 STT 라벨링 |
+| `llm-serving/stt/instances/voxtral.yaml` | 신규 | Voxtral 인스턴스 (gateway_port 5017, GPU 2, 내부 :7172, 메모리 핏 0.35 + max_num_seqs=1, env: VLLM_DISABLE_COMPILE_CACHE=1, compilation_config: PIECEWISE) |
+| `llm-serving/stt/instances/{qwen3_asr,whisper_v3}.yaml` | 위치 이동 | 구 `stt/configs/` → `stt/instances/` (mv) |
+| `llm-serving/stt/gateways/5017.yaml` | 신규 | STT 게이트웨이 (warmup 비활성화, audio timeout 600s, max_inflight=1) |
+| `llm-serving/STT_API_GUIDE.md` | 신규 | 사용자용 §1~§5 (한눈에 보기·첫 호출·핵심 기능·파라미터·통합 예제). Voxtral verbose_json 미지원 캐비어트 4곳 |
+| `llm-serving/STT_OPS_GUIDE.md` | 신규 | 운영자용 §6~§12 (시스템 구조·기동·모델 관리·설정 표·트러블슈팅·QA·참고). 메모리 표 실측 반영 (0.35 = KV 4.24 GiB / 2,160 token / max concurrency 1.05x) |
+| `llm-serving/README.md` / `llm-serving/DEPLOY_GUIDE.md` | 갱신 | STT 진입점/디렉토리/기동 명령 추가 |
+| `llm-serving/stt/README.md` | 재작성 | 페어 구조/단일 인스턴스 옵션/의존성 안내 갱신 |
+| `llm-serving/stt/MODEL_STUDY.md` | 갱신 | §6.2 PoC 절차 — Voxtral 운영 반영. §6.3 디렉토리 — instances/+gateways/. §8 변경 이력 항목 추가 |
+| `agent-guide/PROJECT.md` / `README.md` | 갱신 | 트리/핵심 파일/빠른 시작/상세 참조에 STT 추가 |
+| `aws/requirements.txt` | 신규 라인 | `soundfile/soxr/librosa` 추가 (운영계 재배포 시 ImportError 방지) |
+
+#### 검증 (라이브)
+| 항목 | 결과 |
+|------|------|
+| `GET /health` (게이트웨이 5017) | 200, `{"status":"ok","ready":1,"total":1}` |
+| `GET /v1/models` | `Voxtral-Mini-4B-Realtime-2602` (max_model_len 32768) |
+| `POST /v1/audio/transcriptions` (1초 사인파) | 200, RTT 평균 372ms, `{"text":"","usage":{"type":"duration","seconds":1}}` |
+| `WS /v1/realtime` | session.created 이벤트 수신, 게이트웨이 logs 정상 (`realtime 프록시 시작 → 종료`) |
+| Runtime 격리 | `stt/instances/.runtime/voxtral.json` ↔ `vllm/instances/.runtime/gemma.json` 분리 유지 |
+| `server-status` overload | accepted=7, rejected=0, queue_timeout=0 |
+
+#### work-verify 발견 사항 (1차) → 모두 즉시 수정
+1. `stt/start.sh` 출력 헤더 "vLLM 클러스터" 잔존 → "STT 클러스터" 일괄 교체 (3곳).
+2. `STT_API_GUIDE.md`에서 Voxtral의 verbose_json 지원으로 잘못 안내 → 4곳 캐비어트 추가 (실제 400 BadRequestError 확인).
+3. `STT_API_GUIDE.md` LangChain `langchain_community.tools` (alias) → `langchain_core.tools` (정식) 교체.
+
+#### work-verify 2차 (회귀)
+모든 1차 수정 적용 후 라이브 RTT 372ms (370~374ms 변동), backend healthy 1/1, overload 정상. 추가 발견 없음. **이상 없음 — 운영 가능.**
+
+#### 다음 작업 후보
+- 한국어 정성 비교 (Voxtral vs Qwen3-ASR vs Whisper-large-v3, `test_stt.py` 작성).
+- 운영계 컨테이너 재배포 (requirements.txt 반영) + 폐쇄망 모델 사전 동기화.
+- 동시 N 세션 운영 전환 (메모리 핏 + max_num_seqs 동기 상향).
+
+---
 
 ### 2026-05-04 (vLLM 5015 안정성/트래픽 테스트)
 

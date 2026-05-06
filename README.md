@@ -8,7 +8,7 @@
 |------|------|
 | [`my-docker-server/`](my-docker-server/) | 로컬 PC·사내 서버용 dev/GPU Docker 환경 (`Dockerfile.dev`, `Dockerfile.gpu`, `docker-compose.yml`) |
 | [`aws/`](aws/) | AWS EC2 GPU 인스턴스 셋업 + 다중 사용자 컨테이너 운영 인프라 (vLLM 베이스, SSH) |
-| [`llm-serving/`](llm-serving/) | LLM 서빙 프레임워크 운영 구성 (현재 vLLM, 향후 SGLang/STT 등 추가 예정) |
+| [`llm-serving/`](llm-serving/) | LLM/STT 서빙 프레임워크 운영 구성 (vLLM 기반 LLM :5015/:5016 + STT Voxtral :5017, 향후 SGLang 추가 예정) |
 
 각 디렉토리는 자체 README/가이드를 포함합니다. 아래 진입점에서 시작하세요.
 
@@ -20,7 +20,9 @@
 | AWS GPU 인스턴스에 vLLM 베이스 + 다중 사용자 운영 환경 셋업 | [`aws/SETUP_GUIDE.md`](aws/SETUP_GUIDE.md) |
 | vLLM API 호출 (사용자) | [`llm-serving/VLLM_API_GUIDE.md`](llm-serving/VLLM_API_GUIDE.md) |
 | vLLM 서버 + 멀티 GPU 게이트웨이 띄우기 (운영자) | [`llm-serving/VLLM_OPS_GUIDE.md`](llm-serving/VLLM_OPS_GUIDE.md) |
-| 새 LLM 서빙 프레임워크(SGLang/STT 등) 추가 | [`llm-serving/README.md`](llm-serving/README.md) |
+| STT API 호출 (사용자) | [`llm-serving/STT_API_GUIDE.md`](llm-serving/STT_API_GUIDE.md) |
+| STT 서버 + 게이트웨이 띄우기 (운영자) | [`llm-serving/STT_OPS_GUIDE.md`](llm-serving/STT_OPS_GUIDE.md) |
+| 새 LLM/STT 서빙 프레임워크(SGLang 등) 추가 | [`llm-serving/README.md`](llm-serving/README.md) |
 
 ## 🧭 디렉토리 분리 원칙
 
@@ -28,6 +30,6 @@
 |--------|------|------|
 | **개발 환경** | 로컬·사내 개발자 PC에 띄우는 컨테이너 | `my-docker-server/` |
 | **인프라** | EC2 호스트 셋업, 드라이버, 다중 사용자, 포트/볼륨 정책 | `aws/` |
-| **서빙** | LLM 모델 서빙 프레임워크 설정·게이트웨이·운영 가이드 | `llm-serving/` |
+| **서빙** | LLM/STT 모델 서빙 프레임워크 설정·게이트웨이·운영 가이드 | `llm-serving/` |
 
 > 인프라(어디에 띄우는가) ↔ 서빙(무엇을 어떻게 띄우는가)을 분리해 각 영역을 독립적으로 갱신할 수 있도록 구성합니다.

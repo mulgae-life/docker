@@ -40,10 +40,12 @@ from typing import AsyncGenerator
 
 import httpx
 import uvicorn
+import websockets
 import yaml
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
+from websockets.exceptions import ConnectionClosed as WSConnectionClosed
 
 # ═══════════════════════════════════════════════════════
 # 로깅
@@ -951,6 +953,179 @@ async def _proxy_streaming(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ── POST /v1/audio/transcriptions, /v1/audio/translations ─────────
+#
+# OpenAI Audio API 멀티파트 프록시.
+#   - chat/completions와 같이 admission(과부하 차단) + LB(least-connection) 적용
+#   - request body는 multipart/form-data (audio file + form fields)이라
+#     JSON 파싱 없이 raw bytes + 클라이언트 Content-Type(=boundary 포함)을 그대로 전달
+#   - 응답은 JSON ({"text": "...", "usage": {...}}) — 스트리밍 아님 (현재 vLLM 0.19 기준)
+#   - 장시간 오디오를 고려한 별도 timeout 600s (chat default보다 길게)
+#
+# 한 함수에서 두 path를 서비스하기 위해 request.url.path를 그대로 백엔드에 전달.
+# 향후 새로운 audio 엔드포인트(예: /v1/audio/speech)가 생기면 데코레이터에 추가.
+_AUDIO_TIMEOUT_SECONDS = 600.0
+
+
+@app.post("/v1/audio/transcriptions", response_model=None)
+@app.post("/v1/audio/translations", response_model=None)
+async def audio_proxy(request: Request) -> JSONResponse:
+    """OpenAI Audio API 멀티파트 프록시 (transcription/translation)."""
+    body = await request.body()
+
+    try:
+        await _admission.acquire()
+    except AdmissionRejected as e:
+        logger.warning("audio 요청 거절: %s", e.reason)
+        return JSONResponse(
+            content={
+                "error": {
+                    "message": "서버가 바쁩니다. 잠시 후 다시 시도해주세요.",
+                    "type": "rate_limit_error",
+                    "code": e.reason,
+                }
+            },
+            status_code=429,
+            headers={"Retry-After": str(e.retry_after_seconds)},
+        )
+
+    try:
+        server = await _lb.acquire()
+    except RuntimeError:
+        await _admission.release()
+        return JSONResponse(
+            content={"error": {"message": "사용 가능한 백엔드 서버가 없습니다", "type": "server_error"}},
+            status_code=503,
+        )
+
+    # 클라이언트의 path/Content-Type/Authorization을 그대로 백엔드로 전달
+    url = f"{server.base_url}{request.url.path}"
+    headers: dict[str, str] = {}
+    ct = request.headers.get("content-type")
+    if ct:
+        headers["Content-Type"] = ct  # multipart boundary 보존 필수
+    auth = request.headers.get("authorization")
+    if auth:
+        headers["Authorization"] = auth
+
+    try:
+        resp = await _client.post(url, content=body, headers=headers, timeout=_AUDIO_TIMEOUT_SECONDS)
+        # 응답이 JSON이 아닐 가능성(에러)도 안전하게 처리
+        try:
+            content = resp.json()
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            content = {"error": {"message": resp.text[:500], "type": "backend_error"}}
+        return JSONResponse(content=content, status_code=resp.status_code)
+    except httpx.TimeoutException:
+        logger.error("[%s] audio 타임아웃 (%.0fs 초과)", server.label, _AUDIO_TIMEOUT_SECONDS)
+        return JSONResponse(content={"error": {"message": "백엔드 타임아웃", "type": "timeout"}}, status_code=504)
+    except httpx.HTTPError as e:
+        logger.error("[%s] audio 연결 실패: %s", server.label, e)
+        return JSONResponse(content={"error": {"message": "백엔드 연결 실패", "type": "bad_gateway"}}, status_code=502)
+    finally:
+        await _lb.release(server)
+        await _admission.release()
+
+
+# ── WebSocket /v1/realtime ───────────────────────────
+#
+# OpenAI Realtime API 양방향 WebSocket 프록시.
+#   - 클라이언트 ↔ 게이트웨이 ↔ 백엔드 vLLM 의 양방향 frame relay
+#   - admission/LB은 연결 시점에 1회 acquire하고 연결 종료 시 release
+#     (단일 세션이 길게 점유 — STT realtime의 자연스러운 워크로드)
+#   - WebSocket close code 매핑:
+#       4429 — admission rejected (과부하)
+#       4503 — no backend ready
+#       4500 — proxy 내부 오류 (백엔드 연결 실패 등)
+#   - timeout 미적용: 클라이언트 또는 백엔드가 능동 종료할 때까지 양방향 relay
+#
+# Query string(예: ?model=Voxtral-Mini-...)은 그대로 백엔드에 전달.
+
+
+async def _ws_close_silently(ws: WebSocket | "websockets.WebSocketClientProtocol", **kwargs) -> None:
+    """이미 닫힌 소켓에 close()를 호출해도 예외를 무시한다."""
+    try:
+        await ws.close(**kwargs)
+    except Exception:
+        pass
+
+
+@app.websocket("/v1/realtime")
+async def realtime_proxy(client_ws: WebSocket) -> None:
+    """OpenAI Realtime WebSocket 프록시 (양방향 frame relay)."""
+    await client_ws.accept()
+
+    try:
+        await _admission.acquire()
+    except AdmissionRejected as e:
+        logger.warning("realtime 요청 거절: %s", e.reason)
+        await _ws_close_silently(client_ws, code=4429, reason=e.reason[:120])
+        return
+
+    try:
+        server = await _lb.acquire()
+    except RuntimeError:
+        await _admission.release()
+        await _ws_close_silently(client_ws, code=4503, reason="no backend ready")
+        return
+
+    # 백엔드 WS URL (Query string 패스스루)
+    qs = client_ws.url.query
+    backend_url = f"ws://{server.config.host}:{server.config.port}/v1/realtime"
+    if qs:
+        backend_url += f"?{qs}"
+
+    logger.info("[%s] realtime 프록시 시작 → %s", server.label, backend_url)
+    try:
+        # max_size=None: 오디오 chunk가 큰 경우(수 MB) 대비
+        async with websockets.connect(backend_url, max_size=None, open_timeout=10) as backend_ws:
+            async def client_to_backend() -> None:
+                try:
+                    while True:
+                        msg = await client_ws.receive()
+                        if msg.get("type") == "websocket.disconnect":
+                            return
+                        if msg.get("text") is not None:
+                            await backend_ws.send(msg["text"])
+                        elif msg.get("bytes") is not None:
+                            await backend_ws.send(msg["bytes"])
+                except (WebSocketDisconnect, WSConnectionClosed):
+                    return
+
+            async def backend_to_client() -> None:
+                try:
+                    async for msg in backend_ws:
+                        if isinstance(msg, (bytes, bytearray, memoryview)):
+                            await client_ws.send_bytes(bytes(msg))
+                        else:
+                            await client_ws.send_text(msg)
+                except WSConnectionClosed:
+                    return
+
+            # 한 쪽이 종료되면 양쪽 모두 닫는다 (짝방향 stale 방지).
+            tasks = [
+                asyncio.create_task(client_to_backend()),
+                asyncio.create_task(backend_to_client()),
+            ]
+            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            for task in pending:
+                task.cancel()
+            await asyncio.gather(*pending, return_exceptions=True)
+            await _ws_close_silently(backend_ws)
+            await _ws_close_silently(client_ws)
+
+    except (websockets.exceptions.InvalidURI, OSError, asyncio.TimeoutError) as e:
+        logger.error("[%s] realtime 백엔드 연결 실패: %s", server.label, e)
+        await _ws_close_silently(client_ws, code=4500, reason=f"backend connect failed: {type(e).__name__}")
+    except Exception as e:
+        logger.exception("[%s] realtime 프록시 오류: %s", server.label, e)
+        await _ws_close_silently(client_ws, code=4500, reason=f"proxy error: {type(e).__name__}")
+    finally:
+        await _lb.release(server)
+        await _admission.release()
+        logger.info("[%s] realtime 프록시 종료", server.label)
 
 
 # ── GET /server-status ───────────────────────────────

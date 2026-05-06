@@ -96,19 +96,20 @@ cd /workspace/llm-serving/vllm
 
 ./start.sh up                # 전체 인스턴스 + 게이트웨이 기동
 ./start.sh up <name>         # 단독 기동 (자동 라우팅 — 아래 표 참조)
-./start.sh down              # 게이트웨이 → 인스턴스 순 중지
-./start.sh down <name>       # 단독 중지
+./start.sh down <name>       # 단독 중지 (※ 이름 명시 필수)
 ./start.sh status            # 상태 확인
-./start.sh restart [name]    # 재시작 (인자 없으면 전체)
+./start.sh restart <name>    # 재시작 (※ 이름 명시 필수, 내부적으로 down→up)
 ```
 
-**`[name]` 자동 라우팅 규칙**
+> ⚠️ **안전 정책**: `down`/`restart`는 인자 없이 호출하면 거부된다 (다른 모델/게이트웨이를 실수로 stop시키는 사고 방지). 전체 중지가 필요하면 인스턴스/게이트웨이를 하나씩 명시해 호출한다.
 
-| `[name]` 형태 | 매칭 yaml | 동작 |
+**`<name>` 자동 라우팅 규칙**
+
+| `<name>` 형태 | 매칭 yaml | 동작 |
 |--------------|-----------|------|
 | 모델명 (예: `gemma`, `qwen`) | `instances/<name>.yaml` | 인스턴스만 처리, 게이트웨이 미터치 |
 | 포트 숫자 (예: `5015`, `5016`) | `gateways/<name>.yaml` | 게이트웨이만 처리, 인스턴스 미터치 |
-| (생략) | 전체 | 인스턴스 + 게이트웨이 모두 |
+| (생략, `up` 한정) | 전체 | 인스턴스 + 게이트웨이 모두 |
 | 매칭 없음 | — | 즉시 에러 + 인스턴스/게이트웨이 후보 목록 출력 |
 
 > 인스턴스 yaml은 모델명, 게이트웨이 yaml은 포트 숫자로 명명되어 충돌 가능성이 없습니다. 만일 충돌하면(`instances/X.yaml`과 `gateways/X.yaml` 동명) 에러로 멈춥니다.
@@ -151,8 +152,9 @@ cp instances/gemma.yaml instances/gemma_replica.yaml
 ./start.sh up gemma_replica
 
 # 3. 게이트웨이 재기동 → instances/.runtime/*.json 발견 → 자동 LB 등록
-./start.sh down
-./start.sh up
+#    (게이트웨이 yaml 이름이 5015이면 down/up도 5015 명시)
+./start.sh down 5015
+./start.sh up 5015
 ```
 
 **메커니즘**:
@@ -209,7 +211,7 @@ CUDA_VISIBLE_DEVICES=0 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
 | 메타 키 필터링 | 수동 제거 필요 | `_LAUNCHER_KEYS` 자동 필터 | launcher 경유로 자동 |
 | 다중 인스턴스 / LB | 수동 | 수동 | yaml 추가 + 재기동 자동 |
 | 게이트웨이 | 별도 기동 필요 | 별도 기동 필요 | 함께 기동 |
-| 중지 방법 | `kill` | `kill` | `./start.sh down [name]` |
+| 중지 방법 | `kill` | `kill` | `./start.sh down <name>` |
 
 ### 7.8 보안 주의
 

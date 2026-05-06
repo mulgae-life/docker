@@ -47,5 +47,12 @@ awscli>=1.35.0
 ragas>=0.4.0
 datasets>=3.0.0
 
+# STT (Voxtral / Whisper / Qwen-ASR) 오디오 의존성
+# ※ 미설치 시 vLLM 기동 직후 EngineCore 가 ImportError: soundfile / soxr 로 fail.
+# 모델카드 권장: pip install soxr librosa soundfile
+soundfile>=0.13.0
+soxr>=1.1.0
+librosa>=0.11.0
+
 # 테스트
 pytest>=8.0

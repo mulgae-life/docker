@@ -296,7 +296,7 @@ mm_processor_cache_type: shm
 > 교체 후:
 > 1. `.env`의 `CHAT_MODEL`·`RERANKER_MODEL`을 새 `served_model_name`과 일치시킬 것.
 > 2. Gemma 4로 교체 시 클라이언트 요청에 `"skip_special_tokens": false`를 추가해야 `reasoning_content` 분리 가능.
-> 3. `./start.sh restart`로 재기동.
+> 3. `./start.sh restart <인스턴스명>`(예: `gemma`)으로 재기동. (`restart`는 yaml 이름 명시 필수)
 
 ---
 

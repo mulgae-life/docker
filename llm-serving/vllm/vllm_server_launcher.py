@@ -46,6 +46,10 @@ logging.basicConfig(
 logger = logging.getLogger("vllm-launcher")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# INSTANCES_DIR / RUNTIME_DIR / PORT_ALLOC_LOCK은 yaml 경로의 dirname 기준으로 main()에서
+# 동적 결정한다 (런처는 vllm/instances/, stt/instances/ 등 여러 디렉토리를 서비스하므로).
+# 여기서는 임시 fallback 값만 두고, main()이 yaml 경로에 맞춰 덮어쓴다.
 INSTANCES_DIR = os.path.join(BASE_DIR, "instances")
 RUNTIME_DIR = os.path.join(INSTANCES_DIR, ".runtime")
 # port 할당 + runtime 기록을 동시 기동 launcher 간에 직렬화하기 위한 advisory lock 파일.
@@ -56,7 +60,9 @@ PORT_ALLOC_LOCK = os.path.join(RUNTIME_DIR, ".port_alloc.lock")
 # gateway_port: gateways/<port>.yaml의 discover_from이 인스턴스 yaml에서 읽는 메타.
 #   vllm serve는 이 키를 알지 못하므로 임시 config에서 제거해야 한다.
 # port: 자동 회피 로직이 결정한 실제 포트를 --port CLI로 따로 넘기므로 yaml에서는 제거.
-_LAUNCHER_KEYS = {"gpus", "download_dir", "gateway_port", "port"}
+# env: dict 형태 환경변수. subprocess.Popen의 env에 머지하고 vllm serve에는 전달하지 않는다.
+#   예) Voxtral 권장 VLLM_DISABLE_COMPILE_CACHE=1 처럼 모델별 env 의존성이 있을 때 사용.
+_LAUNCHER_KEYS = {"gpus", "download_dir", "gateway_port", "port", "env"}
 
 
 def parse_args():
@@ -345,9 +351,9 @@ def main():
     # start.sh의 stop/restart는 kill(SIGTERM)을 사용하므로 핸들러 등록 필요.
     signal.signal(signal.SIGTERM, _raise_keyboard_interrupt)
 
-    # 이전 실행에서 SIGKILL/crash로 남은 임시 config / runtime 파일 정리.
+    # 이전 실행에서 SIGKILL/crash로 남은 임시 config 정리. (BASE_DIR = launcher 자기 위치)
+    # _cleanup_stale_runtime_files()는 RUNTIME_DIR을 yaml 기준으로 갱신한 뒤 호출 (아래).
     _cleanup_stale_configs()
-    _cleanup_stale_runtime_files()
 
     # ── 설정 로드 ──
     config_path = os.path.abspath(args.config)
@@ -359,6 +365,18 @@ def main():
 
     instance_name = _instance_name_from_config(config_path)
 
+    # yaml의 dirname 기준으로 INSTANCES/RUNTIME 결정 — 여러 인스턴스 디렉토리(vllm/instances/,
+    # stt/instances/ 등)를 같은 launcher 코드가 서비스하면서도 runtime json을 yaml 옆에
+    # 격리시킨다. 게이트웨이의 _resolve_actual_port도 yaml dirname 기준으로 .runtime을 찾으므로
+    # 이 정의가 일치해야 함.
+    global INSTANCES_DIR, RUNTIME_DIR, PORT_ALLOC_LOCK
+    INSTANCES_DIR = os.path.dirname(config_path)
+    RUNTIME_DIR = os.path.join(INSTANCES_DIR, ".runtime")
+    PORT_ALLOC_LOCK = os.path.join(RUNTIME_DIR, ".port_alloc.lock")
+
+    # RUNTIME_DIR이 yaml 기준으로 확정된 후 stale runtime 정리.
+    _cleanup_stale_runtime_files()
+
     # ── 환경변수 ──
     env = os.environ.copy()
     if args.gpu is not None:
@@ -368,6 +386,17 @@ def main():
         env["HF_HUB_OFFLINE"] = "1"
         env["TRANSFORMERS_OFFLINE"] = "1"
         logger.info("HF 오프라인 모드")
+
+    # yaml의 env dict를 subprocess 환경에 머지 (모델별 권장 env 반영, 예: Voxtral의
+    # VLLM_DISABLE_COMPILE_CACHE=1). 셸이 아닌 python에서 직접 처리하여 start.sh
+    # 변경 없이 모든 인스턴스 yaml에서 동일한 메타 키로 사용 가능.
+    yaml_env = config.get("env") or {}
+    if not isinstance(yaml_env, dict):
+        logger.error("yaml의 env는 dict 여야 합니다 (현재: %r): %s", type(yaml_env).__name__, config_path)
+        sys.exit(1)
+    for k, v in yaml_env.items():
+        env[str(k)] = str(v)
+        logger.info("env(yaml): %s=%s", k, v)
 
     # ── 모델 경로 해석 ──
     model = args.model or config.get("model", "")

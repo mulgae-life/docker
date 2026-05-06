@@ -1,0 +1,89 @@
+# ═══════════════════════════════════════════════════════
+# STT Gateway — :5017 (Voxtral Realtime/Transcription)
+# ═══════════════════════════════════════════════════════
+#
+# 백엔드: stt/instances/voxtral.yaml (gateway_port=5017 매칭)
+# 라우팅: vllm_gateway 본체를 재사용 — chat/completions, transcription, realtime 모두.
+#
+# 백엔드 자동 디스커버리:
+#   discover_from(../instances)의 *.yaml 중 gateway_port == 5017인
+#   인스턴스를 자동 등록. 매칭 결과는 게이트웨이 기동 로그 확인.
+#
+# 사용법:
+#   python ../vllm/vllm_gateway.py -c gateways/5017.yaml
+#   ./start.sh up 5017
+# ═══════════════════════════════════════════════════════
+
+
+# ── 게이트웨이 서버 ──────────────────────────────────
+# host: 외부 노출은 0.0.0.0, 로컬 전용은 127.0.0.1.
+# port: 클라이언트가 접속하는 게이트웨이 포트. 방화벽/보안그룹 오픈 대상.
+# log_level: 일반 운영 info, 상세 진단 debug.
+gateway:
+  host: "0.0.0.0"
+  port: 5017
+  log_level: "info"
+
+# ── 백엔드 디스커버리 ────────────────────────────────
+# discover_from: 이 파일 기준 상대 경로. gateway_port == 5017 인 instances/*.yaml만
+#   백엔드로 자동 등록. 수동 backends 키가 있으면 그쪽이 우선.
+discover_from: "../instances"
+
+# ── 헬스체크 ─────────────────────────────────────────
+health_check:
+  interval_seconds: 10
+  timeout_seconds: 3
+  unhealthy_threshold: 3
+  healthy_threshold: 1
+
+# ── 서버 웜업 ────────────────────────────────────────
+# STT 백엔드는 chat/completions 기반 dummy 추론으로 웜업할 수 없으므로
+# warmup.enabled=false로 두고 /health 프로브만 수행한다.
+# vLLM Voxtral은 첫 호출 시 cudagraph가 자동 capture되므로 별도 inference 웜업 불필요.
+# boot_poll 값은 disabled 상태에서도 GatewayConfig 모델 검증을 위해 유지한다.
+warmup:
+  enabled: false
+  boot_poll:
+    interval_seconds: 5
+    timeout_seconds: 900
+  inference:
+    prompt: "(STT 게이트웨이는 inference 웜업 미사용)"
+    max_tokens: 1
+    timeout_seconds: 10
+
+# ── 프리픽스 캐시 웜업 ───────────────────────────────
+# STT는 chat 시스템 프롬프트 캐싱 패턴과 무관 → 비활성화.
+# warmup.enabled=false 시 _warmup_single이 호출되지 않으므로 사실상 noop이지만
+# 의도를 명시하기 위해 enabled=false 로 둔다.
+prefix_cache_warmup:
+  enabled: false
+  max_tokens: 1
+  timeout_seconds: 10
+  system_prompt: "(STT 게이트웨이는 프리픽스 캐시 웜업 미사용)"
+
+# ── 백엔드 인증 ──────────────────────────────────────
+# Voxtral 인스턴스는 vLLM --api-key 미설정 (내부망 정책). 키 필요 시 활성화.
+# backend_api_key: "your-secret-key"
+
+# ── HTTP 클라이언트 ──────────────────────────────────
+# timeout_seconds: 백엔드 요청 전체 타임아웃(초). transcription은 audio 길이에 비례하므로
+#   chat/completions(300s)보다 길게. realtime은 stream이라 timeout과 무관.
+#   transcription POST는 별도 _AUDIO_TIMEOUT_SECONDS=600s를 쓰지만, 일반 클라이언트가
+#   다른 audio 엔드포인트를 호출할 가능성을 고려해 600 그대로 둔다.
+http_client:
+  timeout_seconds: 600
+  connect_timeout_seconds: 5
+  max_connections: 50
+
+# ── 과부하 차단 ──────────────────────────────────────
+# Voxtral max_num_seqs=1 (단일 세션 PoC) → max_inflight_requests=1.
+# realtime WS 1개가 inflight 슬롯을 길게 점유하므로 max_queue를 작게 두어
+# 대기 사용자에게 빠르게 429 + Retry-After를 돌려준다.
+# 운영 시 동시 N 세션으로 확장하려면 인스턴스의 max_num_seqs / gpu_memory_utilization
+# 와 함께 max_inflight_requests / max_queue_size를 같이 상향한다.
+overload:
+  enabled: true
+  max_inflight_requests: 1
+  max_queue_size: 4
+  queue_timeout_seconds: 120
+  retry_after_seconds: 10

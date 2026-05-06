@@ -55,13 +55,17 @@ cd /workspace/llm-serving/vllm
 ./start.sh up gemma          # 단일 인스턴스만 기동 (instances/gemma.yaml)
 ./start.sh status            # UP 확인 (1~5분 소요, 모델 미보유 시 자동 다운로드 → /models/LLM/)
 
-# STT
+# STT — vllm 패턴 동일 (instances/voxtral.yaml ↔ gateways/5017.yaml 페어 자동)
 cd /workspace/llm-serving/stt
-./start.sh
-./start.sh status            # 모델 미보유 시 자동 다운로드 → /models/STT/
+./start.sh up                # voxtral(:7172) + 게이트웨이(:5017) 자동 기동
+./start.sh up voxtral        # voxtral 인스턴스만 단독 기동
+./start.sh up 5017           # 5017 게이트웨이만 단독 기동
+./start.sh status            # UP/STARTING 확인 (모델 미보유 시 자동 다운로드 → /models/STT/, 17GB)
 ```
 
-> ⚠️ **LLM ↔ STT 동시 운영 주의**: 현재 `vllm/instances/{gemma,qwen}.yaml` 이 각각 GPU 0/1 점유. STT 테스트 시 LLM 인스턴스 먼저 stop 필요 (`cd vllm && ./start.sh down`). 상세는 [`stt/README.md`](stt/README.md) "운영 주의".
+> ⚠️ **LLM ↔ STT 동시 운영 주의**: voxtral 은 GPU 2 단독이라 LLM(`vllm/instances/{gemma,qwen}.yaml` GPU 0/1)과 충돌 없음. 단 비교용 `qwen3_asr / whisper_v3` 는 GPU 0/1 사용이라 LLM 먼저 stop 필요 (`cd vllm && ./start.sh down <name>` — down은 yaml 이름 명시 필수). 상세는 [`stt/README.md`](stt/README.md) "운영 주의".
+
+> ⚠️ **Voxtral 의존성**: 운영계 컨테이너 재배포 시 `pip install soundfile soxr librosa` 필요. 영구 등재는 `aws/requirements.txt`. 미설치 시 vLLM 기동 직후 `EngineCore failed to start` + `ImportError: soundfile` 로 fail.
 
 ---
 
@@ -96,7 +100,7 @@ aws s3 sync ./llm-serving/ s3://hgi-ai-res/hjjo/llm-serving/ \
 # (운영계) 재다운로드 + 재시작
 cd /workspace/
 sudo aws s3 sync s3://hgi-ai-res/hjjo/llm-serving/ ./llm-serving/
-cd llm-serving/vllm && ./start.sh restart        # 또는 stt (단일 재시작은 ./start.sh restart <name>)
+cd llm-serving/vllm && ./start.sh restart <name>  # 또는 stt; restart는 yaml 이름 명시 필수
 ```
 
 > 로컬에서 파일을 삭제했다면 운영계에 잔존하므로 `--delete` 추가. 처음에는 `--dryrun` 으로 확인 권장.
@@ -122,4 +126,6 @@ cd llm-serving/vllm && ./start.sh restart        # 또는 stt (단일 재시작�
 - 인프라/컨테이너: [`../aws/SETUP_GUIDE.md`](../aws/SETUP_GUIDE.md)
 - vLLM API 호출 (사용자): [`VLLM_API_GUIDE.md`](VLLM_API_GUIDE.md)
 - vLLM 운영 상세 (모델 교체, 메모리 표 등): [`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md)
-- STT PoC: [`stt/README.md`](stt/README.md), [`stt/MODEL_STUDY.md`](stt/MODEL_STUDY.md)
+- STT API 호출 (사용자): [`STT_API_GUIDE.md`](STT_API_GUIDE.md)
+- STT 운영 (시스템 구조, 메모리 핏, 트러블슈팅): [`STT_OPS_GUIDE.md`](STT_OPS_GUIDE.md)
+- STT 모델 비교 / PoC: [`stt/README.md`](stt/README.md), [`stt/MODEL_STUDY.md`](stt/MODEL_STUDY.md)

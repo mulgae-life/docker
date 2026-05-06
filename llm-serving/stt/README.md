@@ -1,31 +1,40 @@
-# 🎙️ STT 서빙 (vLLM 통합형)
+# 🎙️ STT 서빙 (vLLM 기반, 페어 구조)
 
-vLLM transcription 엔드포인트(`/v1/audio/transcriptions`)로 STT 모델을 OpenAI 호환 API로 노출.
-Qwen3-ASR-1.7B와 Whisper-large-v3을 동시에 띄워 한국어 정확도를 비교한다.
+`llm-serving/vllm/` 의 `instances/` + `gateways/` 패턴을 STT에 그대로 적용.
+**Voxtral-Mini-4B-Realtime-2602** 를 게이트웨이 `:5017` 로 외부 노출하고,
+`vllm_gateway.py` 본체가 `/v1/audio/transcriptions` (HTTP) + `/v1/realtime` (WebSocket) 라우트를 제공한다.
 
-> 모델 선정 근거 및 후보 비교는 [`MODEL_STUDY.md`](MODEL_STUDY.md) 참조.
+> 사용자(API 호출)용: [`../STT_API_GUIDE.md`](../STT_API_GUIDE.md)
+> 운영자(서버 기동·튜닝)용: [`../STT_OPS_GUIDE.md`](../STT_OPS_GUIDE.md)
+> 후보 모델 비교 / 시나리오: [`MODEL_STUDY.md`](MODEL_STUDY.md)
 
 ---
 
 ## 📦 구성
 
-| 인스턴스 | 모델 | GPU | 포트 | 무게 |
-|---------|------|:---:|:----:|:----:|
-| `qwen3_asr` | `Qwen/Qwen3-ASR-1.7B` | 0 | 7170 | 1.7B (~4GB BF16) |
-| `whisper_v3` | `openai/whisper-large-v3` (baseline) | 1 | 7171 | 1.55B (~3GB BF16) |
+| 인스턴스 | 모델 | GPU | 내부 포트 | 외부 게이트웨이 | 상태 |
+|---------|------|:---:|:----:|:----:|:----:|
+| `voxtral` | `mistralai/Voxtral-Mini-4B-Realtime-2602` | 2 | 7172 | **5017** | ✅ 운영 |
+| `qwen3_asr` | `Qwen/Qwen3-ASR-1.7B` | 0 | 7170 | (직접 노출) | 🧪 비교 PoC |
+| `whisper_v3` | `openai/whisper-large-v3` | 1 | 7171 | (직접 노출) | 🧪 비교 PoC |
 
-엔드포인트: `POST http://localhost:<port>/v1/audio/transcriptions` (OpenAI 호환).
+`qwen3_asr` / `whisper_v3` 는 `gateway_port` 메타가 없으므로 게이트웨이 디스커버리에 포함되지 않고 자기 포트(7170/7171)로 직접 노출됩니다 (한국어 정성 비교 PoC 용도).
 
 ```
 llm-serving/stt/
-├── MODEL_STUDY.md       # 후보 모델 비교 / 시나리오 분석
-├── README.md            # 본 문서
-├── start.sh             # 기동/중지/상태 (configs/*.yaml 자동 순회)
-├── configs/
-│   ├── qwen3_asr.yaml   # Qwen3-ASR-1.7B 설정
-│   └── whisper_v3.yaml  # Whisper-large-v3 설정
-└── logs/                # 인스턴스 stdout/stderr (자동 생성)
+├── README.md                # 본 문서
+├── MODEL_STUDY.md           # 후보 모델 비교 / 시나리오
+├── start.sh                 # vllm/start.sh 패턴 풀 도입 (instances/+gateways/ 페어 자동 순회)
+├── instances/
+│   ├── voxtral.yaml         # gateway_port: 5017 → :5017 페어, 내부 :7172
+│   ├── qwen3_asr.yaml       # 비교용 (gateway_port 없음, :7170 직접)
+│   └── whisper_v3.yaml      # 비교용 (gateway_port 없음, :7171 직접)
+├── gateways/
+│   └── 5017.yaml            # discover_from: ../instances, warmup 비활성화, timeout 600s
+└── logs/                    # 인스턴스/게이트웨이 stdout/stderr (자동 생성)
 ```
+
+> `vllm_server_launcher.py`, `vllm_gateway.py` 는 `../vllm/` 의 본체를 재사용 (코드 단일 출처). `start.sh` 만 STT 변종으로 분리.
 
 ---
 
@@ -34,115 +43,111 @@ llm-serving/stt/
 ```bash
 cd llm-serving/stt
 
-./start.sh              # 두 인스턴스 동시 기동
-./start.sh status       # UP/DOWN 확인
-./start.sh stop         # 전체 중지
-./start.sh restart      # 재시작
+./start.sh up                       # 전체 인스턴스 + 게이트웨이 기동
+./start.sh up voxtral               # voxtral 단독 (게이트웨이 미터치)
+./start.sh up 5017                  # 5017 게이트웨이 단독 (인스턴스 미터치)
+./start.sh status                   # UP/DOWN/STARTING/STALE 표시
+./start.sh down voxtral             # voxtral 단독 중지 (※ 이름 명시 필수)
+./start.sh down 5017                # 5017 게이트웨이 단독 중지 (※ 이름 명시 필수)
+./start.sh restart <name>           # 재시작 (※ 이름 명시 필수)
 ```
+
+> ⚠️ `down`/`restart`는 인자 없이 호출하면 거부된다 (다른 모델/게이트웨이를 실수로 stop시키는 사고 방지).
 
 상태 확인:
 
 ```bash
-curl http://localhost:7170/v1/models   # Qwen3-ASR
-curl http://localhost:7171/v1/models   # Whisper
-
-curl http://localhost:7170/health
-curl http://localhost:7171/health
+curl http://localhost:5017/health             # 게이트웨이 health
+curl http://localhost:5017/v1/models          # 모델 목록
+curl http://localhost:7172/health             # 내부 인스턴스 직접 (디버그용)
 ```
 
 ---
 
-## 🔬 추론 호출 예 (curl)
+## 🔬 첫 호출 (smoke test)
 
 ```bash
-# Qwen3-ASR-1.7B
-curl http://localhost:7170/v1/audio/transcriptions \
-  -F "file=@samples/sample_ko.wav" \
-  -F "model=Qwen3-ASR-1.7B" \
-  -F "language=ko"
+# 1초 사인파 생성
+python3 -c "
+import numpy as np, soundfile as sf
+sr=16000; t=np.linspace(0,1,sr,endpoint=False)
+sf.write('/tmp/sine_1s.wav', (0.1*np.sin(2*np.pi*440*t)).astype('float32'), sr)
+"
 
-# Whisper-large-v3
-curl http://localhost:7171/v1/audio/transcriptions \
-  -F "file=@samples/sample_ko.wav" \
-  -F "model=whisper-large-v3" \
-  -F "language=ko"
+# Transcription HTTP
+curl http://localhost:5017/v1/audio/transcriptions \
+  -F "file=@/tmp/sine_1s.wav" \
+  -F "model=Voxtral-Mini-4B-Realtime-2602" \
+  -F "language=ko" \
+  -F "temperature=0"
+# {"text":"","usage":{"type":"duration","seconds":1}}
+
+# Realtime WebSocket — session.created 수신 확인
+python3 - <<'PY'
+import asyncio, json, websockets
+async def main():
+    async with websockets.connect("ws://localhost:5017/v1/realtime?model=Voxtral-Mini-4B-Realtime-2602") as ws:
+        print(json.loads(await ws.recv())["type"])
+asyncio.run(main())
+PY
+# session.created
 ```
 
-OpenAI Python SDK도 호환:
-
-```python
-from openai import OpenAI
-
-qwen = OpenAI(base_url="http://localhost:7170/v1", api_key="dummy")
-whisper = OpenAI(base_url="http://localhost:7171/v1", api_key="dummy")
-
-with open("samples/sample_ko.wav", "rb") as f:
-    out_qwen = qwen.audio.transcriptions.create(
-        model="Qwen3-ASR-1.7B", file=f, language="ko",
-    )
-print(out_qwen.text)
-```
-
-> `model` 식별자는 vLLM이 HF 모델 ID 마지막 segment를 자동으로 `served_model_name` 으로 사용한다.
-> 정확한 이름은 `GET /v1/models` 응답으로 확인.
+호출 예제·SDK 통합·파라미터 표는 [`../STT_API_GUIDE.md`](../STT_API_GUIDE.md) 참조.
 
 ---
 
 ## ⚠️ 운영 주의
 
-### GPU 점유 충돌 (LLM 인스턴스와 동시 운영 불가)
-
-현재 `llm-serving/vllm/`의 LLM 인스턴스(Gemma 4 26B-A4B)가 **L40S [0,1] TP=2**로 두 GPU를 모두 점유한다. STT를 띄우려면 LLM을 먼저 중지해야 한다:
+### 의존성 (Voxtral 필수)
 
 ```bash
-cd ../vllm && ./start.sh stop
-cd ../stt  && ./start.sh
+pip install --user soundfile soxr librosa
 ```
 
-> 동시 운영(LLM + STT)이 필요해지면:
-> - LLM을 GPU 0 단독(`gpus: [0]`, `tensor_parallel_size: 1`)으로 축소
-> - STT 두 모델은 GPU 1 공유 (각자 `gpu_memory_utilization: 0.30~0.40`)
-> - 또는 PRO 6000 96GB 운영 환경 셋업 후 분리
+미설치 시 vLLM 기동 직후 `EngineCore failed to start` + `ImportError: soundfile` 로 fail. 운영계 컨테이너 재배포 시 동일 실패 방지를 위해 `aws/requirements.txt` 추가 권장.
+
+### GPU 점유 충돌 (LLM 인스턴스와 동시 운영)
+
+- **voxtral** 은 GPU 2 단독 → LLM 인스턴스(`vllm/instances/{gemma,qwen}.yaml` GPU 0/1) 와 충돌 없음.
+- **qwen3_asr / whisper_v3** 는 GPU 0/1 사용 → LLM 운영 중에는 띄울 수 없음. 한국어 비교 PoC 시 LLM 먼저 stop:
+
+```bash
+cd ../vllm && ./start.sh down <인스턴스명>   # 운영 중인 LLM 인스턴스를 하나씩 명시 (예: gemma, qwen)
+cd ../stt  && ./start.sh up qwen3_asr        # 또는 whisper_v3
+```
 
 ### 모델 다운로드
 
-- 첫 실행 시 `/models/STT/<HF_ID>/` 경로로 자동 다운로드 (런처가 처리)
-- Qwen3-ASR-1.7B / Whisper-large-v3 둘 다 Apache 2.0 / MIT 라이선스라 HF_TOKEN 불필요
-- 모델 합계 ~6GB (Qwen3-ASR ~4GB + Whisper ~3GB BF16)
+- 첫 실행 시 launcher가 `/models/STT/<HF_ID>/` 로 자동 다운로드.
+- Voxtral / Qwen3-ASR / Whisper-large-v3 모두 Apache 2.0 또는 MIT 라이선스 → HF_TOKEN 불필요.
+- Voxtral 합계 ~17GB (consolidated.safetensors 8.5GB + model.safetensors 8.5GB).
+- 폐쇄망에선 외부망 PC → S3 → `/models/STT/` 사전 동기화. 절차는 [`../STT_OPS_GUIDE.md`](../STT_OPS_GUIDE.md) §8.2.
 
-### 첫 기동 시간
+### 첫 기동 시간 (재기동, 다운로드 제외)
 
-- 모델 로딩 + CUDA 그래프 캡처에 1~3분 소요 (모델 크기 작아 LLM 대비 빠름)
-- `./start.sh status`에서 UP 표시되면 추론 가능
+- weight 로딩 ~3초, KV 프로파일링 ~15초, CUDA graph capture ~1초, 게이트웨이 health probe ~10초.
+- `./start.sh status`에서 `[UP]`이면 추론 가능.
 
 ---
 
 ## 🔍 트러블슈팅
 
-### `Task transcription is not supported for model …`
+상세 표는 [`../STT_OPS_GUIDE.md`](../STT_OPS_GUIDE.md) §10. 자주 보는 항목:
 
-vLLM이 모델을 transcription task로 인식 못 하는 경우:
-- vLLM 버전 확인: `pip show vllm` (0.10+ 권장)
-- 모델 로드 로그 확인: `tail -f logs/qwen3_asr.log` 에서 `model_executor` 초기화 단계 메시지 확인
-- 임시 우회: config의 `task: transcription` 라인을 제거하고 자동 감지에 맡김
-
-### OOM (CUDA out of memory)
-
-- `gpu_memory_utilization` 을 0.3~0.4로 낮춤
-- `max_num_seqs` 를 4 이하로 낮춤
-- 같은 GPU에 다른 프로세스가 살아있는지 `nvidia-smi`로 확인
-
-### 포트 충돌
-
-- 기본 포트(7170/7171)가 점유 중이면 config의 `port` 변경
-- 또는 기존 점유 프로세스 종료: `lsof -i :7170`
+| 증상 | 1차 조치 |
+|------|----------|
+| `ImportError: soundfile` 로 EngineCore 실패 | `pip install --user soundfile soxr librosa` |
+| `[STARTING]` 만 1분 이상 지속 | `tail -f logs/vllm_voxtral.log` 로 cudagraph capture 단계 확인 |
+| 게이트웨이 ready 0/1 | 백엔드 voxtral 의 `/health` 가 200인지 확인. 미응답이면 `[STALE]` 정리 후 재기동 |
+| GPU OOM | `instances/voxtral.yaml` 의 `gpu_memory_utilization` 0.30~0.35 |
+| 5017 → 백엔드 라우팅 안 됨 | `gateways/5017.yaml` 의 `discover_from` 과 인스턴스의 `gateway_port` 일치 확인 |
 
 ---
 
 ## 📋 다음 단계 (PoC)
 
-- [ ] **한국어 테스트 셋 준비** (자체 데이터 또는 Zeroth-Korean / FLEURS Korean / KsponSpeech 일부)
+- [ ] **한국어 테스트 셋 준비** (Zeroth-Korean / FLEURS Korean / KsponSpeech 일부)
 - [ ] **`test_stt.py` 작성** — WER / RTF / latency / 정성 평가 (고유명사·숫자·전문용어)
-- [ ] **두 모델 한국어 비교 결과 정리** (`MODEL_STUDY.md` 부록)
-- [ ] **게이트웨이 통합** — vLLM 게이트웨이를 transcription 엔드포인트까지 라우팅하도록 확장 (모델별 단일 엔드포인트 노출)
-- [ ] **`STT_OPS_GUIDE.md`** 작성 (PoC 결과 반영)
+- [ ] **세 모델 한국어 비교 결과 정리** (`MODEL_STUDY.md` 부록)
+- [ ] **동시 N 세션 운영 전환** — `gpu_memory_utilization`/`max_num_seqs`/`max_inflight_requests` 함께 상향
