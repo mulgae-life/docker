@@ -23,7 +23,8 @@
 ```bash
 aws s3 sync /workspace/docker/llm-serving/ s3://hgi-ai-res/hjjo/llm-serving/ \
     --exclude "*/logs/*" --exclude "*/__pycache__/*" \
-    --exclude "*/.vllm_serve_*" --exclude "*/samples/*"
+    --exclude "*/.vllm_serve_*" --exclude "*/samples/*" \
+    --exclude "*/.archive/*"
 ```
 
 > `logs/`, `__pycache__/`, 런처 임시 config(`.vllm_serve_*`)는 런타임 산출물이라 제외.
@@ -95,7 +96,8 @@ grep -B1 -A20 "FAIL " logs/test_20260430_144909.log     # 실패만 추출
 cd /workspace/docker
 aws s3 sync ./llm-serving/ s3://hgi-ai-res/hjjo/llm-serving/ \
     --exclude "*/logs/*" --exclude "*/__pycache__/*" \
-    --exclude "*/.vllm_serve_*" --exclude "*/samples/*"
+    --exclude "*/.vllm_serve_*" --exclude "*/samples/*" \
+    --exclude "*/.archive/*"
 
 # (운영계) 재다운로드 + 재시작
 cd /workspace/

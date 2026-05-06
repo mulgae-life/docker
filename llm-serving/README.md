@@ -21,7 +21,7 @@ LLM 서빙 프레임워크 운영 구성 모음. 서버 인프라(EC2/Docker)와
 |------|------|
 | [`VLLM_API_GUIDE.md`](VLLM_API_GUIDE.md) | **사용자용** API 가이드 (호출 예시 · 파라미터 · `.env` 통합) |
 | [`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md) | **운영자용** 가이드 (서버 기동 · 모델 교체 · 트러블슈팅 · QA) |
-| [`vllm/start.sh`](vllm/start.sh) | 빠른 기동 스크립트 (`up [name]` / `down [name]` / `status`) |
+| [`vllm/start.sh`](vllm/start.sh) | 빠른 기동 스크립트 (`up [name]` / `down <name>` / `restart <name>` / `status` — down/restart는 이름 명시 필수) |
 | [`vllm/vllm_server_launcher.py`](vllm/vllm_server_launcher.py) | vLLM 서버 런처 (인스턴스 yaml `-c` 인자 수신) |
 | [`vllm/vllm_gateway.py`](vllm/vllm_gateway.py) | OpenAI 호환 게이트웨이 (자동 디스커버리 LB + 대기열 기반 과부하 차단) |
 | [`vllm/instances/`](vllm/instances/) | **인스턴스 단위 yaml** (`<name>.yaml` 1개 = vLLM 프로세스 1대). `gateway_port` 메타 + 모델/포트/GPU |
