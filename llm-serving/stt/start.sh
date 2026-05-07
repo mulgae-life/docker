@@ -15,16 +15,20 @@
 # /v1/audio/transcriptions(POST) 와 /v1/realtime(WebSocket) 라우트를 제공한다.
 #
 # 사용법 ([name]은 인스턴스/게이트웨이 yaml 파일명에서 자동 감지):
-#   ./start.sh up                # 전체 인스턴스 + 모든 게이트웨이 기동
+#   ./start.sh up                # 인자 없음 → 전체 적용 confirm 프롬프트 [y/N]
+#   ./start.sh up all            # 전체 인스턴스 + 모든 게이트웨이 기동 (확인 없이)
 #   ./start.sh up voxtral        # instances/voxtral.yaml 단독 기동 (게이트웨이 미터치)
 #   ./start.sh up 5017           # gateways/5017.yaml 단독 기동 (인스턴스 미터치)
-#   ./start.sh down voxtral      # instances/voxtral.yaml 단독 중지 (※ 이름 명시 필수)
-#   ./start.sh down 5017         # gateways/5017.yaml 단독 중지 (※ 이름 명시 필수)
+#   ./start.sh down              # 인자 없음 → 전체 중지 confirm 프롬프트 [y/N]
+#   ./start.sh down all          # 모든 인스턴스 + 게이트웨이 중지 (확인 없이)
+#   ./start.sh down voxtral      # instances/voxtral.yaml 단독 중지
+#   ./start.sh down 5017         # gateways/5017.yaml 단독 중지
 #   ./start.sh status            # 상태 확인
-#   ./start.sh restart <name>    # 재시작 (※ 이름 명시 필수, 내부적으로 down→up)
+#   ./start.sh restart           # 인자 없음 → 전체 재시작 confirm 프롬프트 [y/N]
+#   ./start.sh restart <name>    # 단일 대상 재시작 (내부적으로 down→up)
 #
-# 안전 정책: down/restart는 인자 없이 호출되면 거부된다 (다른 모델/게이트웨이 영향 방지).
-# 전체 중지가 필요하면 인스턴스/게이트웨이를 하나씩 명시적으로 호출한다.
+# 안전 정책: 무인자 호출은 [y/N] 기본 No로 묻는다 (사고 방지).
+# 비대화 환경(파이프/cron)에서는 'all' 또는 이름 명시 필수 (prompt 띄울 곳이 없으므로 거부).
 #
 # 라우팅 규칙:
 #   [name]이 instances/<name>.yaml로 존재 → 인스턴스 명령
@@ -37,7 +41,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTANCES_DIR="$SCRIPT_DIR/instances"
 GATEWAYS_DIR="$SCRIPT_DIR/gateways"
 LOG_DIR="$SCRIPT_DIR/logs"
@@ -154,7 +158,7 @@ list_gateway_yamls() {
 # 매칭 실패 시 stderr 에러 메시지 + return 1.
 detect_target_kind() {
     local target="$1"
-    if [ -z "$target" ]; then
+    if [ -z "$target" ] || [ "$target" = "all" ]; then
         echo "all"; return 0
     fi
     local inst_path="$INSTANCES_DIR/${target}.yaml"
@@ -173,6 +177,35 @@ detect_target_kind() {
     echo "  인스턴스: $(ls "$INSTANCES_DIR"/*.yaml 2>/dev/null | xargs -n1 basename | sed 's/\.yaml$//' | tr '\n' ' ')" >&2
     echo "  게이트웨이: $(ls "$GATEWAYS_DIR"/*.yaml 2>/dev/null | xargs -n1 basename | sed 's/\.yaml$//' | tr '\n' ' ')" >&2
     return 1
+}
+
+# 무인자 호출 시 사용자에게 [y/N]로 전체 적용 여부를 묻고 RESOLVED_TARGET을 결정.
+# - target 명시(이름/포트/'all') → 그대로 통과 (prompt 없음)
+# - 무인자 + tty → confirm 프롬프트, y면 RESOLVED_TARGET="all", 아니면 즉시 종료
+# - 무인자 + non-tty(파이프/cron) → prompt 띄울 곳이 없으므로 사고 방지 차원에서 exit 1
+#
+# subshell 캡처(target=$(...))를 쓰면 helper 안 exit가 caller까지 종료시키지 못해
+# "사용자가 N으로 거부했는데 caller가 빈 target으로 'all' 처리하는" 사고가 난다.
+# → 전역 변수에 결과를 적고, helper가 직접 exit 0/1로 전체 스크립트 흐름을 끊는다.
+RESOLVED_TARGET=""
+resolve_target_or_confirm() {
+    local target="${1:-}"
+    local action="$2"
+    if [ -n "$target" ]; then
+        RESOLVED_TARGET="$target"
+        return 0
+    fi
+    if [ ! -t 0 ]; then
+        echo "ERROR: 대상 미지정. 비대화 환경에서는 './start.sh $action all' 또는 이름 명시 필요." >&2
+        exit 1
+    fi
+    local ans=""
+    read -r -p "전체 인스턴스+게이트웨이를 '$action' 하시겠습니까? [y/N]: " ans
+    if [[ ! "$ans" =~ ^[Yy]$ ]]; then
+        echo "취소됨." >&2
+        exit 0
+    fi
+    RESOLVED_TARGET="all"
 }
 
 # ── 명령 구현 ─────────────────────────────────────────
@@ -314,7 +347,8 @@ stop_gateway() {
 }
 
 cmd_up() {
-    local target="${1:-}"
+    resolve_target_or_confirm "${1:-}" "up"
+    local target="$RESOLVED_TARGET"
     local kind
     kind=$(detect_target_kind "$target") || exit 1
 
@@ -381,23 +415,28 @@ cmd_up() {
 }
 
 cmd_down() {
-    # down 명령은 다른 모델/게이트웨이 운영에 영향이 가지 않도록 yaml 이름을 명시적으로 요구한다.
-    # (인자 없는 전체 중지는 운영 중 다른 인스턴스를 실수로 stop시키는 사고 방지를 위해 폐기.)
-    local target="${1:-}"
-    if [ -z "$target" ]; then
-        echo "ERROR: down 명령은 인스턴스 또는 게이트웨이 이름이 필수입니다 (전체 중지 자동화는 폐기됨)." >&2
-        echo "  ./start.sh down <인스턴스명>   # 예: ./start.sh down voxtral" >&2
-        echo "  ./start.sh down <게이트웨이명> # 예: ./start.sh down 5017" >&2
-        echo "" >&2
-        echo "  사용 가능한 인스턴스: $(ls "$INSTANCES_DIR"/*.yaml 2>/dev/null | xargs -n1 basename | sed 's/\.yaml$//' | tr '\n' ' ')" >&2
-        echo "  사용 가능한 게이트웨이: $(ls "$GATEWAYS_DIR"/*.yaml 2>/dev/null | xargs -n1 basename | sed 's/\.yaml$//' | tr '\n' ' ')" >&2
-        exit 1
-    fi
-
+    # 무인자 → confirm 프롬프트로 전체 중지 의사 확인. 'all' 또는 이름 명시는 prompt 없이 진행.
+    # (다른 모델/게이트웨이 운영에 영향이 가지 않도록 무인자는 안전쪽 [y/N] 기본 No.)
+    resolve_target_or_confirm "${1:-}" "down"
+    local target="$RESOLVED_TARGET"
     local kind
     kind=$(detect_target_kind "$target") || exit 1
 
     case "$kind" in
+        all)
+            echo "═══ STT 클러스터 전체 중지 ═══"
+            echo ""
+            # 게이트웨이 먼저 정리해 신규 요청 유입을 차단한 뒤 인스턴스를 종료한다.
+            while IFS= read -r yaml_path; do
+                [ -z "$yaml_path" ] && continue
+                stop_gateway "$yaml_path"
+            done < <(list_gateway_yamls)
+            echo ""
+            while IFS= read -r yaml_path; do
+                [ -z "$yaml_path" ] && continue
+                stop_instance "$yaml_path"
+            done < <(list_instance_yamls)
+            ;;
         instance)
             echo "═══ 인스턴스 단독 중지: $target (게이트웨이 미터치) ═══"
             echo ""
@@ -473,7 +512,10 @@ except Exception:
 }
 
 cmd_restart() {
-    local target="${1:-}"
+    # 여기서 prompt를 한 번만 띄우고, 결정된 target('all' 또는 이름)을 cmd_down/cmd_up에 명시 전달.
+    # 그러면 두 함수의 resolve_target_or_confirm은 인자 명시 분기로 빠져 prompt를 다시 띄우지 않는다.
+    resolve_target_or_confirm "${1:-}" "restart"
+    local target="$RESOLVED_TARGET"
     # cmd_down 내부에서 stop_instance/stop_gateway가 종료 폴링까지 보장하므로 추가 sleep 불필요.
     cmd_down "$target"
     echo ""
@@ -487,6 +529,6 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         down|stop)    shift || true; cmd_down "${1:-}" ;;
         status)       cmd_status ;;
         restart)      shift || true; cmd_restart "${1:-}" ;;
-        *)            echo "사용법: $0 {up [name] | down <name> | restart <name> | status}"; exit 1 ;;
+        *)            echo "사용법: $0 {up [name|all] | down|stop [name|all] | restart [name|all] | status}"; exit 1 ;;
     esac
 fi

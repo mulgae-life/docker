@@ -15,7 +15,8 @@
 #
 # 사용법:
 #   ./start.sh up voxtral                                   # 본 인스턴스만 단독 기동
-#   ./start.sh up                                           # 전체 STT 클러스터 (인스턴스+게이트웨이)
+#   ./start.sh up all                                       # 전체 STT 클러스터 (인스턴스+게이트웨이)
+#   ./start.sh up                                           # 동일하지만 [y/N] 전체 적용 confirm 프롬프트
 #   python ../vllm/vllm_server_launcher.py \                # 직접 실행
 #       -c instances/voxtral.yaml -g 2
 #

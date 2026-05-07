@@ -11,7 +11,8 @@ start.sh에서 호출되며, 직접 실행도 가능.
 
 사용법:
     # start.sh를 통한 실행 (권장)
-    ./start.sh up                       # 전체 인스턴스 + 게이트웨이 기동
+    ./start.sh up all                   # 전체 인스턴스 + 게이트웨이 기동 (확인 없이)
+    ./start.sh up                       # [y/N] 전체 적용 confirm 프롬프트
     ./start.sh up gemma                 # 단일 인스턴스 (instances/gemma.yaml)
 
     # 직접 실행

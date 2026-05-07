@@ -94,14 +94,18 @@ chatbot-poc (.env)
 ```bash
 cd /workspace/llm-serving/vllm
 
-./start.sh up                # 전체 인스턴스 + 게이트웨이 기동
+./start.sh up                # 인자 없음 → 전체 적용 confirm 프롬프트 [y/N]
+./start.sh up all            # 전체 인스턴스 + 게이트웨이 기동 (확인 없이)
 ./start.sh up <name>         # 단독 기동 (자동 라우팅 — 아래 표 참조)
-./start.sh down <name>       # 단독 중지 (※ 이름 명시 필수)
+./start.sh down              # 인자 없음 → 전체 중지 confirm 프롬프트 [y/N]
+./start.sh down all          # 모든 인스턴스 + 게이트웨이 중지 (확인 없이)
+./start.sh down <name>       # 단독 중지
 ./start.sh status            # 상태 확인
-./start.sh restart <name>    # 재시작 (※ 이름 명시 필수, 내부적으로 down→up)
+./start.sh restart           # 인자 없음 → 전체 재시작 confirm 프롬프트 [y/N]
+./start.sh restart <name>    # 단일 대상 재시작 (내부적으로 down→up)
 ```
 
-> ⚠️ **안전 정책**: `down`/`restart`는 인자 없이 호출하면 거부된다 (다른 모델/게이트웨이를 실수로 stop시키는 사고 방지). 전체 중지가 필요하면 인스턴스/게이트웨이를 하나씩 명시해 호출한다.
+> ⚠️ **안전 정책**: 무인자 호출은 [y/N] 기본 No로 묻는다 (다른 모델/게이트웨이를 실수로 stop시키는 사고 방지). 자동화 스크립트/cron 등 비대화 환경에서는 prompt 띄울 곳이 없으므로 무인자 호출이 거부되며 `'all'` 또는 이름을 명시해야 한다.
 
 **`<name>` 자동 라우팅 규칙**
 
@@ -109,7 +113,8 @@ cd /workspace/llm-serving/vllm
 |--------------|-----------|------|
 | 모델명 (예: `gemma`, `qwen`) | `instances/<name>.yaml` | 인스턴스만 처리, 게이트웨이 미터치 |
 | 포트 숫자 (예: `5015`, `5016`) | `gateways/<name>.yaml` | 게이트웨이만 처리, 인스턴스 미터치 |
-| (생략, `up` 한정) | 전체 | 인스턴스 + 게이트웨이 모두 |
+| `all` (명시) | 전체 | 인스턴스 + 게이트웨이 모두 (확인 없이) |
+| 생략 (무인자) | 전체 | [y/N] 프롬프트 후 전체 — non-tty 환경은 거부 |
 | 매칭 없음 | — | 즉시 에러 + 인스턴스/게이트웨이 후보 목록 출력 |
 
 > 인스턴스 yaml은 모델명, 게이트웨이 yaml은 포트 숫자로 명명되어 충돌 가능성이 없습니다. 만일 충돌하면(`instances/X.yaml`과 `gateways/X.yaml` 동명) 에러로 멈춥니다.

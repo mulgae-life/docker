@@ -43,16 +43,20 @@ llm-serving/stt/
 ```bash
 cd llm-serving/stt
 
-./start.sh up                       # 전체 인스턴스 + 게이트웨이 기동
+./start.sh up                       # 인자 없음 → 전체 적용 confirm 프롬프트 [y/N]
+./start.sh up all                   # 전체 인스턴스 + 게이트웨이 기동 (확인 없이)
 ./start.sh up voxtral               # voxtral 단독 (게이트웨이 미터치)
 ./start.sh up 5017                  # 5017 게이트웨이 단독 (인스턴스 미터치)
 ./start.sh status                   # UP/DOWN/STARTING/STALE 표시
-./start.sh down voxtral             # voxtral 단독 중지 (※ 이름 명시 필수)
-./start.sh down 5017                # 5017 게이트웨이 단독 중지 (※ 이름 명시 필수)
-./start.sh restart <name>           # 재시작 (※ 이름 명시 필수)
+./start.sh down                     # 인자 없음 → 전체 중지 confirm 프롬프트 [y/N]
+./start.sh down all                 # 모든 인스턴스 + 게이트웨이 중지 (확인 없이)
+./start.sh down voxtral             # voxtral 단독 중지
+./start.sh down 5017                # 5017 게이트웨이 단독 중지
+./start.sh restart                  # 인자 없음 → 전체 재시작 confirm 프롬프트 [y/N]
+./start.sh restart <name>           # 단일 대상 재시작
 ```
 
-> ⚠️ `down`/`restart`는 인자 없이 호출하면 거부된다 (다른 모델/게이트웨이를 실수로 stop시키는 사고 방지).
+> ⚠️ 무인자 호출은 [y/N] 기본 No로 묻는다 (다른 모델/게이트웨이를 실수로 stop시키는 사고 방지). 비대화 환경(파이프/cron)에서는 `'all'` 또는 이름 명시 필수.
 
 상태 확인:
 
