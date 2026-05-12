@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-05-04 (STT Voxtral 페어 구조 도입 + 게이트웨이 5017 + 가이드 작성)
+last-updated: 2026-05-12 (Gemma 4 31B / Qwen 3.6 27B MTP 도입 + 런처 drafter 자동 다운로드)
 ---
 
 # 세션 상태
@@ -27,6 +27,7 @@ last-updated: 2026-05-04 (STT Voxtral 페어 구조 도입 + 게이트웨이 501
 | P1 | **5015 Gemma 운영 프로파일 확정**: 현재 라이브 게이트웨이는 `max_inflight_requests=20`, `max_queue_size=20`으로 동작. 로컬 `gateways/5015.yaml`은 단일 인스턴스 안전값 `2/18`에 운영 후보 `20/40` 주석이 붙어 있으므로, 재시작 전 실제 GPU/`max_num_seqs` 기준으로 값 확정 필요. | Todo |
 | P1 | **5015 Gemma 장문 트래픽 검증**: 단문 smoke/동시 20/24 요청은 통과. 운영 전 `max_tokens >= 512` 또는 실제 평균 프롬프트/출력 길이로 latency, queue timeout, 429 비율 확인 필요. | Todo |
 | P1 | **vLLM Qwen 본체 :7080 이전**: `instances/qwen.yaml`의 `port: 7080`이 의도된 다음 운영 포트. 게이트웨이 :5016은 메모리상 :7071 보유 중이라 즉시 영향 없으나, 다음 게이트웨이 재기동 시 yaml 기준(:7080)으로 디스커버리하므로 그 시점 전에 vLLM 본체를 :7080으로 옮겨야 정합. | Todo |
+| P1 | **Gemma 4 31B / Qwen 3.6 27B MTP 실기동 검증**: yaml/런처 준비 완료(2026-05-12). 진입 전 ① GPU 0(prd-gemma 26B-A4B)·GPU 1(qwen 35B-A3B) prd 인스턴스 down ② vLLM 0.19.0+ 확인(`gemma4_assistant` model_type 인식) ③ 외부망 가능 환경에서 첫 기동(런처가 `gemma-4-31B-it-assistant` 자동 다운로드) ④ acceptance/TPOT/throughput 사내 벤치 — `slm_research/mtp.md` §5 워크로드별 권장 참고. 기존 운영(26B-A4B / 35B-A3B-FP8) 교체 여부 별도 결정. | Todo |
 | P1 | `llm-serving/sglang/` 디렉토리 골격 (운영 가이드 + 런처 + 설정 + 테스트) | Todo |
 | P1 | **`llm-serving/stt/` 한국어 정성 비교 (PoC 잔여)**: Voxtral-Mini-4B-Realtime(:5017 운영) + Qwen3-ASR-1.7B(:7170, LLM stop 후) + Whisper-large-v3(:7171, LLM stop 후) 한국어 벤치. `test_stt.py`(WER/RTF/latency/정성평가) 작성 + 결과 정리(`MODEL_STUDY.md` 부록). | Todo (인프라/메인 운영 ✅, 비교 모델 벤치 대기) |
 | P2 | **STT 동시 N 세션 운영 전환 (현재 단일 PoC)**: `instances/voxtral.yaml`의 `gpu_memory_utilization 0.35 → 0.40~0.50`, `max_num_seqs 1 → 2~4`, `gateways/5017.yaml`의 `max_inflight_requests/max_queue_size` 동기 상향. 동시 stream 목표 결정 후 진행. | Todo |
@@ -43,6 +44,40 @@ last-updated: 2026-05-04 (STT Voxtral 페어 구조 도입 + 게이트웨이 501
 ---
 
 ## 최근 세션
+
+### 2026-05-12 (Gemma 4 31B / Qwen 3.6 27B MTP 도입 + 런처 drafter 자동 다운로드)
+
+#### 세션 목표
+- 2026-05-05 공개된 Gemma 4 external drafter MTP와 Qwen 3.6 native MTP 비교 정리 (`slm_research/mtp.md`, 70f7b57 커밋 분량 포함).
+- 운영 yaml(`instances/gemma.yaml`, `instances/qwen.yaml`)에 MTP 설정 반영 — GPU 0/1 각 1장 L40S 단일 배치.
+- 런처가 `speculative_config.model` (external drafter)도 메인 모델처럼 없으면 자동 다운로드하도록 일반화.
+
+#### 변경 파일
+| 파일 | 변경 유형 | 요약 |
+|------|----------|------|
+| `llm-serving/vllm/vllm_server_launcher.py` | 기능 추가 | `_resolve_model_path(model_id, download_dir, *, kind)` helper 추출 (download_model 다음 위치). `main()`의 모델 경로 해석 블록을 helper 호출로 교체 + `speculative_config.model` 분기 신설 (dict in-place 절대경로 치환 → `_write_vllm_config`의 yaml.dump로 자식 vLLM에 전달, OFFLINE 환경에서도 로컬 로드). 절대경로 sys.exit·메시지·로그 텍스트 동치성 보존. |
+| `llm-serving/vllm/instances/gemma.yaml` | 모델 교체 + MTP | 26B-A4B-it FP8 → **31B-it FP8** (GPU 0). `max_model_len 65536 → 8192` (31B FP8 ~29GB + drafter 0.5B BF16 → KV 여유 ~12GB). 신규 섹션 `Speculative Decoding (MTP)` — external drafter `google/gemma-4-31B-it-assistant` + `num_speculative_tokens: 4`. 헤더 모델명 갱신. |
+| `llm-serving/vllm/instances/qwen.yaml` | 모델 교체 + MTP | 35B-A3B-FP8 → **27B-FP8** (GPU 1, Dense). `max_model_len` 보수 조정. 신규 섹션 `Speculative Decoding (MTP)` — native MTP `method: qwen3_next_mtp` + `num_speculative_tokens: 1` (drafter 모델 없음, 메인 모델 자기 자신의 sequential MTP head). 헤더 모델명 갱신. |
+
+#### 결정 사항
+- **drafter 자동 다운로드 위치**: 런처에 `_resolve_model_path` helper로 추출 — 호출 2회(메인 model + spec_cfg.model)라 추상화 정당. 향후 EAGLE/Medusa 같은 추가 external drafter 키에도 재사용 가능. inline 반복 대비 diff 약간 증가지만 DRY가 우선.
+- **OFFLINE 환경변수 의미 재정리**: `HF_HUB_OFFLINE=1`은 "오프라인용 모델 다운로드"가 아니라 "Hub 호출 금지(로컬 캐시만)". 런처는 자신이 다운로드할 때만 일시 해제(`os.environ.pop`)하고, vLLM subprocess env에는 강제 주입 — drafter도 사전에 절대경로로 받아둬야 OFFLINE 자식이 정상 로드. dict의 model 키를 in-place 절대경로 치환하는 방식 채택.
+- **31B + drafter 단일 L40S 메모리**: BF16 31B 62GB는 단일 GPU 불가 → FP8 on-the-fly 양자화로 ~29GB. drafter 0.5B BF16 추가 ~1GB. `gpu_memory_utilization=0.85` 기준 KV ~12GB → `max_model_len 8192` 보수 시작값. recipes 권장 `num_speculative_tokens 4–8` 중 하단 채택.
+- **31B-it-assistant 라이선스**: drafter는 Apache 2.0 (메인 Gemma 라이선스와 별개) — HF 모델 카드 4종 직접 fetch로 검증.
+
+#### 검증
+| 항목 | 결과 |
+|------|------|
+| `yaml.safe_load`로 gemma/qwen yaml 파싱 | 정상, `speculative_config` dict 정상 매핑 |
+| `python ast.parse(launcher)` | syntax OK |
+| `_resolve_model_path` dry-run 5분기 | 메인(있음) skip / drafter(없음) → `download_model` 호출 / Qwen 27B(있음) skip / 빈 값 / `download_dir` 없음 — 모두 의도대로 |
+| `speculative_config.method`만 있는 qwen.yaml | `spec_cfg.get("model")` falsy → 분기 자동 스킵 (회귀 없음) |
+| `instances/prd-gemma.yaml`처럼 spec_config 자체 없는 인스턴스 | `isinstance(None, dict)` False → 스킵 (회귀 없음) |
+
+#### 현재 상태
+- yaml 변경 + 런처 패치 완료. **아직 실 기동 안 함** — 사전 작업 필요: ① GPU 0/1 점유 prd 인스턴스 down ② vLLM 0.19.0+ 확인 (`gemma4_assistant` model_type 인식) ③ 외부망 접근 가능한 환경에서 첫 기동 (런처가 drafter 자동 받음, HF 캐시 후 OFFLINE에서도 정상).
+
+---
 
 ### 2026-05-04 (STT Voxtral 페어 구조 도입 + 게이트웨이 5017 + 가이드 작성)
 

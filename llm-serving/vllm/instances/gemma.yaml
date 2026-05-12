@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════
-# vLLM 인스턴스 설정 (v0.19.0+) — google/gemma-4-26B-A4B-it
+# vLLM 인스턴스 설정 (v0.19.0+) — google/gemma-4-31B-it (+ MTP drafter)
 # ═══════════════════════════════════════════════════════
 #
 # 대상 GPU: L40S 46GB × 1장 (GPU 0)
@@ -44,7 +44,7 @@ gateway_port: 5015
 # 폐쇄망에서는 반드시 런처를 사용하거나 오프라인 환경변수를 설정할 것.
 #   런처: 자동 오프라인 모드 + download_dir 경로 조합
 #   네이티브: HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 vllm serve --config ...
-model: google/gemma-4-26B-A4B-it
+model: google/gemma-4-31B-it
 
 # 모델 로컬 저장 루트 디렉토리.
 # {download_dir}/{model} 경로에서 모델을 찾음.
@@ -130,7 +130,7 @@ gpu_memory_utilization: 0.85
 # 2026-04-03 실측 로그 기준으로 엔진이 추정한 상한은 약 46464였고,
 # 기본값은 안정 기동 우선으로 12288을 유지한다.
 # 긴 컨텍스트 실험이 필요하면 CLI override 또는 별도 실험용 config를 사용한다.
-max_model_len: 65536 # 12288, 65536, 262144, 170000
+max_model_len: 8192 # 8192, 12288, 65536, 262144 (31B FP8 + drafter 0.5B BF16 → KV 여유 ~12GB)
 
 # 동시 처리 시퀀스 수.
 # 1: 단일 요청 순차 처리 (메모리 절약, 지연 최소).
@@ -138,14 +138,14 @@ max_model_len: 65536 # 12288, 65536, 262144, 170000
 # 멀티모달 모델에서는 encoder cache 용량에 맞춰 제한 필요.
 # max_num_batched_tokens=98304 기준 이미지 1장 ≈ 16384 tokens → 약 5~6장 수용.
 # encoder cache 초과 시 eviction race로 assertion 크래시 발생 가능.
-max_num_seqs: 2
+max_num_seqs: 1
 
 # 한 번에 배치 처리할 최대 토큰 수.
 # 2의 배수 권장. max_model_len보다 작아도 됨 (chunked prefill이 자동 분할).
 # 멀티모달 모델에서는 encoder_cache_size와 동일값으로 복제됨 (scheduler.py:235).
 # 이미지 1장 ≈ 16384 encoder tokens 기준 98304 → 약 6장 캐시 수용.
 # 동시 요청 N장 처리를 위해서는 (N × 이미지 토큰) + 여유 마진으로 산정.
-max_num_batched_tokens: 16384 # 8192, 16384, 32768, 81920, 98304, 163840
+max_num_batched_tokens: 8192 # 8192, 16384, 32768, 81920, 98304, 163840
 
 # 재현 가능한 추론을 위한 전역 시드.
 seed: 42
@@ -202,6 +202,24 @@ kv_cache_dtype: auto
 #     image: 0
 #     audio: 0
 language_model_only: false
+
+
+# ── Speculative Decoding (MTP) ───────────────────────
+#
+# Gemma 4는 외부 drafter(*-it-assistant) 기반 MTP를 지원한다 (2026-05-05 공개).
+# drafter는 target과 input embedding 테이블 + 마지막 layer activation을 공유하는
+# specialized draft model로, 일반 draft model이 아니다.
+#   31B-it-assistant: 0.5B BF16 (~1GB), Apache 2.0, 별도 체크포인트 다운로드 필요
+#   배치 경로: /models/LLM/google/gemma-4-31B-it-assistant
+# vLLM 0.19.0 미만은 assistant 모델을 일반 draft model로 오인하여 init 실패한다
+# (vLLM MTP 페이지: "Gemma 4 assistants are not generic draft models").
+# 사이즈별 권장 num_speculative_tokens (vLLM Gemma 4 recipes):
+#   E2B: 2 / E4B: 4 / 26B-A4B: 4 / 31B: 4–8 (느린 target일수록 큰 값)
+# 워크로드 의존성이 크다 — 동시성 16+ 배치는 큰 이득, prefill-bound는 회귀 가능.
+# acceptance / 정량 speedup 수치는 공식 미공개 ("최대 3×" 헤드라인만).
+speculative_config:
+  model: google/gemma-4-31B-it-assistant
+  num_speculative_tokens: 4  # 31B 권장 4–8, 보수 시작값
 
 
 # ── 멀티모달 최적화 ───────────────────────────────────

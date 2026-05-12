@@ -106,6 +106,37 @@ def download_model(model_id: str, local_dir: str) -> None:
     logger.info("모델 다운로드 완료: %s", local_dir)
 
 
+def _resolve_model_path(model_id: str, download_dir: str, *, kind: str = "모델") -> str:
+    """HF ID를 download_dir 하위 로컬 절대경로로 해석한다 (없으면 자동 다운로드).
+
+    - 빈 값/None: 그대로 반환
+    - 절대경로: 디렉토리 존재 검증만 수행 (없으면 sys.exit)
+    - HF ID + download_dir 있음: {download_dir}/{model_id} 경로 사용, 없으면 받음
+    - HF ID + download_dir 없음: 변환 없이 그대로 반환 (vLLM이 HF Hub에서 해석)
+    kind는 로그/에러 라벨 ("모델", "drafter" 등).
+    """
+    if not model_id:
+        return model_id
+    if os.path.isabs(model_id):
+        if not os.path.isdir(model_id):
+            logger.error(
+                "%s 경로가 존재하지 않습니다: %s\n"
+                "config에서 HF 모델 ID 형식(예: google/gemma-4-31B-it)을 사용하세요.",
+                kind, model_id,
+            )
+            sys.exit(1)
+        return model_id
+    if not download_dir:
+        return model_id
+    local_path = os.path.join(download_dir, model_id)
+    if os.path.isdir(local_path):
+        logger.info("%s 경로 해석: %s → %s", kind, model_id, local_path)
+    else:
+        logger.info("로컬 %s 없음, 자동 다운로드: %s", kind, local_path)
+        download_model(model_id, local_path)
+    return local_path
+
+
 def _write_vllm_config(config: dict) -> str:
     """런처 전용 키를 제거한 vllm serve용 임시 config 파일을 생성한다."""
     vllm_only = {k: v for k, v in config.items() if k not in _LAUNCHER_KEYS}
@@ -402,22 +433,19 @@ def main():
     # ── 모델 경로 해석 ──
     model = args.model or config.get("model", "")
     download_dir = config.get("download_dir", "")
+    model = _resolve_model_path(model, download_dir, kind="모델")
 
-    if model and not os.path.isabs(model) and download_dir:
-        local_path = os.path.join(download_dir, model)
-        if os.path.isdir(local_path):
-            logger.info("모델 경로 해석: %s → %s", model, local_path)
-        else:
-            logger.info("로컬 모델 없음, 자동 다운로드: %s", local_path)
-            download_model(model, local_path)
-        model = local_path
-    elif model and os.path.isabs(model) and not os.path.isdir(model):
-        logger.error(
-            "모델 경로가 존재하지 않습니다: %s\n"
-            "config에서 HF 모델 ID 형식(예: google/gemma-4-31B-it)을 사용하세요.",
-            model,
+    # ── speculative_config.model 경로 해석 (drafter 자동 다운로드) ──
+    # external drafter 기반 MTP(예: Gemma 4 *-it-assistant) 사용 시, dict 안의
+    # model 키도 메인 모델과 동일하게 download_dir 하위로 해석한다.
+    # 절대경로로 변환되어 vLLM에 전달되므로 자식 프로세스의 HF_HUB_OFFLINE=1과
+    # 무관하게 로컬에서 로드된다.
+    # native MTP(method 키만 있는 Qwen 3.6 등)는 model 키가 없어 이 블록을 건너뛴다.
+    spec_cfg = config.get("speculative_config")
+    if isinstance(spec_cfg, dict) and spec_cfg.get("model"):
+        spec_cfg["model"] = _resolve_model_path(
+            spec_cfg["model"], download_dir, kind="drafter"
         )
-        sys.exit(1)
 
     if args.download_only:
         logger.info("다운로드 완료. 서버를 실행하지 않습니다.")

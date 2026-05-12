@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════
-# vLLM 인스턴스 설정 (v0.19.0+) — Qwen/Qwen3.6-35B-A3B-FP8
+# vLLM 인스턴스 설정 (v0.19.0+) — Qwen/Qwen3.6-27B-FP8 (+ native MTP)
 # ═══════════════════════════════════════════════════════
 #
 # 대상 GPU: L40S 46GB × 1장 (GPU 1)
@@ -44,7 +44,7 @@ gateway_port: 5016
 # 폐쇄망에서는 반드시 런처를 사용하거나 오프라인 환경변수를 설정할 것.
 #   런처: 자동 오프라인 모드 + download_dir 경로 조합
 #   네이티브: HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 vllm serve --config ...
-model: Qwen/Qwen3.6-35B-A3B-FP8
+model: Qwen/Qwen3.6-27B-FP8
 
 # 모델 로컬 저장 루트 디렉토리.
 # {download_dir}/{model} 경로에서 모델을 찾음.
@@ -118,7 +118,7 @@ tensor_parallel_size: 1
 # 모델 가중치가 클수록 KV 캐시 여유를 위해 util을 상향, vision encoder 사용량이
 # 클수록 외부 여유를 위해 하향한다.
 # 운영 권장 범위: 0.85 (멀티모달 비중 큼) ~ 0.92 (모델 가중치 큼).
-gpu_memory_utilization: 0.92
+gpu_memory_utilization: 0.85
 
 
 # ── 추론 ──────────────────────────────────────────────
@@ -130,7 +130,7 @@ gpu_memory_utilization: 0.92
 # 2026-04-03 실측 로그 기준으로 엔진이 추정한 상한은 약 46464였고,
 # 기본값은 안정 기동 우선으로 12288을 유지한다.
 # 긴 컨텍스트 실험이 필요하면 CLI override 또는 별도 실험용 config를 사용한다.
-max_model_len: 65536 # 12288, 65536, 262144, 170000
+max_model_len: 8192 # 12288, 16384, 65536, 262144 (27B-FP8 + native MTP → KV 여유 ~15GB)
 
 # 동시 처리 시퀀스 수.
 # 1: 단일 요청 순차 처리 (메모리 절약, 지연 최소).
@@ -138,14 +138,14 @@ max_model_len: 65536 # 12288, 65536, 262144, 170000
 # 멀티모달 모델에서는 encoder cache 용량에 맞춰 제한 필요.
 # max_num_batched_tokens=98304 기준 이미지 1장 ≈ 16384 tokens → 약 5~6장 수용.
 # encoder cache 초과 시 eviction race로 assertion 크래시 발생 가능.
-max_num_seqs: 2
+max_num_seqs: 1
 
 # 한 번에 배치 처리할 최대 토큰 수.
 # 2의 배수 권장. max_model_len보다 작아도 됨 (chunked prefill이 자동 분할).
 # 멀티모달 모델에서는 encoder_cache_size와 동일값으로 복제됨 (scheduler.py:235).
 # 이미지 1장 ≈ 16384 encoder tokens 기준 98304 → 약 6장 캐시 수용.
 # 동시 요청 N장 처리를 위해서는 (N × 이미지 토큰) + 여유 마진으로 산정.
-max_num_batched_tokens: 16384 # 8192, 16384, 32768, 81920, 98304, 163840
+max_num_batched_tokens: 8192 # 8192, 16384, 32768, 81920, 98304, 163840
 
 # 재현 가능한 추론을 위한 전역 시드.
 seed: 42
@@ -202,6 +202,24 @@ kv_cache_dtype: auto
 #     image: 0
 #     audio: 0
 language_model_only: false
+
+
+# ── Speculative Decoding (MTP) ───────────────────────
+#
+# Qwen 3.6은 사전·사후 학습에 MTP가 포함된 native MTP 모델로,
+# 메인 모델 자기 자신의 sequential MTP head로 draft를 생성한다.
+# DeepSeek-V3 계열 sequential 구조이며 drafter 별도 체크포인트 다운로드 불필요.
+# method 문자열:
+#   "qwen3_next_mtp" — Qwen3.6 모델 카드 표기 (현재 사용)
+#   "mtp"            — vLLM recipes 표기 (동일 경로, 버전별 한쪽만 허용될 수 있음)
+# num_speculative_tokens는 1부터 시작해 acceptance rate · TPOT 모니터링 후 상향.
+# 알려진 이슈:
+#   #38182 — MTP 활성 시 prefix cache hit 92% → 71% 저하 (Open)
+#   #39323 — FA3 backend 회귀 (Open, nightly 수정) → FLASHINFER 백엔드 권장
+# 워크로드 의존성: 동시성 16+ 배치 +24% throughput, prefill-bound는 −7% 회귀.
+speculative_config:
+  method: qwen3_next_mtp
+  num_speculative_tokens: 1  # L40S 1장 보수 시작값
 
 
 # ── 멀티모달 최적화 ───────────────────────────────────
