@@ -1,38 +1,84 @@
 # ═══════════════════════════════════════════════════════
-# Qwen3-ASR-1.7B (vLLM transcription serve)
+# vLLM STT 인스턴스 설정 (v0.19.0+) — Qwen/Qwen3-ASR-1.7B
 # ═══════════════════════════════════════════════════════
 #
-# 대상 GPU: L40S 46GB × 1 (단독)
-# 엔드포인트: POST /v1/audio/transcriptions (OpenAI 호환)
+# 대상 GPU: L40S 46GB × 1장 (GPU 0)
+# 외부 노출 경로:
+#   비교 PoC 단독 인스턴스 — 게이트웨이 미터치, :7170 직접 호출.
+#   (gateway_port 키 주석 처리로 게이트웨이 discover_from에서 자동 제외)
+# 엔드포인트:
+#   - POST /v1/audio/transcriptions  (OpenAI Audio API)
+#
+# 역할: 한국어 정확도 비교 PoC (vs Whisper-large-v3). 30개 언어 + 22 중국 방언.
+# 모델 크기: 2B params (표기 1.7B, BF16)
 #
 # 사용법:
-#   ./start.sh                                              # 전체 STT 클러스터 기동
-#   python ../vllm/vllm_server_launcher.py \                 # 직접 실행
-#       -c configs/qwen3_asr.yaml -g 0 --port 7170
+#   ./start.sh up qwen3_asr                                  # 본 인스턴스만 단독 기동
+#   ./start.sh up all                                        # 전체 STT 클러스터 (인스턴스+게이트웨이)
+#   ./start.sh up                                            # 동일하지만 [y/N] 전체 적용 confirm 프롬프트
+#   python ../vllm/vllm_server_launcher.py \                 # 직접 실행 (게이트웨이 미터치)
+#       -c instances/qwen3_asr.yaml -g 0
+#
+# 모델카드 권장 (https://huggingface.co/Qwen/Qwen3-ASR-1.7B):
+#   vllm serve <model> --task transcription
+#   → task 키에 반영. env / compilation_config 별도 권장 없음.
 #
 # ※ 이 config는 vllm/vllm_server_launcher.py 가 그대로 소비한다.
-#    `gpus` / `download_dir` 키는 런처가 처리하고 vllm serve로는 전달되지 않는다.
+#    `gpus` / `download_dir` / `env` / `gateway_port` 키는 런처가 처리하고
+#    vllm serve로는 전달되지 않는다.
 # ═══════════════════════════════════════════════════════
+
+
+# ── 메타 (vLLM에는 전달되지 않는 게이트웨이 매칭용 키) ──
+#
+# 이 인스턴스가 소속될 게이트웨이 포트.
+# gateways/<port>.yaml 의 discover_from(../instances)이 본 yaml의 gateway_port를 보고
+# 자기 게이트웨이 포트와 일치하면 backends에 등록한다.
+# vllm_server_launcher.py:_LAUNCHER_KEYS 가 이 키를 vllm serve 인자에서 제외한다.
+# 비교 PoC 단독 인스턴스(qwen3_asr / whisper_v3)는 이 키를 주석 처리하여
+# 게이트웨이 미매칭으로 운영한다(직접 port 호출).
+# gateway_port: 5017
 
 
 # ── 모델 ──────────────────────────────────────────────
 # HF ID. 런처가 download_dir과 조합하여 로컬 경로로 자동 해석한다.
-# 미존재 시 snapshot_download로 자동 다운로드.
+# 미존재 시 snapshot_download로 자동 다운로드. Apache 2.0 → HF_TOKEN 불필요.
 model: Qwen/Qwen3-ASR-1.7B
 
-# STT/오디오 모델 전용 저장 루트 (LLM과 분리하여 디스크 관리 단순화)
+# STT/오디오 모델 전용 저장 루트 (LLM과 분리하여 디스크 관리 단순화).
 download_dir: /models/STT
 
 
+# ── 환경변수 (런처가 vllm 자식 프로세스에 export) ─────
+# vllm_server_launcher.py 가 _LAUNCHER_KEYS로 인식하여 vllm serve에는 전달하지 않고
+# subprocess.Popen 의 env에 머지한다.
+# 모델별 적용:
+#   voxtral    : VLLM_DISABLE_COMPILE_CACHE=1 (모델카드 권장, 첫 기동 안정성)
+#   qwen3_asr  : 미사용 (기본 동작)
+#   whisper_v3 : 미사용 (기본 동작)
+# env:
+#   VLLM_DISABLE_COMPILE_CACHE: "1"
+
+
 # ── 작업 유형 ─────────────────────────────────────────
-# vLLM은 모델 config로 task를 자동 감지하지만, ASR 계열은 transcription 명시가 안전.
-# transcription: /v1/audio/transcriptions 엔드포인트 활성화
+# vLLM은 모델 config로 task를 자동 감지하지만, ASR 계열은 명시가 안전한 경우가 있다.
+#   transcription : /v1/audio/transcriptions 엔드포인트 활성화
+#   미지정        : 자동 감지 (Voxtral-Realtime은 /v1/realtime 동시 노출 위해 미지정 권장)
+# 자동 감지 결과가 부정확하면 명시 후 재기동.
+# 모델별 적용:
+#   voxtral    : 미지정 (모델카드 권장 — /v1/realtime + transcription 동시 노출)
+#   qwen3_asr  : transcription
+#   whisper_v3 : transcription
 task: transcription
 
 
 # ── 서버 ──────────────────────────────────────────────
 host: 0.0.0.0
-port: 7170                       # STT 인스턴스 base. Whisper는 :7171
+# port = 내부 vLLM 포트 (게이트웨이 ↔ 인스턴스 사이의 hop). 외부 클라이언트는
+# stt/gateways/5017.yaml(:5017)으로 접속하고 게이트웨이가 본 포트로 forward한다.
+# 비교 PoC 인스턴스(gateway_port 미지정)는 이 포트를 직접 호출한다.
+# 7170은 STT 인스턴스 base. Whisper(:7171), Voxtral(:7172) 자리 다음. 사용 중이면 launcher가 자동 회피(+1).
+port: 7170
 uvicorn_log_level: info
 
 
@@ -41,17 +87,32 @@ uvicorn_log_level: info
 gpus: [0]
 tensor_parallel_size: 1
 
-# Qwen3-ASR-1.7B BF16 기준 가중치 ~4GB.
-# L40S 46GB × 0.5 = ~23GB → 가중치+KV cache 충분, 다른 프로세스/Whisper 비교 테스트용 여유 확보.
+# 가중치 + KV cache + cudagraph + 활성화 메모리 합산.
+# 모델별 실측 기준 (단일 세션 PoC):
+#   voxtral    : 0.35 (16.1 GiB) — weight 8.38 + KV ~4 + cudagraph + 외부 활성화 = 안정 영역
+#   qwen3_asr  : 0.50 (~23 GiB) — weight ~4 + KV 충분 + 비교 측정용 여유
+#   whisper_v3 : 0.20 (~9 GiB)  — weight ~3 + decoder context 448 token이라 KV 매우 작음
+# 동시 N 세션 운영 전환 시 0.40~0.50 (+max_num_seqs 동기 상향).
 gpu_memory_utilization: 0.50
 
 
 # ── 추론 ──────────────────────────────────────────────
-# ASR은 LLM 대비 짧은 컨텍스트. 보수적 8192.
-# 실측 후 모델카드의 권장값으로 조정.
+# 모델별 컨텍스트:
+#   voxtral    : 모델카드 기본 131072 (~3시간 오디오, 1 token ≈ 80ms).
+#                1시간 녹음 처리에 모델카드 최소 권장값은 45000.
+#                운영 시작은 보수적 32768 (≈ 43분), 장시간 워크로드 등장 시 상향.
+#   qwen3_asr  : ASR은 LLM 대비 짧은 컨텍스트. 보수적 8192.
+#   whisper_v3 : 모델 config(max_target_positions, 448 token) 자동 감지 → 미지정.
 max_model_len: 8192
 
-# 동시 처리 시퀀스 수.
+# 동시 처리 시퀀스 수 (continuous batching 상한).
+# vLLM은 N개를 batched parallel로 처리하지만, KV cache 슬롯이 부족하면
+# preemption(swap out)이 발생해 사실상 일부 순차화된다.
+# 모델별 PoC 기준:
+#   voxtral    : 1 (단일 세션 PoC)
+#   qwen3_asr  : 8
+#   whisper_v3 : 5 (decoder context 작아 더 많이 가능하지만 비교 측정 안정성 우선)
+# 동시 N 세션 운영 시 KV(=gpu_memory_utilization)와 함께 상향.
 max_num_seqs: 8
 
 # 활성화 dtype: 모델 config 자동 (BF16).
@@ -59,6 +120,18 @@ dtype: auto
 
 # 재현 가능한 추론.
 seed: 42
+
+
+# ── 컴파일 / 그래프 ───────────────────────────────────
+# Voxtral 모델카드 권장: PIECEWISE cudagraph 모드.
+# 첫 기동 시 cudagraph 캡처 단계의 안정성 우선 (env의 VLLM_DISABLE_COMPILE_CACHE=1과 짝).
+# vLLM은 이 dict를 CompilationConfig dataclass로 자동 변환한다.
+# 모델별 적용:
+#   voxtral    : PIECEWISE (모델카드 권장)
+#   qwen3_asr  : 미사용 (기본 동작)
+#   whisper_v3 : 미사용 (기본 동작)
+# compilation_config:
+#   cudagraph_mode: PIECEWISE
 
 
 # ── 로깅 ──────────────────────────────────────────────
