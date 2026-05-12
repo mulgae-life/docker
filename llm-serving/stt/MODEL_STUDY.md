@@ -148,6 +148,90 @@
 
 **한계**: 디아라이제이션·음성 출력 없음 — 순수 transcription만
 
+### 4.5 Whisper vs 한국어 특화 / 신모델 — 정확도 검증 (2026-05-12 추가)
+
+> "정확도 우선 + offline (실시간 X)" 의사결정용 본문 검증 결과. **WER ≠ CER**이므로 두 지표는 분리해서 봅니다. 한국어는 공식적으로 **CER 권고** (Whisper 공식 release [Discussion #1762](https://github.com/openai/whisper/discussions/1762)).
+
+#### 4.5.1 WER vs CER (한국어 평가 지표)
+
+- **WER (Word Error Rate)**: 단어 단위 오류율. 영어/유럽어 표준.
+- **CER (Character Error Rate)**: 글자 단위 오류율. 한국어/중국어/일본어 표준 (공백 표기가 모호한 언어).
+- 같은 모델/데이터셋이라도 한국어 WER는 CER보다 훨씬 큼 (단어 한 글자만 틀려도 단어 전체 오답 처리).
+- **본 문서의 모든 한국어 수치는 metric 명시 필수**.
+
+#### 4.5.2 한국어 STT 서비스/모델 정확도 비교 (rtzr 벤치)
+
+[Return Zero사 한국어 STT 벤치](https://github.com/rtzr/Awesome-Korean-Speech-Recognition) — 7개 한국어 데이터셋 (회의/상담/전화망/강의/KsponSpeech) 평균 CER:
+
+| 서비스 / 모델 | Avg CER | 비고 |
+|--------------|:-------:|------|
+| Return Zero VITO | 6.77% | 상용. 측정자=제작자 자기검증 한계 |
+| ETRI | 7.15% | 상용 |
+| Return Zero Whisper (자사 FT) | 7.73% | 상용 |
+| Naver ClovaSpeech | 7.96% | 상용 |
+| AWS Transcribe | 8.89% | 상용 |
+| Azure batch STT | 9.56% | 상용 |
+| **OpenAI Whisper (baseline)** | **11.34%** | 오픈 가중치 |
+| Google API v2 | 11.59% | 상용 |
+| Gemini 2.0 flash | 14.48% | API |
+| Deepgram (nova-2) | 21.18% | 상용 |
+
+→ **한국어 특화 상용 서비스는 Whisper 대비 30~40% 우수**. 단 폐쇄망/오픈 가중치 요구사항엔 부적합.
+
+#### 4.5.3 한국어 fine-tune Whisper 사례
+
+| 모델 | 데이터셋 | CER | 비교 (Whisper-large-v3 base) |
+|------|----------|:---:|:----------------------------:|
+| ENERZAi EZWhisper-Small (484MB) | KsponSpeech Eval-Other | ~6.45% | base 11.13% **대비 절반** |
+| ENERZAi EZWhisper-Small 1.58-bit (13MB) | KsponSpeech | base 3GB 능가 주장 | 230× 경량화 + 우위 |
+| ghost613/whisper-large-v3-turbo-korean | Zeroth-Korean test | 2.06% | 단, Zeroth는 낭독체 도메인 한정 |
+
+→ **한국어 fine-tune은 base CER을 절반까지 낮춤** (ENERZAi 실증). 별도 학습 트랙 필요.
+
+#### 4.5.4 Multilingual 신모델 (Qwen3-ASR / Voxtral)
+
+| 모델 | 데이터셋 | 한국어 수치 | 비교 baseline |
+|------|----------|:----------:|:-------------:|
+| Qwen3-ASR-1.7B | FLEURS Korean | CER 2.57 | Whisper-large-v3 **CER 2.07** (Qwen3-ASR 논문 Table A.2(b)) — Whisper 우위 |
+| Qwen3-ASR-1.7B | CommonVoice Korean | WER 5.88 | Whisper 직접 비교 없음 |
+| Qwen3-ASR-0.6B | FLEURS Korean | CER 3.72 | — |
+| Voxtral Mini Transcribe V2 (offline) | FLEURS Korean | WER 12.29 | Whisper **WER 14.30** (Voxtral 논문 Table 7) — Voxtral 우위 |
+| Voxtral Mini 4B Realtime (480ms) | FLEURS Korean | WER 15.74 | Whisper WER 14.30 — Whisper 우위 |
+| Voxtral Mini 4B Realtime (2400ms) | FLEURS Korean | WER 14.30 | 동률 |
+
+⚠️ **수치 해석 주의 (자료별 Whisper baseline 불일치)**:
+- Voxtral 논문 Whisper FLEURS Korean = **WER 14.30%**
+- Qwen3-ASR 논문 Whisper-large-v3 FLEURS Korean = **CER 2.07%**
+- 같은 데이터셋이지만 **metric 차이** (WER vs CER). 두 수치 직접 비교 불가.
+- 저자별 측정 방법론(디코딩 옵션, 텍스트 정규화)에 따라 다를 수 있음 → **자체 측정이 가장 신뢰 가능**.
+
+#### 4.5.5 Voxtral Transcribe V2는 공개 가중치 아님
+
+[Mistral 발표](https://mistral.ai/news/voxtral-transcribe-2)는 "13개 언어 한국어 포함 + offline 3시간"이지만, [mistralai HF 인덱스](https://huggingface.co/mistralai)에 등록된 Voxtral ASR 라인업에는 `Voxtral Transcribe V2`가 없음.
+
+- 공개된 라인업: `Voxtral-Mini-4B-Realtime-2602` (한국어 ✅), `Voxtral-Small-24B-2507` (한국어 ❌), `Voxtral-Mini-3B-2507` (한국어 ❌), `Voxtral-4B-TTS-2603` (TTS)
+- → **`Voxtral Transcribe V2`는 Mistral API 전용 클라우드 모델로 추정**. 폐쇄망/오픈 가중치 운영 후보에서 제외.
+
+#### 4.5.6 Whisper-large-v3의 "산업 표준 baseline" 위치 (참고)
+
+- **MLPerf Inference v5.1 (2025-09)**: [MLCommons](https://mlcommons.org/2025/09/whisper-inferencev5-1/)가 STT 벤치 baseline으로 공식 채택 — 산업 표준 정의 자체.
+- **HF 생태계**: 월 다운로드 ~490만, Finetunes 843개, Adapters 205개, Quantizations 27개 (ASR 단일 모델 1위)
+- **파생 생태계**: faster-whisper, distil-whisper, whisper.cpp, WhisperX, Insanely-Fast-Whisper, whisper-large-v3-turbo, RedHatAI FP8-dynamic, Qualcomm AI Hub 공식 포팅
+- → 신모델 평가의 reference baseline 위치는 견고. 단 "표준 baseline" ≠ "모든 영역 1위" (영어 OpenASR 1위는 NVIDIA Canary-Qwen-2.5B, 한국어 도메인은 KsponSpeech fine-tune 등).
+
+#### 4.5.7 "정확도 우선 + offline" 후보 정리
+
+| 순위 | 모델 | 한국어 정확도 | 비고 |
+|:----:|------|:-------------:|------|
+| 1 | **Whisper-large-v3 + 한국어 fine-tune** | CER 5~7% (예상) | ENERZAi 실증 6.45%. 별도 학습 트랙 필요 |
+| 2 | **Whisper-large-v3 (base)** | CER ~11% (rtzr) | 안전한 default. 즉시 도입 가능 |
+| 3 | Qwen3-ASR-1.7B | FLEURS CER 2.57 | Whisper와 거의 동급. 운영 노하우 부족 |
+
+**비추천**:
+- Voxtral Mini 4B Realtime → 실시간 특화 설계. offline 정확도 우선 목적엔 다른 후보가 적합
+- Voxtral Transcribe V2 → 공개 가중치 없음
+- 상용 (VITO/ClovaSpeech) → 폐쇄망 부적합
+
 ---
 
 ## 5. 시나리오별 추천
@@ -189,6 +273,33 @@
 - 다운로드·기동·테스트 가장 빠름
 - L40S 1장 일부 (수 GB)만 사용 → Gemma 4와 자유롭게 공존
 - 정확도 부족하면 1.7B → Voxtral Mini 4B Realtime → Qwen3-Omni 순으로 업그레이드
+
+### 5.5 시나리오 E: **정확도 우선 + offline (실시간 X)** ⭐ 2026-05-12 신규
+
+> "회의록·인터뷰 등 batch 변환에서 한국어 정확도 최우선, 실시간 streaming 불필요" 시나리오. §4.5 검증 결과 기반.
+
+**1순위 (한국어 정확도 최대화)**: **Whisper-large-v3 + 한국어 fine-tune** (별도 학습 트랙)
+- 예상 한국어 CER 5~7% (ENERZAi 실증 6.45%)
+- KsponSpeech (AI-Hub 무료) + 자체 도메인 데이터로 LoRA fine-tune
+- L40S 1장 며칠~1주 학습 시간 예상
+- 폐쇄망 운영에서 진짜 차별화 포인트
+
+**2순위 (즉시 도입)**: **Whisper-large-v3 (base 그대로)**
+- 한국어 CER ~11% (rtzr 벤치) — "회의록 후처리 가능 수준"
+- 1.55B, MIT, vLLM 공식 지원, 산업 표준 baseline
+- (1순위)로 단계적 업그레이드 경로 명확
+
+**3순위**: **Qwen3-ASR-1.7B**
+- FLEURS Korean CER 2.57 — Whisper와 거의 동급
+- Apache 2.0, 1.7B, multilingual, vLLM Day-zero
+- 단, 2026 출시로 운영 노하우 부족
+
+**제외**:
+- Voxtral Mini 4B Realtime → 실시간 특화 설계. offline 정확도 우선 목적엔 부적합
+- Voxtral Transcribe V2 → 공개 가중치 없음 (Mistral API 전용)
+- 상용 (VITO/ClovaSpeech) → 폐쇄망 부적합
+
+> **권장 의사결정 흐름**: (A) 빠른 도입 → 2순위(Whisper base)로 시작 → (B) 정확도 부족 확인 시 1순위(fine-tune) 트랙 별도 진행.
 
 ---
 
@@ -258,6 +369,16 @@ llm-serving/stt/
 - [`Qwen/Qwen3-ASR-1.7B`](https://huggingface.co/Qwen/Qwen3-ASR-1.7B) — 30개 언어(한국어 ✅)/0.6B 자매 모델/Flash 별도 모델 부재
 - [`openai/whisper-large-v3-turbo`](https://huggingface.co/openai/whisper-large-v3-turbo) — MIT/809M/99개 언어
 
+### ✅ 한국어 정확도 검증 본문 fetch (2026-05-12 추가, §4.5 근거)
+- [rtzr/Awesome-Korean-Speech-Recognition (GitHub)](https://github.com/rtzr/Awesome-Korean-Speech-Recognition) — 9개 STT 한국어 CER 비교 표 (Whisper 11.34% vs VITO 6.77% 등)
+- [Qwen3-ASR Technical Report (arxiv 2601.21337v1)](https://arxiv.org/html/2601.21337v1) — Table A.2(b): FLEURS Korean Qwen3-ASR-1.7B 2.57 CER, Whisper-large-v3 2.07 CER
+- [Voxtral Realtime 논문 (arxiv 2602.11298v2)](https://arxiv.org/html/2602.11298v2) — Table 7: FLEURS Korean Whisper baseline WER 14.30%
+- [ENERZAi — Conquering Korean ASR with Low-bit Whisper](https://enerzai.com/resources/blog/small-models-big-heat-conquering-korean-asr-with-low-bit-whisper) — EZWhisper-Small KsponSpeech CER 6.45% (Whisper-large-v3 11.13% 대비)
+- [`ghost613/whisper-large-v3-turbo-korean` (HF 모델카드)](https://huggingface.co/ghost613/whisper-large-v3-turbo-korean) — Zeroth-Korean test CER 2.06%
+- [openai/whisper Discussion #1762 (large-v3 release)](https://github.com/openai/whisper/discussions/1762) — 한국어가 CER 권고 언어임 (공백 처리 모호성)
+- [MLPerf Inference v5.1 (MLCommons)](https://mlcommons.org/2025/09/whisper-inferencev5-1/) — Whisper-large-v3가 산업 표준 STT baseline으로 채택
+- [openai/whisper-large-v3 (HF 모델카드)](https://huggingface.co/openai/whisper-large-v3) — 다운로드/파생 통계 (월 490만, Finetune 843개)
+
 ### 보조 (검색 요약 기반 — PoC 전 본문 재검증 권장)
 - [Voxtral 발표 - Mistral AI](https://mistral.ai/news/voxtral)
 - [Voxtral Transcribe 2 - Mistral AI](https://mistral.ai/news/voxtral-transcribe-2)
@@ -296,3 +417,4 @@ llm-serving/stt/
 | 2026-04-29 (2차 정정) | 자기 일관성 보강. (1) Qwen3-ASR-0.6B를 시나리오 D 1순위로 추천하면서 보조 표에 두던 분류 모순 해결 → **3.1 핵심 후보로 승격** (1.7B와 같은 시리즈/라이선스/언어 지원). (2) 6.4 GPU 분할 가이드에서 "Voxtral Small 24B"(비교군)를 우리 후보 라인업(Qwen3-Omni 30B-A3B)으로 교체. |
 | 2026-04-29 (PoC 진입) | 시나리오 D 확정 + 인프라 구현 반영. (1) §6.1 시나리오 확정 (Qwen3-ASR-1.7B + Whisper-large-v3 비교, baseline은 turbo 아닌 large-v3 — 무게 매칭). (2) §6.2 PoC 절차를 actual 진행 상태로 갱신 (인프라 ✅, 벤치/게이트웨이 통합 예정). (3) §6.3 디렉토리 구조를 actual로 갱신 (`stt_server_launcher.py` 미작성/`vllm` 런처 재사용, `configs/` 모델별 분리, `STT_OPS_GUIDE.md` → `README.md`). |
 | 2026-05-04 (Voxtral 도입 + 페어 구조) | (1) Voxtral-Mini-4B-Realtime-2602를 메인 STT 모델로 도입 (GPU 2, gateway :5017, 한국어 ✅). (2) `configs/` → `instances/` 마이그레이션 + `gateways/5017.yaml` 신규로 vllm 페어 패턴 도입. (3) `vllm_gateway.py` 본체에 `/v1/audio/transcriptions` (POST) + `/v1/realtime` (WS) 라우트 추가 — STT 게이트웨이는 본체 재사용. (4) `vllm_server_launcher.py`의 RUNTIME_DIR을 yaml dirname 기준으로 동적 결정 (STT/LLM runtime 격리). (5) STT_API_GUIDE / STT_OPS_GUIDE 2종 분리 작성. (6) 메모리 핏: `gpu_memory_utilization: 0.50 → 0.35`, `max_num_seqs: 4 → 1` (단일 세션 PoC). |
+| 2026-05-12 (정확도 우선 후보 재정리) | "정확도 우선 + offline (실시간 X)" 의사결정용 추가 검증. (1) §4.5 신규: WER vs CER 정의, rtzr 한국어 STT 벤치(Whisper 11.34% vs VITO 6.77%), 한국어 fine-tune 사례(ENERZAi KsponSpeech 6.45%, base 11.13% 대비 절반), Qwen3-ASR-1.7B(FLEURS Korean CER 2.57) / Voxtral 한국어 수치, Voxtral Transcribe V2 공개 가중치 부재 확인, Whisper-large-v3 산업 표준 baseline 위치(MLPerf v5.1). (2) §5.5 신규 시나리오 E "정확도 우선 + offline" — 1순위 Whisper-large-v3 + 한국어 fine-tune, 2순위 Whisper base 즉시 도입, 3순위 Qwen3-ASR-1.7B. Voxtral Realtime/Transcribe V2/상용은 제외. (3) §7 Sources 본문 검증 자료 8건 추가. **교훈**: WER vs CER 혼동 주의 — 같은 FLEURS Korean이라도 Voxtral 논문 Whisper WER 14.30%와 Qwen3-ASR 논문 Whisper-large-v3 CER 2.07%는 metric 차이로 직접 비교 불가. 자체 측정이 가장 신뢰 가능. |
