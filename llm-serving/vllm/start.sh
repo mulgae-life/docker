@@ -37,9 +37,13 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INSTANCES_DIR="$SCRIPT_DIR/instances"
-GATEWAYS_DIR="$SCRIPT_DIR/gateways"
-LOG_DIR="$SCRIPT_DIR/logs"
+# 본체는 vllm/. wrapper(stt/start.sh 등)에서 INSTANCES_DIR/GATEWAYS_DIR/LOG_DIR/CLUSTER_LABEL을
+# export하여 클러스터별 디렉토리/라벨로 동작시킨다. 미설정 시 vllm/ 자체로 동작.
+# 단, launcher/gateway 파이썬 본체는 항상 vllm/ 기준($SCRIPT_DIR)에서 호출한다.
+INSTANCES_DIR="${INSTANCES_DIR:-$SCRIPT_DIR/instances}"
+GATEWAYS_DIR="${GATEWAYS_DIR:-$SCRIPT_DIR/gateways}"
+LOG_DIR="${LOG_DIR:-$SCRIPT_DIR/logs}"
+CLUSTER_LABEL="${CLUSTER_LABEL:-vLLM}"
 mkdir -p "$LOG_DIR"
 
 # ── 인스턴스/게이트웨이 yaml 파싱 ────────────────────
@@ -364,7 +368,7 @@ cmd_up() {
             start_gateway "$GATEWAYS_DIR/${target}.yaml"
             ;;
         all)
-            echo "═══ vLLM 클러스터 전체 시작 ═══"
+            echo "═══ $CLUSTER_LABEL 클러스터 전체 시작 ═══"
             echo ""
             local started_runtimes=()
             while IFS= read -r yaml_path; do
@@ -419,7 +423,7 @@ cmd_down() {
 
     case "$kind" in
         all)
-            echo "═══ vLLM 클러스터 전체 중지 ═══"
+            echo "═══ $CLUSTER_LABEL 클러스터 전체 중지 ═══"
             echo ""
             # 게이트웨이 먼저 정리해 신규 요청 유입을 차단한 뒤 인스턴스를 종료한다.
             while IFS= read -r yaml_path; do
@@ -448,7 +452,7 @@ cmd_down() {
 }
 
 cmd_status() {
-    echo "═══ vLLM 클러스터 상태 ═══"
+    echo "═══ $CLUSTER_LABEL 클러스터 상태 ═══"
 
     while IFS= read -r yaml_path; do
         [ -z "$yaml_path" ] && continue

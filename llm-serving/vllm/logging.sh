@@ -27,10 +27,14 @@
 #   필터링: 'POST /v1/' 라인만 추출 (그 외 /health, throughput 라인은 무시).
 # ─────────────────────────────────────────────────────────────────────
 set -euo pipefail
-cd "$(dirname "${BASH_SOURCE[0]}")"
+# 본체는 vllm/. wrapper(stt/logging.sh 등)에서 WORK_DIR/INST_DEFAULT/S3_PREFIX를
+# export하여 클러스터별 작업 디렉토리/기본 인스턴스/S3 경로로 동작시킨다.
+# 미설정 시 vllm/ 자체로 동작 (기존 동작 유지).
+WORK_DIR="${WORK_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+cd "$WORK_DIR"
 
-# 인자 1개가 있으면 인스턴스명으로 사용 ('stop' 제외). 그 외는 기본값 'gemma'.
-INST="prd-gemma"
+# 인자 1개가 있으면 인스턴스명으로 사용 ('stop' 제외). 그 외는 기본값 (INST_DEFAULT 또는 'prd-gemma').
+INST="${INST_DEFAULT:-prd-gemma}"
 [ "${1:-}" != "stop" ] && [ -n "${1:-}" ] && INST="$1"
 
 S3_BUCKET="${S3_BUCKET:-hgi-ai-res}"

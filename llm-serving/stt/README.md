@@ -34,7 +34,7 @@ llm-serving/stt/
 └── logs/                    # 인스턴스/게이트웨이 stdout/stderr (자동 생성)
 ```
 
-> `vllm_server_launcher.py`, `vllm_gateway.py` 는 `../vllm/` 의 본체를 재사용 (코드 단일 출처). `start.sh` 만 STT 변종으로 분리.
+> `start.sh` / `logging.sh` / `vllm_server_launcher.py` / `vllm_gateway.py` 는 모두 `../vllm/` 의 본체를 재사용한다 (코드 단일 출처). `stt/start.sh` 와 `stt/logging.sh` 는 STT 디렉토리·라벨만 env로 export한 뒤 본체를 `exec` 호출하는 thin wrapper다.
 
 ---
 
