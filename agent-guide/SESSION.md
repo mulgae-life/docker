@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-05-12 (Gemma 4 31B / Qwen 3.6 27B MTP 도입 + 런처 drafter 자동 다운로드)
+last-updated: 2026-05-12 (STT 한국어 정확도 의사결정 + yaml 통일 + 옵션 A 리팩토링)
 ---
 
 # 세션 상태
@@ -29,10 +29,11 @@ last-updated: 2026-05-12 (Gemma 4 31B / Qwen 3.6 27B MTP 도입 + 런처 drafter
 | P1 | **vLLM Qwen 본체 :7080 이전**: `instances/qwen.yaml`의 `port: 7080`이 의도된 다음 운영 포트. 게이트웨이 :5016은 메모리상 :7071 보유 중이라 즉시 영향 없으나, 다음 게이트웨이 재기동 시 yaml 기준(:7080)으로 디스커버리하므로 그 시점 전에 vLLM 본체를 :7080으로 옮겨야 정합. | Todo |
 | P1 | **Gemma 4 31B / Qwen 3.6 27B MTP 실기동 검증**: yaml/런처 준비 완료(2026-05-12). 진입 전 ① GPU 0(prd-gemma 26B-A4B)·GPU 1(qwen 35B-A3B) prd 인스턴스 down ② vLLM 0.19.0+ 확인(`gemma4_assistant` model_type 인식) ③ 외부망 가능 환경에서 첫 기동(런처가 `gemma-4-31B-it-assistant` 자동 다운로드) ④ acceptance/TPOT/throughput 사내 벤치 — `slm_research/mtp.md` §5 워크로드별 권장 참고. 기존 운영(26B-A4B / 35B-A3B-FP8) 교체 여부 별도 결정. | Todo |
 | P1 | `llm-serving/sglang/` 디렉토리 골격 (운영 가이드 + 런처 + 설정 + 테스트) | Todo |
-| P1 | **`llm-serving/stt/` 한국어 정성 비교 (PoC 잔여)**: Voxtral-Mini-4B-Realtime(:5017 운영) + Qwen3-ASR-1.7B(:7170, LLM stop 후) + Whisper-large-v3(:7171, LLM stop 후) 한국어 벤치. `test_stt.py`(WER/RTF/latency/정성평가) 작성 + 결과 정리(`MODEL_STUDY.md` 부록). | Todo (인프라/메인 운영 ✅, 비교 모델 벤치 대기) |
+| P1 | **`llm-serving/stt/` 한국어 정성 비교 (PoC 잔여)**: 2026-05-12 검증으로 후보·의사결정 명확화 — "정확도 우선 + offline" 시나리오 E(MODEL_STUDY §5.5) 채택. 1순위 Whisper-large-v3 base(rtzr 벤치 CER 11.34%) → 부족 시 한국어 fine-tune 트랙(ENERZAi 사례 CER ~6.45%). Voxtral은 실시간 시나리오 B 격리. `test_stt.py`(WER/RTF/latency/정성평가) 작성으로 실측 확정. | Todo (의사결정 ✅, 실측 대기) |
 | P2 | **STT 동시 N 세션 운영 전환 (현재 단일 PoC)**: `instances/voxtral.yaml`의 `gpu_memory_utilization 0.35 → 0.40~0.50`, `max_num_seqs 1 → 2~4`, `gateways/5017.yaml`의 `max_inflight_requests/max_queue_size` 동기 상향. 동시 stream 목표 결정 후 진행. | Todo |
 | P2 | **운영계 컨테이너에 STT 의존성 반영 + 모델 동기화**: `aws/requirements.txt`에 추가된 `soundfile/soxr/librosa` 가 운영계 컨테이너 빌드에 반영되도록 재배포. Voxtral 17GB는 외부망 PC → S3 → `/models/STT/` 사전 동기화 (폐쇄망 대비). | Todo |
 | P2 | **RTX PRO 6000 Blackwell 운영 이전 후 fused MoE 튜닝**: `benchmark_moe.py`로 `E=128,N=352,device_name=NVIDIA_RTX_PRO_6000_Blackwell_Workstation_Edition,dtype=fp8_w8a8.json` 생성 → site-packages `vllm/model_executor/layers/fused_moe/configs/`에 배치 → 가능하면 vLLM 본가 PR. 트리거: 운영 환경 셋업 완료 시점 | Todo |
+| P2 | **운영 가이드 wrapper / logging.sh 보강 (옵션 A 후속)**: 2026-05-12 옵션 A 리팩토링으로 `stt/start.sh`·`stt/logging.sh`가 `../vllm/` 본체를 호출하는 thin wrapper가 됨. `STT_OPS_GUIDE.md` / `VLLM_OPS_GUIDE.md` 양쪽에 (1) 본체/wrapper 구조 한 줄 (2) `logging.sh` 운영 명령(S3 호출 카운트 sync) 섹션 추가. | Todo |
 | P3 | `agent-guide/` MCP 도구 섹션 채우기 (필요 시) | Todo |
 
 ---
@@ -44,6 +45,56 @@ last-updated: 2026-05-12 (Gemma 4 31B / Qwen 3.6 27B MTP 도입 + 런처 drafter
 ---
 
 ## 최근 세션
+
+### 2026-05-12 (STT 한국어 정확도 의사결정 + STT yaml 통일 + 옵션 A 리팩토링)
+
+#### 세션 목표
+- 한국어 STT 의사결정용 본문 검증: Voxtral-Mini-4B-Realtime vs Whisper-large-v3, "정확도 우선 + offline" 조건에서 어느 게 우수한지 + Whisper의 산업 표준 baseline 위상 + 한국어에서 Whisper 능가를 공개한 모델 정리.
+- 운영 결과를 `stt/MODEL_STUDY.md` 신규 §4.5 / §5.5 / §7 / §8로 보존.
+- STT instances/ yaml 3종 구조·주석 통일 (운영 노하우 동기화, 모델별 값만 차이).
+- `vllm/` ↔ `stt/` 의 `start.sh` / `logging.sh` 약 90% 중복 제거 — 옵션 A(env-driven 본체 + thin wrapper) 채택.
+
+#### 변경 파일
+| 파일 | 변경 유형 | 요약 |
+|------|----------|------|
+| `llm-serving/stt/MODEL_STUDY.md` | 대규모 추가 (+122줄) | §4.5 신규: WER vs CER 정의, rtzr 한국어 STT 벤치(Whisper 11.34% vs VITO 6.77% vs ClovaSpeech 7.96%), 한국어 fine-tune 사례(ENERZAi KsponSpeech 6.45%), Qwen3-ASR-1.7B(FLEURS Korean CER 2.57) / Voxtral(FLEURS Korean WER 12.29 offline / 14.30 동률·2400ms) 한국어 수치, Voxtral Transcribe V2 공개 가중치 부재 확인, Whisper-large-v3 산업 표준 baseline 위치(MLPerf v5.1). §5.5 신규 시나리오 E "정확도 우선 + offline" — 1순위 Whisper + 한국어 fine-tune, 2순위 Whisper base, 3순위 Qwen3-ASR-1.7B. §7 Sources 본문 검증 자료 8건 추가. §8 변경 이력 entry. (커밋: `831a9a7 study`) |
+| `llm-serving/stt/instances/voxtral.yaml` | 마스터로 재작성 (117→143줄) | 헤더/메타/모델/env/task/server/GPU·메모리/추론/컴파일/로깅 9개 섹션 구조 확립. 모든 운영 노하우 주석에 `voxtral / qwen3_asr / whisper_v3` 3행 비교표 동일하게 명시. |
+| `llm-serving/stt/instances/qwen3_asr.yaml` | 구조 통일 (66→139줄) | voxtral과 동일 키 순서·동일 주석. 모델별 값만 차이 (model/task/gpus/port/gpu_memory_utilization=0.50/max_num_seqs=8/max_model_len=8192). 비교 PoC라 `gateway_port` / `env` / `compilation_config` 주석 처리 (구조는 유지). |
+| `llm-serving/stt/instances/whisper_v3.yaml` | 구조 통일 (54→140줄) | qwen3_asr과 동일 접근. `gpu_memory_utilization=0.20`, `max_num_seqs=5`, `max_model_len` 주석처리(모델 config 자동 감지). |
+| `llm-serving/vllm/start.sh` | env-driven 일반화 (+4줄) | `INSTANCES_DIR / GATEWAYS_DIR / LOG_DIR / CLUSTER_LABEL` 을 env로 받음 (`${VAR:-default}` 패턴). 미설정 시 자기 디렉토리/`vLLM` 라벨로 동작 — 기존 동작 100% 동일. 헤더 echo 3곳 `"$CLUSTER_LABEL 클러스터"`로 변경. launcher/gateway 호출은 항상 `$SCRIPT_DIR` 기준 → 본체 단일 출처. |
+| `llm-serving/vllm/logging.sh` | env-driven 일반화 (+4줄) | `WORK_DIR / INST_DEFAULT / S3_PREFIX`를 env로 받음. 미설정 시 vllm/·`prd-gemma`·`logs/vllm` 기본값. |
+| `llm-serving/stt/start.sh` | thin wrapper로 교체 (534→26줄) | `HERE` 산출 후 `CLUSTER_LABEL=STT`·`INSTANCES_DIR/GATEWAYS_DIR/LOG_DIR` export → `exec bash ../vllm/start.sh "$@"`. 기존 운영 명령(`./stt/start.sh up voxtral` 등) 사용법 100% 동일. |
+| `llm-serving/stt/logging.sh` | thin wrapper로 교체 (147→30줄) | `WORK_DIR=$HERE`·`INST_DEFAULT=voxtral`·`S3_PREFIX=logs/stt` export → `exec bash ../vllm/logging.sh "$@"`. STT 호출 통계가 `s3://hgi-ai-res/logs/stt/<inst>/` 로 LLM(`logs/vllm/`)과 분리. |
+| `llm-serving/stt/README.md` | 표현 정정 (L37) | "start.sh만 STT 변종으로 분리" → "start.sh/logging.sh/launcher/gateway 모두 ../vllm/ 본체를 재사용. stt/start.sh, stt/logging.sh는 env export 후 exec 호출하는 thin wrapper". |
+
+#### 결정 사항
+- **시나리오 E "정확도 우선 + offline" 채택**: 회의록·인터뷰 등 batch 변환용. 1순위 Whisper-large-v3 + 한국어 fine-tune, 2순위 Whisper base 즉시 도입, 3순위 Qwen3-ASR-1.7B. Voxtral은 시나리오 B(실시간) 격리 — 480ms 권장 설정에서 Whisper 대비 한국어 WER ~1.44%p 열등.
+- **수치 해석 — WER ≠ CER**: 같은 FLEURS Korean 데이터셋이라도 Voxtral 논문 Whisper WER 14.30% vs Qwen3-ASR 논문 Whisper-large-v3 CER 2.07%. metric 차이로 직접 비교 불가. 한국어는 공식적으로 CER 권고(Whisper Discussion #1762). 자체 측정이 가장 신뢰 가능 — `test_stt.py` 작성으로 확정 필요.
+- **옵션 A 리팩토링 (env-driven 본체 + thin wrapper)**: 옵션 B(`_lib/` 공통 디렉토리)·옵션 C(symlink)·옵션 D(현재 유지) 비교 후 채택. 근거: (1) `vllm`이 기본이라는 사용자 멘탈 모델 일치 (2) launcher/gateway가 이미 동일 패턴 (3) wrapper 26줄로 진입점 보존 (4) sglang 추가 시 동일 패턴 그대로. 결과 — 1,351줄 → 734줄 (-617, -45%).
+- **yaml 통일 = 구조 + 주석 동일화** (`feedback_preserve_operational_comments` 재확인): voxtral 마스터로 통일하되 비교 PoC는 `gateway_port`/`env`/`compilation_config`를 주석 처리하여 키 구조 유지. 라인 수 143/139/140 (차이 ≤4줄, vllm gemma/qwen 56줄 차이 패턴 유사).
+- **stt/logging.sh 신규 도입**: 5/8 vllm/logging.sh 추가(015e9e4) 이후 stt에 미반영 갭 발견 → 옵션 A 진행 전 단계로 먼저 신규 작성, 옵션 A로 wrapper화. `POST /v1/audio/transcriptions`도 `POST /v1/` 필터에 매칭 (실증 80건 INFO MM-DD + 6건 transcription POST).
+
+#### 검증
+| 항목 | 결과 |
+|------|------|
+| bash syntax 4종 (vllm/stt × start/logging) | PASS |
+| YAML 문법 3종 (voxtral/qwen3_asr/whisper_v3) | `yaml.safe_load` PASS |
+| 라이브 회귀: `vllm/start.sh status` | gemma(PID 876058) + gateway 5015/5016 UP 유지 |
+| 라이브 회귀: `stt/start.sh status` (wrapper) | "═══ STT 클러스터 상태 ═══" 라벨 + voxtral의 gateway_port=5017 → gw :5017 매칭 정확 |
+| cwd 독립성: `/tmp`에서 stt wrapper 호출 | `HERE=$(cd $(dirname $BASH_SOURCE[0]) && pwd)`로 stt/ 절대경로 정확 산출 |
+| yaml 키 동등성 (Python set 비교) | 공통 14개 + voxtral 단독 3개(gateway_port·env·compilation_config) + qwen3_asr/whisper_v3 단독 1개(task) — 의도된 차이 |
+| work-verify 3회 (1차 logging.sh 후 / 2차 yaml+옵션 A 후 / 3차 README 정정 후) | 모두 PASS — 참고 등급만 발견, 심각/주의 0건 |
+
+#### 교훈 (영구 기록 후보)
+- **vllm↔stt 양쪽 동시 갱신 부담은 코드 단일 출처로 해소**: d58daee(2026-05-07) 처럼 양쪽 90줄씩 동기 변경하던 패턴이 본 리팩토링으로 사라짐. 향후 sglang 추가 시 26줄 wrapper만 작성하면 진입점 완성.
+- **검색 요약 ≠ 모델카드/논문 본문**: 검색 요약은 "Voxtral macro-avg 5.9% vs Whisper 7.4%"를 자주 인용하지만 이는 13개 언어 평균이지 한국어 단독이 아님. 실제 한국어 WER은 Whisper가 동률(2400ms) 또는 우위(480ms). 모델카드/논문 표(Voxtral 논문 Table 7, Qwen3-ASR 논문 Table A.2)까지 본문 fetch가 필수. (`feedback_model_card_verification` 재적용 성공 사례)
+
+#### 현재 상태
+- STT yaml 3종 통일 ✅, 옵션 A 리팩토링 ✅, MODEL_STUDY §4.5/§5.5 ✅ (커밋 완료 `831a9a7`)
+- 미커밋 변경 (본 세션 후속): stt/{instances yaml 3종, start.sh, logging.sh, README.md} + vllm/{start.sh, logging.sh}
+- 다음 작업 후보: (a) 운영 가이드 wrapper/logging.sh 보강 (P2 신규) (b) `test_stt.py` 작성 + 한국어 실측 (P1) (c) sglang 디렉토리 골격 (옵션 A 패턴 그대로 적용)
+
+---
 
 ### 2026-05-12 (Gemma 4 31B / Qwen 3.6 27B MTP 도입 + 런처 drafter 자동 다운로드)
 
