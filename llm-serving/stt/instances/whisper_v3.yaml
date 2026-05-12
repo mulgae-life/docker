@@ -30,12 +30,12 @@ uvicorn_log_level: info
 
 # ── GPU / 메모리 ──────────────────────────────────────
 # Qwen3-ASR과 다른 GPU에 단독 배치하여 한국어 정확도/지연 동시 측정 가능.
-gpus: [1]
+gpus: [2]
 tensor_parallel_size: 1
 
 # Whisper-large-v3 가중치 ~3GB (BF16). KV cache는 audio decoder 컨텍스트(448 tokens)로 매우 작음.
 # 0.5로 두어도 모델+KV+오버헤드 여유 충분.
-gpu_memory_utilization: 0.50
+gpu_memory_utilization: 0.20
 
 
 # ── 추론 ──────────────────────────────────────────────
@@ -43,7 +43,7 @@ gpu_memory_utilization: 0.50
 # vLLM이 모델 config(`max_target_positions`)로 자동 감지하므로 max_model_len 미지정.
 
 # 동시 처리 시퀀스 수.
-max_num_seqs: 8
+max_num_seqs: 5
 
 dtype: auto
 seed: 42
