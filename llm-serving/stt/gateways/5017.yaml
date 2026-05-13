@@ -83,7 +83,7 @@ http_client:
 # 와 함께 max_inflight_requests / max_queue_size를 같이 상향한다.
 overload:
   enabled: true
-  max_inflight_requests: 1
-  max_queue_size: 4
-  queue_timeout_seconds: 120
+  max_inflight_requests: 20 # 20
+  max_queue_size: 40 # 40
+  queue_timeout_seconds: 180
   retry_after_seconds: 10

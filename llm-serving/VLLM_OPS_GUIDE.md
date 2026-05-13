@@ -980,22 +980,22 @@ cp E=128,N=352,device_name=NVIDIA_RTX_PRO_6000_Blackwell_Workstation_Edition,dty
 cd /workspace/llm-serving/vllm
 
 # 전체 테스트 (모델명 자동 추출 — 아래 우선순위)
-python test_vllm_server.py
+python tests/test_vllm_server.py
 
 # 원격 서버 — 로컬 yaml 사본 없어도 동작 (게이트웨이가 listen 중이면)
-python test_vllm_server.py --base-url http://gpu-server:5015
+python tests/test_vllm_server.py --base-url http://gpu-server:5015
 
 # 모델명 명시
-python test_vllm_server.py --base-url http://gpu-server:5015 --model MyModel
+python tests/test_vllm_server.py --base-url http://gpu-server:5015 --model MyModel
 
 # 특정 카테고리만
-python test_vllm_server.py --category infra inference tool
+python tests/test_vllm_server.py --category infra inference tool
 
 # 카테고리 목록
-python test_vllm_server.py --list
+python tests/test_vllm_server.py --list
 
 # 상세 출력
-python test_vllm_server.py -v
+python tests/test_vllm_server.py -v
 ```
 
 **모델명 자동 추출 우선순위**
@@ -1024,16 +1024,16 @@ python test_vllm_server.py -v
 매 실행마다 콘솔 출력 전체가 다음 경로에 자동 저장됩니다 (ANSI 색 제거된 plain text):
 
 ```
-llm-serving/vllm/logs/test_YYYYMMDD_HHMMSS.log
+llm-serving/vllm/tests/logs/test_YYYYMMDD_HHMMSS.log
 ```
 
 main 시작 시 path가 안내되고 종료 시 다시 출력됩니다. 사후 분석 예시:
 
 ```bash
-# 최근 로그 확인
-ls -lt logs/test_*.log | head -3
+# 최근 로그 확인 (vllm/ 디렉토리에서 실행)
+ls -lt tests/logs/test_*.log | head -3
 # 실패만 추출
-grep -B1 -A20 "FAIL " logs/test_20260430_144909.log
+grep -B1 -A20 "FAIL " tests/logs/test_20260430_144909.log
 ```
 
 > 백그라운드/CI 실행, 긴 출력 스크롤 등으로 콘솔 확인이 어려울 때 이 파일이 단일 진실 소스입니다.
@@ -1060,16 +1060,43 @@ grep -B1 -A20 "FAIL " logs/test_20260430_144909.log
 cd llm-serving/vllm
 
 # 저강도 생존/성공률 확인
-python traffic_test_vllm.py --base-url http://3.38.195.121:5015 --mode smoke
+python tests/traffic_test_vllm.py --base-url http://3.38.195.121:5015 --mode smoke
 
 # 대기열/429 방어 확인
-python traffic_test_vllm.py --base-url http://3.38.195.121:5015 --mode overload
+python tests/traffic_test_vllm.py --base-url http://3.38.195.121:5015 --mode overload
 
 # 동시 사용자 20명 기준 짧은 응답 테스트
-python traffic_test_vllm.py --base-url http://3.38.195.121:5015 --mode smoke --requests 20 --concurrency 20 --max-tokens 32
+python tests/traffic_test_vllm.py --base-url http://3.38.195.121:5015 --mode smoke --requests 20 --concurrency 20 --max-tokens 32
 ```
 
 운영 전에는 `max_tokens >= 512` 또는 실제 서비스 평균 프롬프트/출력 길이로 한 번 더 확인합니다. 테스트 후 `/health`와 `/server-status`가 모두 200이어야 통과입니다.
+
+### 14.3.1 속도 비교 테스트 (모델 간 매트릭스 누적)
+
+`tests/speed_test.py`는 게이트웨이 단위 속도 측정 도구입니다. 모델명은 `{base_url}/v1/models`에서 자동 추출하며, 결과는 `tests/results/speed_results.md`에 Markdown 테이블 행으로 누적 append 됩니다. 여러 모델 비교는 게이트웨이별로 두 번 호출하면 같은 파일에 이어 쌓입니다.
+
+```bash
+cd llm-serving/vllm
+
+# 게이트웨이별 측정 — 동시성[1,5,10] × 입력[short,long] × 출력[200자,500자] = 12 row / 호출
+python tests/speed_test.py --base-url http://localhost:5015     # Gemma 게이트웨이
+python tests/speed_test.py --base-url http://localhost:5016     # Qwen 게이트웨이 (같은 파일에 누적)
+
+# 모델명 직접 지정 (자동 추출 건너뜀)
+python tests/speed_test.py --base-url http://localhost:5015 --model gemma-4-31B-it --label "Gemma-32k"
+
+# 빠른 구문/연결 확인 (동시성 1, short, 200자만)
+python tests/speed_test.py --base-url http://localhost:5015 --quick
+
+# 결과 경로 변경
+python tests/speed_test.py --base-url http://localhost:5015 --results-path tests/results/2026-05_speed.md
+```
+
+**측정 지표**
+- `TTFT` (Time To First Token): 첫 토큰까지 지연 (ms, prefill 성능)
+- `decode TPS`: 요청당 생성 속도 (output tok/s, decode 성능)
+- `server TPS`: 전체 elapsed 기준 시스템 처리량 (output tok/s)
+- `ITL` (Inter-Token Latency): 토큰 간 평균 지연 (ms/tok, `1000 / decode_TPS_p50`)
 
 ### 14.4 테스트 항목 상세
 
@@ -1170,8 +1197,11 @@ llm-serving/
 │   ├── start.sh                 (launcher ↔ gateway 통합 진입점, name 자동 라우팅)
 │   ├── vllm_server_launcher.py  (yaml 단위 vLLM 서브프로세스 + 포트 자동 회피 + runtime json)
 │   ├── vllm_gateway.py          (LB + Admission Controller + 헬스체크 + 웜업)
-│   ├── test_vllm_server.py      (9 카테고리 QA)
-│   ├── traffic_test_vllm.py     (smoke/overload 트래픽 테스트)
+│   ├── tests/                   ← 테스트 코드 디렉토리
+│   │   ├── test_vllm_server.py  (9 카테고리 QA)
+│   │   ├── traffic_test_vllm.py (smoke/overload 트래픽 테스트)
+│   │   ├── speed_test.py        (모델 간 속도 매트릭스 누적)
+│   │   └── results/             (speed_results.md 등 누적 리포트)
 │   ├── instances/               ← 인스턴스 단위 yaml (vLLM 1대 = 1 yaml)
 │   │   ├── gemma.yaml           (gateway_port: 5015, port hint: 7070, gpus: [0])
 │   │   ├── qwen.yaml            (gateway_port: 5016, port hint: 7080, gpus: [1])

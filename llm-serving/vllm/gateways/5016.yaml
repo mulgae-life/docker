@@ -96,7 +96,7 @@ http_client:
 # retry_after_seconds: 429 응답의 Retry-After 헤더 값(초).
 overload:
   enabled: true
-  max_inflight_requests: 2
-  max_queue_size: 4
-  queue_timeout_seconds: 3
-  retry_after_seconds: 5
+  max_inflight_requests: 20 # 20
+  max_queue_size: 40 # 40
+  queue_timeout_seconds: 180
+  retry_after_seconds: 10

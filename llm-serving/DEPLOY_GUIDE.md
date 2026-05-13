@@ -78,13 +78,18 @@ cd /workspace/llm-serving/stt
 cd /workspace/llm-serving/vllm
 
 # QA 테스트 — 모델명은 /v1/models API에서 자동 추출 (--model 불필요)
-python test_vllm_server.py --base-url http://localhost:5015
-python test_vllm_server.py --base-url http://localhost:5015 --category infra inference   # 일부만
-python test_vllm_server.py --list                                                         # 카테고리 목록
+python tests/test_vllm_server.py --base-url http://localhost:5015
+python tests/test_vllm_server.py --base-url http://localhost:5015 --category infra inference   # 일부만
+python tests/test_vllm_server.py --list                                                         # 카테고리 목록
 
-# 로그 — 매 실행마다 logs/test_YYYYMMDD_HHMMSS.log에 자동 저장 (ANSI 색 제거)
-ls -lt logs/test_*.log | head -3
-grep -B1 -A20 "FAIL " logs/test_20260430_144909.log     # 실패만 추출
+# 속도 비교 테스트 (게이트웨이별로 호출 — 같은 results 파일에 모델명 자동 추출하여 누적 append)
+python tests/speed_test.py --base-url http://localhost:5015                  # Gemma 게이트웨이
+python tests/speed_test.py --base-url http://localhost:5016                  # Qwen 게이트웨이 (같은 파일에 이어 쌓임)
+python tests/speed_test.py --base-url http://localhost:5015 --quick          # 빠른 검증 (동시성 1, short, 200자)
+
+# 로그 — 매 실행마다 tests/logs/test_YYYYMMDD_HHMMSS.log에 자동 저장 (ANSI 색 제거)
+ls -lt tests/logs/test_*.log | head -3
+grep -B1 -A20 "FAIL " tests/logs/test_20260430_144909.log     # 실패만 추출
 ```
 
 > 실패/예외 시 detail에 **요청 method·URL·body + 응답 status·body + (예외 시) 전체 traceback**이 자동 부착됩니다. 상세 우선순위/포맷은 [`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md) §14.1.

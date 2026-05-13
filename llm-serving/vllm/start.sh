@@ -104,7 +104,11 @@ is_running() {
 }
 
 get_pid() {
-    netstat -tlnp 2>/dev/null | awk -v port=":$1" '$4 ~ port {split($7,a,"/"); print a[1]}' || true
+    # awk의 `~`는 substring/regex 매칭이라 port=":5015"가 ":50152"도 prefix 매칭한다.
+    # 끝 앵커($)를 붙여 "끝이 :<port>인 행"만 잡는다. 안 그러면 같은 prefix를 가진
+    # 다른 포트의 무관 프로세스(예: VSCode Pylance가 잡은 :50152)에 SIGTERM이 가서
+    # 다중 PID 매칭으로 stop_gateway의 종료 폴링이 꼬인다.
+    netstat -tlnp 2>/dev/null | awk -v port=":$1\$" '$4 ~ port {split($7,a,"/"); print a[1]}' || true
 }
 
 # runtime json에서 pid 추출. 파일/키 부재·파싱 실패 시 빈 출력.

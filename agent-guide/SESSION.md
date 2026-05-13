@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-05-12 (STT 한국어 정확도 의사결정 + yaml 통일 + 옵션 A 리팩토링)
+last-updated: 2026-05-13 (Gemma 4 31B MTP 메모리 조정 실기동 + tests/ 정리 + speed_test.py 신규)
 ---
 
 # 세션 상태
@@ -24,10 +24,10 @@ last-updated: 2026-05-12 (STT 한국어 정확도 의사결정 + yaml 통일 + �
 
 | 우선순위 | 작업 | 상태 |
 |---------|------|------|
-| P1 | **5015 Gemma 운영 프로파일 확정**: 현재 라이브 게이트웨이는 `max_inflight_requests=20`, `max_queue_size=20`으로 동작. 로컬 `gateways/5015.yaml`은 단일 인스턴스 안전값 `2/18`에 운영 후보 `20/40` 주석이 붙어 있으므로, 재시작 전 실제 GPU/`max_num_seqs` 기준으로 값 확정 필요. | Todo |
-| P1 | **5015 Gemma 장문 트래픽 검증**: 단문 smoke/동시 20/24 요청은 통과. 운영 전 `max_tokens >= 512` 또는 실제 평균 프롬프트/출력 길이로 latency, queue timeout, 429 비율 확인 필요. | Todo |
+| P1 | **5015 Gemma 운영 프로파일 확정**: 게이트웨이 `max_inflight_requests=20`, `max_queue_size=40`은 확정. 인스턴스는 TP=2 + `max_model_len 32768` + `gpu_memory_utilization 0.95`로 라이브(2026-05-13 7차 시도). 잔존: 장문 트래픽(평균 프롬프트/출력 길이) 기준 latency·429 비율 측정. | 부분 완료(매트릭스 운영값 확정), 장문 검증 잔존 |
 | P1 | **vLLM Qwen 본체 :7080 이전**: `instances/qwen.yaml`의 `port: 7080`이 의도된 다음 운영 포트. 게이트웨이 :5016은 메모리상 :7071 보유 중이라 즉시 영향 없으나, 다음 게이트웨이 재기동 시 yaml 기준(:7080)으로 디스커버리하므로 그 시점 전에 vLLM 본체를 :7080으로 옮겨야 정합. | Todo |
-| P1 | **Gemma 4 31B / Qwen 3.6 27B MTP 실기동 검증**: yaml/런처 준비 완료(2026-05-12). 진입 전 ① GPU 0(prd-gemma 26B-A4B)·GPU 1(qwen 35B-A3B) prd 인스턴스 down ② vLLM 0.19.0+ 확인(`gemma4_assistant` model_type 인식) ③ 외부망 가능 환경에서 첫 기동(런처가 `gemma-4-31B-it-assistant` 자동 다운로드) ④ acceptance/TPOT/throughput 사내 벤치 — `slm_research/mtp.md` §5 워크로드별 권장 참고. 기존 운영(26B-A4B / 35B-A3B-FP8) 교체 여부 별도 결정. | Todo |
+| P1 | **Gemma 4 31B / Qwen 3.6 27B MTP 실기동 검증**: 2026-05-13 Gemma 31B TP=2 + max_len 32768 정상 기동 / Qwen 27B 단일카드 정상 기동. 잔존: ① Qwen 5016 가용성 재점검 ② acceptance/TPOT/throughput 사내 벤치 — `tests/speed_test.py`로 매트릭스 누적 측정 가능, `slm_research/mtp.md` §5 워크로드별 권장 참고. | 부분 완료(실기동 OK), 벤치 잔존 |
+| P1 | **모델 간 속도 매트릭스 측정**: `tests/speed_test.py --base-url http://localhost:5015` / `:5016` 으로 두 게이트웨이 호출하여 `tests/results/speed_results.md`에 모델당 12행 누적. 컬럼: timestamp/model/concurrency/input/max_tok/ok/N/TTFT_ms/TPS. | 신규 (도구 준비 완료) |
 | P1 | `llm-serving/sglang/` 디렉토리 골격 (운영 가이드 + 런처 + 설정 + 테스트) | Todo |
 | P1 | **`llm-serving/stt/` 한국어 정성 비교 (PoC 잔여)**: 2026-05-12 검증으로 후보·의사결정 명확화 — "정확도 우선 + offline" 시나리오 E(MODEL_STUDY §5.5) 채택. 1순위 Whisper-large-v3 base(rtzr 벤치 CER 11.34%) → 부족 시 한국어 fine-tune 트랙(ENERZAi 사례 CER ~6.45%). Voxtral은 실시간 시나리오 B 격리. `test_stt.py`(WER/RTF/latency/정성평가) 작성으로 실측 확정. | Todo (의사결정 ✅, 실측 대기) |
 | P2 | **STT 동시 N 세션 운영 전환 (현재 단일 PoC)**: `instances/voxtral.yaml`의 `gpu_memory_utilization 0.35 → 0.40~0.50`, `max_num_seqs 1 → 2~4`, `gateways/5017.yaml`의 `max_inflight_requests/max_queue_size` 동기 상향. 동시 stream 목표 결정 후 진행. | Todo |
@@ -45,6 +45,62 @@ last-updated: 2026-05-12 (STT 한국어 정확도 의사결정 + yaml 통일 + �
 ---
 
 ## 최근 세션
+
+### 2026-05-13 (Gemma 4 31B MTP 메모리 조정 실기동 + tests/ 정리 + speed_test.py 신규)
+
+#### 세션 목표
+- 2026-05-12 yaml에 정의한 Gemma 4 31B FP8 MTP를 실제 기동 — L40S 단일 카드의 startup free check 실패 + KV cache 부족 두 단계를 메모리 파라미터로 통과.
+- 테스트 코드 디렉토리(`tests/`) 도입하여 기존 2종(`test_vllm_server.py`, `traffic_test_vllm.py`) 이동 + 모델 간 속도 비교용 `speed_test.py` 신규 작성.
+- 결과 테이블은 누적 append (`tests/results/speed_results.md`) — 게이트웨이별로 두 번 호출하여 같은 파일에 모델 비교 행 누적.
+
+#### 변경 파일
+| 파일 | 변경 유형 | 요약 |
+|------|----------|------|
+| `llm-serving/vllm/instances/gemma.yaml` | 메모리 운영값 조정 | 단일카드 시도 5회 fail 후 **TP=1 → TP=2**, `max_model_len 65536 → 32768`, `max_num_batched_tokens 98304` 유지, `gpu_memory_utilization 0.85 → 0.95`. vLLM `_check_enough_kv_cache_memory` 권장값 31856에 근접한 32768 채택(KV 가용 15.2 GiB / 필요 ~13.76 GiB, 마진 1.44). `Available KV cache memory: 15.2 GiB` / `GPU KV cache size: 36,196 tokens` 라이브 확인. |
+| `llm-serving/vllm/tests/` (신규 디렉토리) | 신규 | 테스트 코드/픽스처/결과 통합 — `test_vllm_server.py`(이동), `traffic_test_vllm.py`(이동), `speed_test.py`(신규), `image.png`(이동, 멀티모달 fixture), `results/speed_results.md`(append용). |
+| `llm-serving/vllm/tests/speed_test.py` | 신규 (388줄) | `--base-url` 단독 호출(`/v1/models` 첫 결과 자동 추출, `--model`로 오버라이드). 매트릭스: 동시성 `[1,5,10]` × 입력 `[short ~250 tok / long ~2000 tok]` × 출력 `[200자(max_tok=400) / 500자(max_tok=1000)]` = 12행/게이트웨이. ThreadPoolExecutor 기반 동시 호출, SSE 스트리밍으로 TTFT 측정, `decode_TPS = completion_tokens / (latency - ttft)` 산식. 결과 Markdown 컬럼은 사용자 피드백으로 18 → **8**(`timestamp/model/concurrency/input/max_tok/ok/N/TTFT_ms/TPS`) — 핵심 TPS + 측정 조건 + 신뢰도(ok/N) + 보조(TTFT)만 유지. |
+| `llm-serving/vllm/image.png` → `tests/image.png` | 이동(mv) | 멀티모달 테스트가 `__file__` 기준으로 fixture를 찾으므로 회귀 방지차 같이 이동. |
+| `llm-serving/README.md` | 인덱스 갱신 | `vllm/tests/` 디렉토리 + 3개 파일(test/traffic/speed) 행 추가. 기존 vllm/ 루트 행 정정. |
+| `llm-serving/DEPLOY_GUIDE.md` | 명령 예시 갱신 | `python tests/test_vllm_server.py ...`, `python tests/speed_test.py --base-url ...`, 로그 경로 `tests/logs/test_*.log`. |
+| `llm-serving/VLLM_OPS_GUIDE.md` | §14.1 / §14.3 / §14.3.1(신규) / §15.1 트리 | 모든 명령 예시 경로 `tests/...`로 통일. §14.3.1 속도 비교 섹션 신설(컬럼·실행 예 포함). 트리 다이어그램에 `tests/` 하위 4개 항목 반영. |
+| `llm-serving/vllm/tests/test_vllm_server.py` | docstring 명령 예시 | "vllm/ 디렉토리에서 실행: `python tests/test_vllm_server.py ...`" 패턴으로 통일. |
+| `llm-serving/.archive/2026-05-13_speed_test_verify/`, `2026-05-13_speed_results_18col/` | 검증 산출물 보존 | 컬럼 변경 전 검증 결과를 `.archive`로 mv (rm 금지 규칙). |
+
+#### 결정 사항
+- **단일 L40S 한계 → TP=2 채택**: 6회 실기동 시도에서 단일카드 0.85~0.93 모든 조합이 startup free check(GPU 0 driver stale mmap ~3.3 GiB) 또는 KV 부족으로 fail. 카드 2장 분산(총 88.78 GiB 예산)으로 startup·KV 두 단계 동시 통과.
+- **max_model_len 32768 선택 근거**: vLLM 에러 메시지가 직접 권장한 추정 최대 31856의 102%. 가용 KV 15.2 GiB > 필요 ~13.76 GiB, 마진 1.44 GiB. 사용자 의도(컨텍스트 길이)와 KV 산정 사이의 균형값. 65536(필요 27.51)·40960·36864는 모두 fail.
+- **`gpu_memory_utilization` 줄이는 게 아니라 max_len 줄여야 함 — 단계 분리**: 단일카드 시기엔 `gmu`를 줄여야 startup free check 통과(요구 < free); TP=2 + 0.95 통과 시기엔 KV 부족이 새 병목이라 `max_len`을 줄여야 함(에러 메시지의 권장 max_len도 이 단계 기준). 사용자가 "줄이는 거 아냐?" 질문할 때 단계별 차이 정리. (`lessons_*` 후보)
+- **speed_test 호출 패턴 `--base-url` 단독**: 초안의 `--model {gemma,qwen,all}` 사전 정의 dict는 게이트웨이 추가 시 코드 변경 강제. `test_vllm_server.py`의 `/v1/models` 자동 추출 패턴 차용 — `speed_test.py --base-url http://localhost:5015` 한 줄로 모델명·테이블 누적 모두 자동. 두 모델 비교는 두 번 호출(같은 results 파일에 누적).
+- **결과 컬럼 18 → 8 단순화 (사용자 피드백 반영)**: "텍스트 출력 속도 하나만 보면 되는 거 아냐?" 지적 후 핵심 TPS + 측정 조건(concurrency/input/max_tok) + 신뢰도(ok/N) + 보조(TTFT)만 유지. p95·svrTPS·ITL(decTPS_p50의 역수, 중복)·prompt_tok/compl_tok 제거. 콘솔 진행 출력은 운영 진단을 위해 풀 유지.
+- **image.png는 tests/와 함께 이동**: work-verify 1차에서 `__file__` 기준 fixture 경로 회귀 발견. fixture는 테스트 코드와 같이 묶는 게 자연스럽고, 이동 후 9.x 멀티모달 카테고리 모두 정상.
+- **`tests/results/speed_results.md`는 git 추적**: 모델 비교/공유 목적이라 누적 행 자체가 자산. `.gitignore`의 `__pycache__/`, `logs/`, `.archive/`, `.runtime/`은 자동 무시 — `tests/results/`만 추적.
+
+#### 검증
+| 항목 | 결과 |
+|------|------|
+| Gemma 4 31B TP=2 max_len 32768 실기동 | `Available KV cache memory: 15.2 GiB` / `GPU KV cache size: 36,196 tokens` / `Application startup complete.` 10:52:06 |
+| 5015 헬스 + `/v1/models` 첫 결과 | `gemma-4-31B-it` 자동 추출 OK |
+| `tests/speed_test.py --quick` 라이브 (Gemma) | warmup ok / 5/5 성공 / TTFT_p50 81.8ms / decTPS_p50 64.8 / 8컬럼 행 정확 기록 |
+| `py_compile` 3개 파일 (test/traffic/speed) | PASS |
+| 컬럼 정합성 (HEADER 8 ↔ `_row` 8값) | 일치 |
+| 매트릭스 unit 검증 (`_matrix(quick=False)`·`_matrix(quick=True)`) | 12개 / 1개 — 의도값 |
+| `_resolve_model_name` / `_endpoint_label` 단위 | `http://localhost:5015` → `gemma-4-31B-it`, `localhost:5015` / `3.38.195.121:5015` |
+| work-verify 2회 (1차 컬럼 18개·`MODELS` dict / 2차 컬럼 8개 단순화) | 모두 PASS — 회귀 2건(image.png 미이동·logs 경로 변경) 발견 즉시 수정 |
+| `.gitignore` 누락 패턴 검사 | `__pycache__/` / `logs/` / `.archive/` / `.runtime/` 모두 등록됨 → tests/ 내부도 자동 처리 |
+
+#### 교훈 (영구 기록 후보)
+- **vLLM 메모리 에러는 단계로 끊어 진단해야 함**: startup `_check_free_memory`(요구 > 실측 free → fail) → KV `_check_enough_kv_cache_memory`(필요 KV > 예산 KV → fail). 같은 "GPU memory" 에러 메시지라도 단계가 다르고, `gmu`/`max_len`/`TP`의 효과 방향이 다르다. 사용자가 "`gmu` 줄이면 되는 거 아냐?"라고 물을 때 단계 차이를 명확히 분리 설명한 것이 검증 사이클 단축의 핵심.
+- **에러 메시지의 권장값은 1요청 기준**: `_check_enough_kv_cache_memory` 권장 `estimated maximum model length is 31856`는 "단일 시퀀스가 max_len 꽉 채워도 처리 가능한 한계". 운영 동시성과 무관한 single-shot 체크라, 게이트웨이 admission control(inflight=20)이나 사용자 동시성과 별개로 통과해야 시작 가능.
+- **fixture는 코드와 동거**: 테스트 코드를 이동하면 `__file__` 기준으로 같은 디렉토리를 가정하는 fixture(`image.png`)도 같이 옮겨야 회귀 없음. work-verify 1차에서 잡힌 회귀 — 이동/리팩토링 checklist에 fixture 동거 항목 추가 후보.
+- **컬럼 단순화: 핵심 1 + 측정 조건 + 신뢰도 + 1개 보조**: "지표 다 보고 싶다"는 의도 자체는 코드는 풀 통계 유지하되 사용자 출력 테이블만 핵심으로 줄여 가독성·의사결정 속도 확보. p95·역수 지표는 분석 시 콘솔 로그/`.archive` 검증 데이터로 재계산 가능.
+
+#### 현재 상태
+- Gemma 4 31B MTP @ TP=2, max_len 32768, gmu 0.95 — **UP**. drafter 4 layer 매핑(`gemma4.py:330`) + multimodal warmup 완료.
+- Qwen 3.6 27B MTP — 5월 12일 17:43 UP 확인 후 본 세션 후반 `curl :5016/v1/models` 응답 없음 → 운영 점검 필요.
+- `tests/speed_test.py` — `tests/results/speed_results.md` 첫 행 1개(2026-05-13 13:36:56, Gemma quick smoke) 기록 후 즉시 사용 가능.
+- 다음 작업: ① Qwen 5016 가용성 점검 후 ② 두 게이트웨이 풀 매트릭스 실행 → `speed_results.md`에 모델당 12행 누적 → 모델 간 TPS·TTFT 비교.
+
+---
 
 ### 2026-05-12 (STT 한국어 정확도 의사결정 + STT yaml 통일 + 옵션 A 리팩토링)
 

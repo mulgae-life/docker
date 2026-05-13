@@ -63,7 +63,11 @@ PORT_ALLOC_LOCK = os.path.join(RUNTIME_DIR, ".port_alloc.lock")
 # port: 자동 회피 로직이 결정한 실제 포트를 --port CLI로 따로 넘기므로 yaml에서는 제거.
 # env: dict 형태 환경변수. subprocess.Popen의 env에 머지하고 vllm serve에는 전달하지 않는다.
 #   예) Voxtral 권장 VLLM_DISABLE_COMPILE_CACHE=1 처럼 모델별 env 의존성이 있을 때 사용.
-_LAUNCHER_KEYS = {"gpus", "download_dir", "gateway_port", "port", "env"}
+# task: vLLM 0.20.x에서 --task CLI 인자가 제거되고 model config 기반 자동 감지로 통합됨.
+#   STT yaml(whisper_v3 / qwen3_asr / voxtral)의 task 키는 PoC 비교 메타로만 보존하고
+#   vllm serve에는 전달하지 않는다. 자동 감지가 부정확한 모델이 나오면 그때 vLLM 새 인자
+#   (--runner 등)로 매핑하는 launcher 분기를 추가한다.
+_LAUNCHER_KEYS = {"gpus", "download_dir", "gateway_port", "port", "env", "task"}
 
 
 def parse_args():

@@ -15,18 +15,18 @@ vLLM 서버 배포 후 기능 검증을 위한 테스트 스위트.
   8. 프리픽스 캐싱: 동일 시스템 프롬프트 반복 호출의 응답 시간 비교.
   9. 멀티모달: 단일 이미지, 동시 이미지, 이미지+텍스트 혼합 요청 안정성 확인.
 
-사용법:
+사용법 (vllm/ 디렉토리에서 실행):
     # 기본 (localhost:5015, base-url 포트 → gateways/+instances/에서 모델명 자동 추출)
-    python test_vllm_server.py
+    python tests/test_vllm_server.py
 
     # 커스텀 서버/모델
-    python test_vllm_server.py --base-url http://localhost:8000 --model MyModel
+    python tests/test_vllm_server.py --base-url http://localhost:8000 --model MyModel
 
     # 특정 카테고리만 실행
-    python test_vllm_server.py --category infra inference
+    python tests/test_vllm_server.py --category infra inference
 
     # 카테고리 목록 확인
-    python test_vllm_server.py --list
+    python tests/test_vllm_server.py --list
 """
 import argparse
 import base64
@@ -1102,11 +1102,11 @@ def parse_args():
               caching     프리픽스 캐싱
               multimodal  멀티모달 (이미지, image.png 필요)
 
-            예시:
-              python test_vllm_server.py
-              python test_vllm_server.py --category infra inference
-              python test_vllm_server.py --category multimodal
-              python test_vllm_server.py --base-url http://gpu-server:5015
+            예시 (vllm/ 디렉토리에서 실행):
+              python tests/test_vllm_server.py
+              python tests/test_vllm_server.py --category infra inference
+              python tests/test_vllm_server.py --category multimodal
+              python tests/test_vllm_server.py --base-url http://gpu-server:5015
         """),
     )
     p.add_argument("--base-url", default="http://localhost:5015", help="vLLM 서버 URL (기본: http://localhost:5015)")

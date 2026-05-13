@@ -96,7 +96,7 @@ http_client:
 # retry_after_seconds: 대기열 포화/시간 초과 시 클라이언트 재시도 권장 간격(초).
 overload:
   enabled: true
-  max_inflight_requests: 2 # 20
-  max_queue_size: 18 # 40
+  max_inflight_requests: 20 # 20
+  max_queue_size: 40 # 40
   queue_timeout_seconds: 180
   retry_after_seconds: 10

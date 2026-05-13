@@ -6,7 +6,7 @@
 >
 > 사용자(API 호출)용 가이드: [`STT_API_GUIDE.md`](STT_API_GUIDE.md)
 
-vLLM 0.19.1 기반 STT 게이트웨이의 **시스템 구조 / 기동·중지 / 모델 관리 / 설정 / 트러블슈팅**을 다룹니다. § 번호는 사용자 가이드(`STT_API_GUIDE.md` §1~§5)와의 cross-reference 안정성을 위해 6부터 시작합니다.
+vLLM 0.20.2 기반 STT 게이트웨이의 **시스템 구조 / 기동·중지 / 모델 관리 / 설정 / 트러블슈팅**을 다룹니다. § 번호는 사용자 가이드(`STT_API_GUIDE.md` §1~§5)와의 cross-reference 안정성을 위해 6부터 시작합니다.
 
 ---
 
@@ -18,7 +18,8 @@ vLLM 0.19.1 기반 STT 게이트웨이의 **시스템 구조 / 기동·중지 / 
 9. [인스턴스·게이트웨이 설정](#9-인스턴스게이트웨이-설정)
 10. [트러블슈팅](#10-트러블슈팅)
 11. [QA 체크리스트](#11-qa-체크리스트)
-12. [참고 자료](#12-참고-자료)
+12. [호출 로그 동기화 (logging.sh)](#12-호출-로그-동기화-loggingsh)
+13. [참고 자료](#13-참고-자료)
 
 ---
 
@@ -49,7 +50,7 @@ vLLM voxtral :7172       stt/instances/voxtral.yaml
 |--------|---------|------|
 | LLM 서빙 | `llm-serving/vllm/` | Gemma/Qwen 등 chat 모델 (게이트웨이 :5015 / :5016) |
 | STT 서빙 | `llm-serving/stt/` | Voxtral 등 음성 모델 (게이트웨이 :5017) |
-| 공용 코드 | `llm-serving/vllm/{vllm_server_launcher.py, vllm_gateway.py}` | 두 디렉토리가 같은 launcher/gateway 파이썬을 재사용 |
+| 공용 코드 | `llm-serving/vllm/{start.sh, logging.sh, vllm_server_launcher.py, vllm_gateway.py}` | STT는 `start.sh` / `logging.sh`도 vllm 본체를 호출하는 thin wrapper (옵션 A, 2026-05-12). launcher/gateway는 같은 파이썬 모듈 재사용. |
 
 > 게이트웨이 코드는 `vllm/vllm_gateway.py` 단일 출처. STT 게이트웨이는 chat/completions 외에도 `/v1/audio/transcriptions`, `/v1/realtime` 라우트를 자동 제공합니다.
 
@@ -70,10 +71,12 @@ vllm/instances/.runtime/gemma.json    ← LLM 인스턴스 runtime
 llm-serving/stt/
 ├── README.md
 ├── MODEL_STUDY.md             # 후보 모델 비교 / 시나리오 분석
-├── start.sh                   # 빠른 기동 (instances/+gateways/ 자동 순회)
+├── start.sh                   # thin wrapper → ../vllm/start.sh (env-driven 본체 호출, 옵션 A)
+├── logging.sh                 # thin wrapper → ../vllm/logging.sh (S3 호출 카운트 5분 sync)
 ├── instances/
-│   └── voxtral.yaml           # gateway_port: 5017, 내부 :7172
-│   └── (qwen3_asr/whisper_v3는 비교용, gateway_port 미지정 — 직접 노출)
+│   ├── voxtral.yaml           # gateway_port: 5017, 내부 :7172 (메인 운영)
+│   ├── whisper_v3.yaml        # 비교 PoC, :7171 직접 노출 (gateway_port 미지정)
+│   └── qwen3_asr.yaml         # 비교 PoC, :7170 직접 노출 (gateway_port 미지정)
 ├── gateways/
 │   └── 5017.yaml              # discover_from: ../instances
 └── logs/                      # 인스턴스/게이트웨이 stdout/stderr (자동 생성)
@@ -82,6 +85,8 @@ llm-serving/stt/
 ---
 
 ## 7. 기동·중지·재시작
+
+> `stt/start.sh`는 `../vllm/start.sh`를 호출하는 thin wrapper(옵션 A, 2026-05-12). 운영 로직(up/down/status/restart, `[name]` 라우팅, confirm 프롬프트, fcntl 직렬화, atomic runtime write, cmdline PID 매칭)은 vllm 본체 단일 출처. 호출 사용법은 vllm/와 동일하며 라벨만 `═══ STT 클러스터 상태 ═══`로 표시.
 
 ### 7.1 명령 요약
 
@@ -171,16 +176,17 @@ pip install --user soundfile soxr librosa
 
 ## 9. 인스턴스·게이트웨이 설정
 
-### 9.1 메모리 핏 (instances/voxtral.yaml)
+### 9.1 메모리 핏 (instances/*.yaml — 3종 통일)
 
-```yaml
-gpus: [2]
-gpu_memory_utilization: 0.35   # L40S 46GB × 0.35 = 16.1 GiB 예약
-max_num_seqs: 1                # 단일 세션 PoC. 동시 N 세션 시 N으로 상향
-max_model_len: 32768           # ≈ 43분 오디오 (1 token = 80ms)
-```
+3종 인스턴스는 동일 키 구조(2026-05-12 yaml 통일)이며 모델별 값만 차이:
 
-L40S 46GB × util별 동작 (실측):
+| 인스턴스 | 노출 경로 | gpu_memory_utilization | max_num_seqs | max_model_len | 예약(L40S 46GB) | 비고 |
+|---|---|---|---|---|---|---|
+| **voxtral** | gw `:5017` → `:7172` (GPU 2) | 0.35 | 1 | 32768 | 16.1 GiB | 메인 운영 (실시간 + transcription) |
+| **qwen3_asr** | `:7170` 직접 (GPU 0) | 0.50 | 8 | 8192 | ~23 GiB | 비교 PoC |
+| **whisper_v3** | `:7171` 직접 (GPU 2) | 0.20 | 5 | 모델 config 자동(448) | ~9 GiB | 비교 PoC, 시나리오 E 1순위 |
+
+L40S 46GB × util별 동작 (voxtral 실측):
 
 | util | 예약 | weight | KV 가용 | KV token | 권장 max_num_seqs |
 |------|------|--------|---------|---------|---------|
@@ -230,6 +236,7 @@ overload:
 | 증상 | 원인 / 해결 |
 |------|-------------|
 | `EngineCore failed to start` + `ImportError: soundfile` | Voxtral 의존성 미설치. `pip install --user soundfile soxr librosa` |
+| `vllm: error: unrecognized arguments: --task transcription` | vLLM 0.20.x에서 `--task` CLI 인자가 제거되고 model config 기반 자동 감지로 통합됨. launcher `_LAUNCHER_KEYS`(`vllm_server_launcher.py:66`)가 yaml의 `task` 키를 필터하여 vllm serve에 전달하지 않도록 보장(`{"gpus", "download_dir", "gateway_port", "port", "env", "task"}`). yaml의 `task` 키는 PoC 비교 운영 메타로만 보존. 자동 감지가 부정확한 모델이 나오면 launcher에 `--runner` 매핑 분기 추가. |
 | 게이트웨이 `/health`가 503 + `ready: 0/1` | 백엔드 voxtral가 미기동 또는 로딩 중. `./start.sh status` → `[STARTING]`이면 1~2분 대기 |
 | 게이트웨이 로그 `realtime 백엔드 연결 실패` | `gateways/5017.yaml`의 `discover_from`이 voxtral.yaml의 `gateway_port`와 일치하는지 확인. 디스커버리 결과는 게이트웨이 기동 로그(`logs/gateway_5017.log`)에 표시 |
 | `[STALE]` 표시 | launcher가 SIGKILL/crash로 죽음. `./start.sh down voxtral`로 runtime 파일 정리 |
@@ -277,13 +284,78 @@ async def main():
 asyncio.run(main())
 PY
 # session.created OK: session.created
+
+# 5) Smoke transcription — whisper_v3 단독 (비교 PoC, 게이트웨이 미경유)
+curl -s -w "\n[%{http_code} (%{time_total}s)]\n" \
+  http://localhost:7171/v1/audio/transcriptions \
+  -F "file=@/tmp/sine_1s.wav" \
+  -F "model=whisper-large-v3" \
+  -F "language=ko" \
+  -F "temperature=0"
+# {"text":"","usage":{"type":"duration","seconds":1}}  [200]
 ```
 
-위 4개가 모두 통과하면 5017 게이트웨이 + voxtral 백엔드는 운영 가능 상태입니다.
+위 1~4번이 모두 통과하면 5017 게이트웨이 + voxtral 백엔드는 운영 가능 상태입니다. 비교 PoC(`whisper_v3` / `qwen3_asr`)는 5번 절차로 단독 확인.
 
 ---
 
-## 12. 참고 자료
+## 12. 호출 로그 동기화 (logging.sh)
+
+`stt/logging.sh`는 `../vllm/logging.sh`를 호출하는 thin wrapper(옵션 A). vLLM 호출 로그를 5분 간격으로 S3에 sync하여 인스턴스별 호출 카운트 통계를 생성합니다. **read-only**(stat / tail -c / awk)로 로그를 읽을 뿐, vLLM 프로세스·포트·파일에 일절 손대지 않으므로 서비스 영향 없음.
+
+### 12.1 환경 분리 (STT vs LLM)
+
+| 클러스터 | S3 prefix | 기본 인스턴스 |
+|---|---|---|
+| LLM (vllm/) | `s3://hgi-ai-res/logs/vllm/` | `prd-gemma` |
+| STT (stt/) | `s3://hgi-ai-res/logs/stt/` | `voxtral` |
+
+STT wrapper(`stt/logging.sh`)가 `WORK_DIR=$HERE`, `INST_DEFAULT=voxtral`, `S3_PREFIX=logs/stt`를 export하여 본체 호출. wrapper 30줄, 본체 로직은 단일 출처.
+
+### 12.2 시작·중지·확인
+
+```bash
+cd llm-serving/stt
+
+./logging.sh                    # 기본 voxtral 시작
+./logging.sh whisper_v3         # 인스턴스 명시 시작
+./logging.sh stop               # 중지
+
+tail -f logs/logging.out        # sync 로그 watch (5분마다 "uploaded N date(s)")
+cat logs/.logging.pid           # 데몬 PID
+```
+
+### 12.3 매칭·일자 라우팅 동작
+
+- **필터**: `POST /v1/` 라인만 추출. `/v1/audio/transcriptions`(POST)는 매칭, `/v1/realtime`(WebSocket upgrade)은 미매칭 — **본 통계는 transcription 호출만 포함**.
+- **일자 자동 분배**: vLLM 로그 안의 `INFO MM-DD ...` 라인(throughput 10초 주기 등)에서 일자를 추출하여 호출 라인을 해당 일자 파일로 라우팅. 자정 경계의 5분 chunk도 양일에 정확히 분배되며, 며칠치 백로그가 쌓여 있어도 첫 sync에서 일자별로 자동 분할.
+- **truncate 감지**: 로그 파일 크기가 줄면 offset을 0으로 리셋(vLLM 재기동 대응).
+
+### 12.4 호출 카운트 확인 (S3)
+
+```bash
+# 오늘자 voxtral transcription 호출 수
+aws s3 cp s3://hgi-ai-res/logs/stt/voxtral/$(date +%F).log - | wc -l
+
+# 특정 일자 whisper_v3 호출 수
+aws s3 cp s3://hgi-ai-res/logs/stt/whisper_v3/2026-05-13.log - | wc -l
+
+# 인스턴스별 일자 파일 목록
+aws s3 ls s3://hgi-ai-res/logs/stt/voxtral/
+```
+
+### 12.5 운영 트러블슈팅
+
+| 증상 | 원인 / 해결 |
+|------|-------------|
+| `already running (PID ...)` | 이미 데몬 실행 중. 의도적이면 무시, 재시작 필요 시 `./logging.sh stop` 후 재실행 |
+| `skip — logs/vllm_<inst>.log 없음` | 인스턴스 미기동 또는 다른 인스턴스명 지정. `./start.sh status`로 확인 |
+| S3 업로드 0건이 5분 이상 지속 | (1) `POST /v1/` 라인 미발생(트래픽 없음) — 정상 (2) AWS credential 만료 — `aws s3 ls` 점검 |
+| 자정 경계 호출이 다음날로 합쳐짐 | vLLM 로그에 `INFO MM-DD` 일자 표기 라인이 없는 경우(이례적). 통상 throughput 라인이 10초마다 찍히므로 발생 빈도 매우 낮음 |
+
+---
+
+## 13. 참고 자료
 
 - 사용자 호출 가이드: [`STT_API_GUIDE.md`](STT_API_GUIDE.md) §1~§5
 - 배포 절차(로컬 → S3 → 운영계): [`DEPLOY_GUIDE.md`](DEPLOY_GUIDE.md)

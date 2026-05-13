@@ -1,8 +1,12 @@
 # STT API 가이드 (사용자용)
 
 > **대상**: API 사용자 (음성-텍스트 변환을 호출할 개발자)
-> **메인 모델**: `Voxtral-Mini-4B-Realtime-2602` (Mistral AI, 13개 다국어 STT)
-> **Base URL**: `http://3.38.195.121:5017/v1` (외부)
+> **모델 매트릭스 (시나리오별, 2026-05-12 의사결정)**:
+> - **정확도 우선 + offline (1순위)**: `whisper-large-v3` (MIT, 산업 표준 baseline) — `:7171` 직접 노출
+> - **실시간 스트리밍**: `Voxtral-Mini-4B-Realtime-2602` (Mistral AI, Realtime API 단독 지원) — Gateway `:5017`
+> - **추가 비교 PoC**: `qwen3-asr-1.7b` (Apache 2.0) — `:7170` 직접 노출
+>
+> **Base URL** (실시간 + Voxtral transcription): `http://3.38.195.121:5017/v1` (외부)
 > **API 호환**: OpenAI Audio API + Realtime API
 > **인증**: 불필요 (`Authorization` 헤더 생략 가능)
 
@@ -26,6 +30,16 @@
 ---
 
 ## 1. 한눈에 보기
+
+### 1.1 시나리오별 모델 선택 (2026-05-12 의사결정)
+
+| 시나리오 | 모델 | 노출 경로 | 라이선스 | 비고 |
+|---|---|---|---|---|
+| **정확도 우선 + offline** (1순위) | `whisper-large-v3` | `:7171` 직접 | MIT | 한국어 batch 변환(회의록 등). 산업 표준 baseline. `verbose_json` / word·segment 타임스탬프 지원 |
+| **실시간 스트리밍** | `Voxtral-Mini-4B-Realtime-2602` | Gateway `:5017` | Apache 2.0 | `/v1/realtime` WebSocket 단독 지원. 480ms chunk sweet spot |
+| **추가 비교 PoC** | `qwen3-asr-1.7b` | `:7170` 직접 | Apache 2.0 | FLEURS Korean CER 2.57% 후보. 일반 transcription |
+
+### 1.2 메인 운영 (Voxtral / Realtime + Transcription)
 
 | 항목 | 값 |
 |------|-----|

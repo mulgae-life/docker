@@ -26,8 +26,10 @@ LLM 서빙 프레임워크 운영 구성 모음. 서버 인프라(EC2/Docker)와
 | [`vllm/vllm_gateway.py`](vllm/vllm_gateway.py) | OpenAI 호환 게이트웨이 (자동 디스커버리 LB + 대기열 기반 과부하 차단) |
 | [`vllm/instances/`](vllm/instances/) | **인스턴스 단위 yaml** (`<name>.yaml` 1개 = vLLM 프로세스 1대). `gateway_port` 메타 + 모델/포트/GPU |
 | [`vllm/gateways/`](vllm/gateways/) | **게이트웨이 단위 yaml** (`<port>.yaml` 1개 = 게이트웨이 1대). `discover_from`으로 인스턴스 자동 매칭 |
-| [`vllm/test_vllm_server.py`](vllm/test_vllm_server.py) | 서버 헬스/추론 테스트 |
-| [`vllm/traffic_test_vllm.py`](vllm/traffic_test_vllm.py) | smoke/overload 트래픽 테스트와 429 방어 응답 검증 |
+| [`vllm/tests/`](vllm/tests/) | 테스트 코드 디렉토리 (기능/트래픽/속도 + `results/` 누적 리포트) |
+| [`vllm/tests/test_vllm_server.py`](vllm/tests/test_vllm_server.py) | 서버 헬스/추론 기능 테스트 (9개 카테고리 QA) |
+| [`vllm/tests/traffic_test_vllm.py`](vllm/tests/traffic_test_vllm.py) | smoke/overload 트래픽 테스트와 429 방어 응답 검증 |
+| [`vllm/tests/speed_test.py`](vllm/tests/speed_test.py) | 모델 간 속도 비교 (TTFT · decode TPS · server TPS · ITL 매트릭스 누적) |
 | [`vllm/slm_research/`](vllm/slm_research/) | SLM 비교 리서치 (Gemma, Qwen) |
 | [`vllm/bugfix/`](vllm/bugfix/) | 운영 중 발견된 이슈 기록 |
 

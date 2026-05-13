@@ -77,8 +77,12 @@ docker/
     │   ├── gateways/                 # 게이트웨이 yaml (포트/디스커버리)
     │   │   ├── 5015.yaml
     │   │   └── 5016.yaml
-    │   ├── test_vllm_server.py       # 서버 헬스/추론 테스트
-    │   ├── traffic_test_vllm.py      # 보수적 트래픽/과부하 테스트
+    │   ├── tests/                   # 테스트 코드/픽스처/결과 디렉토리
+    │   │   ├── test_vllm_server.py  # 서버 헬스/추론 9 카테고리 QA
+    │   │   ├── traffic_test_vllm.py # 보수적 트래픽/과부하 테스트
+    │   │   ├── speed_test.py        # 모델 간 속도 매트릭스 누적 (--base-url 단독)
+    │   │   ├── image.png            # 멀티모달 fixture
+    │   │   └── results/             # speed_results.md 등 누적 리포트
     │   ├── slm_research/             # SLM 비교 (Gemma, Qwen)
     │   └── bugfix/                   # 운영 중 발견 이슈 기록
     └── stt/                          # STT 운영 중 (vllm 페어 패턴 동일, launcher/gateway 본체 재사용)
@@ -124,7 +128,9 @@ docker/
 | `aws/docker-compose.yml` | 메인 컨테이너 정의 (`.env`로 GPU/메모리/포트 제어) |
 | `llm-serving/vllm/vllm_server_launcher.py` | 다중 vLLM 서버 기동 (GPU 분할, yaml-relative runtime json) — LLM/STT 공용 |
 | `llm-serving/vllm/vllm_gateway.py` | OpenAI 호환 게이트웨이 (chat/completions + audio/transcriptions + realtime WebSocket) — LLM/STT 공용 |
-| `llm-serving/vllm/traffic_test_vllm.py` | 운영 서버 보호를 우선한 smoke/overload 트래픽 테스트 |
+| `llm-serving/vllm/tests/test_vllm_server.py` | 서버 헬스/추론 9 카테고리 QA |
+| `llm-serving/vllm/tests/traffic_test_vllm.py` | 운영 서버 보호를 우선한 smoke/overload 트래픽 테스트 |
+| `llm-serving/vllm/tests/speed_test.py` | 게이트웨이 단위 속도 매트릭스 측정 (`--base-url` 단독, 모델명 자동 추출, results/speed_results.md 누적 append) |
 | `llm-serving/VLLM_API_GUIDE.md` | vLLM 사용자용 API 가이드 (§1~§5: 호출·파라미터·`.env`) |
 | `llm-serving/VLLM_OPS_GUIDE.md` | vLLM 운영자용 가이드 (§6~§15: 기동·튜닝·트러블슈팅·QA) |
 | `llm-serving/STT_API_GUIDE.md` | STT 사용자용 API 가이드 (§1~§5: transcription·realtime·통합) |
@@ -157,7 +163,8 @@ sudo ./user.sh up jin --password 1234 --gpus 0,1   # 추가 사용자
 cd llm-serving/vllm
 ./start.sh up              # instances/+gateways/ 자동 순회 (포트 충돌 시 자동 회피)
 ./start.sh status          # 인스턴스/게이트웨이 상태 확인
-python test_vllm_server.py # 추론/스트리밍/툴콜 QA
+python tests/test_vllm_server.py # 추론/스트리밍/툴콜 QA
+python tests/speed_test.py --base-url http://localhost:5015  # 모델 간 속도 매트릭스 누적
 
 # 4) STT 서빙 (Voxtral, vllm 페어 패턴 동일)
 cd ../stt
