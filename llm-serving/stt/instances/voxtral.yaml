@@ -39,8 +39,7 @@
 # gateways/<port>.yaml 의 discover_from(../instances)이 본 yaml의 gateway_port를 보고
 # 자기 게이트웨이 포트와 일치하면 backends에 등록한다.
 # vllm_server_launcher.py:_LAUNCHER_KEYS 가 이 키를 vllm serve 인자에서 제외한다.
-# 비교 PoC 단독 인스턴스(qwen3_asr / whisper_v3)는 이 키를 주석 처리하여
-# 게이트웨이 미매칭으로 운영한다(직접 port 호출).
+# 같은 gateway_port를 갖는 인스턴스가 여러 개면 게이트웨이가 model 필드로 라우팅한다.
 gateway_port: 5017
 
 
@@ -80,7 +79,6 @@ env:
 host: 0.0.0.0
 # port = 내부 vLLM 포트 (게이트웨이 ↔ 인스턴스 사이의 hop). 외부 클라이언트는
 # stt/gateways/5017.yaml(:5017)으로 접속하고 게이트웨이가 본 포트로 forward한다.
-# 비교 PoC 인스턴스(gateway_port 미지정)는 이 포트를 직접 호출한다.
 # 7172는 vllm 측 7070(gemma) / 7080(qwen) 다음 자리. 사용 중이면 launcher가 자동 회피(+1).
 port: 7172
 uvicorn_log_level: info

@@ -1,18 +1,13 @@
 # STT API 가이드 (사용자용)
 
-> **대상**: API 사용자 (음성-텍스트 변환을 호출할 개발자)
-> **모델 매트릭스 (시나리오별, 2026-05-12 의사결정)**:
-> - **정확도 우선 + offline (1순위)**: `whisper-large-v3` (MIT, 산업 표준 baseline) — `:7171` 직접 노출
-> - **실시간 스트리밍**: `Voxtral-Mini-4B-Realtime-2602` (Mistral AI, Realtime API 단독 지원) — Gateway `:5017`
-> - **추가 비교 PoC**: `qwen3-asr-1.7b` (Apache 2.0) — `:7170` 직접 노출
->
-> **Base URL** (실시간 + Voxtral transcription): `http://3.38.195.121:5017/v1` (외부)
-> **API 호환**: OpenAI Audio API + Realtime API
+> **대상**: API 사용자 (음성 → 텍스트 변환을 호출할 개발자)
+> **메인 모델**: `whisper-large-v3` (OpenAI Whisper, MIT 라이선스, 산업 표준 baseline)
+> **API 호환**: OpenAI Audio API 100% — 기존 OpenAI SDK · LangChain · `curl` 그대로
 > **인증**: 불필요 (`Authorization` 헤더 생략 가능)
 
-자체 호스팅한 vLLM 기반 STT 게이트웨이를 **OpenAI Audio API · Realtime API** 그대로 호출하기 위한 가이드입니다.
+자체 호스팅한 vLLM 기반 STT 서버를 **OpenAI Audio API 쓰듯** 호출하기 위한 가이드입니다.
 
-처음 호출하는 분은 §1~§3만 보면 됩니다. 운영(서버 기동·튜닝·트러블슈팅)은 [`STT_OPS_GUIDE.md`](STT_OPS_GUIDE.md) 참고.
+처음 호출하는 분은 §1~§3만 보면 됩니다. 운영(서버 기동·튜닝·트러블슈팅·테스트)은 [`STT_OPS_GUIDE.md`](STT_OPS_GUIDE.md) 참고.
 
 ---
 
@@ -21,47 +16,45 @@
 1. [한눈에 보기](#1-한눈에-보기)
 2. [첫 호출](#2-첫-호출)
 3. [핵심 기능](#3-핵심-기능)
-   - 3.1 Transcriptions (HTTP, OpenAI Audio API)
-   - 3.2 Realtime (WebSocket, OpenAI Realtime API)
-   - 3.3 언어 / 샘플링 / 타임스탬프
+   - 3.1 Transcription (음성 → 원어 텍스트)
+   - 3.2 Translation (음성 → 영어 텍스트)
+   - 3.3 타임스탬프 (`verbose_json` / word·segment)
+   - 3.4 Realtime 스트리밍 (Voxtral 옵션)
 4. [파라미터·응답·에러 레퍼런스](#4-파라미터응답에러-레퍼런스)
-5. [클라이언트 통합 예제](#5-클라이언트-통합-예제)
+5. [클라이언트 통합 (.env)](#5-클라이언트-통합-env)
 
 ---
 
 ## 1. 한눈에 보기
 
-### 1.1 시나리오별 모델 선택 (2026-05-12 의사결정)
+**Base URL**: `http://3.38.195.121:5017/v1` — 3 모델 모두 동일 게이트웨이로 호출하고, `model` 필드로 라우팅됩니다.
 
-| 시나리오 | 모델 | 노출 경로 | 라이선스 | 비고 |
-|---|---|---|---|---|
-| **정확도 우선 + offline** (1순위) | `whisper-large-v3` | `:7171` 직접 | MIT | 한국어 batch 변환(회의록 등). 산업 표준 baseline. `verbose_json` / word·segment 타임스탬프 지원 |
-| **실시간 스트리밍** | `Voxtral-Mini-4B-Realtime-2602` | Gateway `:5017` | Apache 2.0 | `/v1/realtime` WebSocket 단독 지원. 480ms chunk sweet spot |
-| **추가 비교 PoC** | `qwen3-asr-1.7b` | `:7170` 직접 | Apache 2.0 | FLEURS Korean CER 2.57% 후보. 일반 transcription |
+| 항목 | **Whisper (메인)** | Voxtral (실시간 옵션) | Qwen3-ASR (옵션) |
+|------|---------------------|------------------------|-------------------|
+| 모델명 (`model` 필드) | **`whisper-large-v3`** | `Voxtral-Mini-4B-Realtime-2602` | `Qwen3-ASR-1.7B` |
+| API 키 | 불필요 | 불필요 | 불필요 |
+| Transcription (HTTP) | ✅ | ✅ | ✅ |
+| Translation (HTTP, → 영어) | ✅ (모델 카드 명시) | — | — |
+| Realtime (WebSocket) | ❌ | ✅ (단독 지원) | ❌ |
+| `verbose_json` + 타임스탬프 | ✅ (word/segment) | ❌ (요청 시 400) | ✅* |
+| 권장 입력 | wav/mp3/flac/m4a, 16kHz mono 권장 | PCM16 16kHz mono | wav/mp3/flac/m4a |
+| 권장 샘플링 | `temperature=0` | `temperature=0` (모델카드 강제) | `temperature=0` |
 
-### 1.2 메인 운영 (Voxtral / Realtime + Transcription)
+> `*` Qwen3-ASR은 OpenAI 호환 transcription 모델로 `verbose_json` 응답 자체는 반환되나, word·segment 타임스탬프 정밀도는 Whisper와 다를 수 있음 — 정확한 타임스탬프가 필수면 `model=whisper-large-v3` 권장.
 
-| 항목 | 값 |
-|------|-----|
-| Base URL | `http://3.38.195.121:5017/v1` |
-| 모델명 (`model` 필드) | `Voxtral-Mini-4B-Realtime-2602` |
-| API 키 | 불필요 |
-| 지원 task | `transcription` (HTTP), `realtime` (WebSocket) |
-| 컨텍스트 길이 | `max_model_len: 32768` token (≈ 43분 오디오, 1 token = 80ms) |
-| 지원 언어 | 13개 — `ar, de, en, es, fr, hi, it, nl, pt, zh, ja, ko, ru` |
-| 권장 샘플링 | `temperature=0.0` (모델카드 강제) |
+> 컨텍스트 길이·동시 세션 한도 등은 운영 튜닝값에 따라 달라집니다. 현재 값은 `GET /v1/models` 응답 또는 운영자에게 확인.
+
+**API 호환성**: vLLM은 OpenAI Audio API와 **100% 호환**. `OpenAI` SDK · `langchain_openai` · `fetch` · `curl` 어떤 클라이언트도 `base_url`만 바꾸면 그대로 동작합니다.
 
 **엔드포인트 요약**:
 
 | 메서드 | 경로 | 용도 |
 |--------|------|------|
-| POST | `/v1/audio/transcriptions` | **음성 → 텍스트** (multipart 업로드, 단일 응답) |
+| POST | `/v1/audio/transcriptions` | **음성 → 원어 텍스트** (multipart 업로드) |
 | POST | `/v1/audio/translations` | 음성 → 영어 텍스트 |
-| WS   | `/v1/realtime` | **실시간 스트리밍 STT** (양방향 WebSocket) |
+| WS   | `/v1/realtime` | 실시간 스트리밍 (`model=Voxtral-Mini-4B-Realtime-2602` 한정) |
 | GET  | `/v1/models` | 로드된 모델 목록 |
-| GET  | `/health` | 게이트웨이 헬스체크 |
-
-> 게이트웨이 `/health`는 ready 백엔드 1개 이상이면 200, 없으면 503. JSON 본문에 `{"status": "ok", "ready": N, "total": N}`.
+| GET  | `/health` | 서버 헬스체크 |
 
 ---
 
@@ -69,12 +62,12 @@
 
 > 호출 전 살아있는지 확인: `curl http://3.38.195.121:5017/health` → `200 OK`.
 
-### 2.1 Transcriptions (HTTP, multipart) — curl
+### 2.1 curl
 
 ```bash
 curl http://3.38.195.121:5017/v1/audio/transcriptions \
   -F "file=@sample_ko.wav" \
-  -F "model=Voxtral-Mini-4B-Realtime-2602" \
+  -F "model=whisper-large-v3" \
   -F "language=ko" \
   -F "temperature=0"
 ```
@@ -88,27 +81,158 @@ curl http://3.38.195.121:5017/v1/audio/transcriptions \
 }
 ```
 
-### 2.2 Transcriptions — Python (OpenAI SDK)
+### 2.2 Python (OpenAI SDK)
 
 ```python
 from openai import OpenAI
 
 client = OpenAI(
     base_url="http://3.38.195.121:5017/v1",
-    api_key="not-needed",  # vLLM 기본 인증 없음. 빈 문자열은 SDK가 거부.
+    api_key="not-needed",   # vLLM 기본 인증 없음. 빈 문자열은 SDK가 거부하므로 더미값.
 )
 
 with open("sample_ko.wav", "rb") as f:
     resp = client.audio.transcriptions.create(
         file=f,
-        model="Voxtral-Mini-4B-Realtime-2602",
+        model="whisper-large-v3",
         language="ko",
         temperature=0,
     )
 print(resp.text)
 ```
 
-### 2.3 Realtime (WebSocket) — Python
+### 2.3 LangChain
+
+```python
+from langchain_core.tools import tool
+from openai import OpenAI
+
+_stt = OpenAI(base_url="http://3.38.195.121:5017/v1", api_key="not-needed")
+
+@tool
+def transcribe_audio(path: str, language: str = "ko") -> str:
+    """오디오 파일 경로를 받아 텍스트로 변환."""
+    with open(path, "rb") as f:
+        return _stt.audio.transcriptions.create(
+            file=f, model="whisper-large-v3",
+            language=language, temperature=0,
+        ).text
+```
+
+### 2.4 Node.js (OpenAI SDK)
+
+```javascript
+import OpenAI from "openai";
+import fs from "fs";
+
+const client = new OpenAI({
+  baseURL: "http://3.38.195.121:5017/v1",
+  apiKey: "not-needed",
+});
+
+const resp = await client.audio.transcriptions.create({
+  file: fs.createReadStream("sample_ko.wav"),
+  model: "whisper-large-v3",
+  language: "ko",
+  temperature: 0,
+});
+
+console.log(resp.text);
+```
+
+### 2.5 모델 목록 확인
+
+```bash
+curl http://3.38.195.121:5017/v1/models
+```
+
+응답에 `served_model_name`(예: `whisper-large-v3`)과 `max_model_len`이 들어 있어, 클라이언트에서 모델명을 자동 감지하는 데 쓸 수 있습니다.
+
+---
+
+## 3. 핵심 기능
+
+### 3.1 Transcription (음성 → 원어 텍스트)
+
+OpenAI Audio API와 동일. multipart/form-data로 audio 파일 + form 필드 업로드.
+
+| 필드 | 필수 | 값 | 설명 |
+|------|:----:|----|------|
+| `file` | O | 파일 | wav / mp3 / flac / m4a / ogg 등 (vLLM이 librosa로 디코드) |
+| `model` | O | `whisper-large-v3` | `/v1/models`로 확인한 정확한 ID |
+| `language` | 권장 | `ko` 등 ISO-639-1 | 지정 시 언어 자동감지 비용 절약 |
+| `temperature` | 권장 | `0` | 숫자/고유명사 안정성 — Whisper 모델카드 권장 |
+| `response_format` | 선택 | `json`(기본) / `text` / `srt` / `vtt` / `verbose_json` | §3.3 참조 |
+| `timestamp_granularities[]` | 선택 | `word` / `segment` | `verbose_json` 일 때만 의미 있음 |
+
+**Whisper의 30초 chunk 처리**: Whisper는 구조적으로 30초 단위로 처리됩니다. 30초가 넘는 입력은 vLLM이 자동으로 chunk를 잘라 순차 디코드합니다 — 클라이언트 측 분할 불필요. 다만 1시간 이상의 매우 긴 오디오는 네트워크/timeout 안정성을 위해 사전 분할을 권장.
+
+**입력 포맷 팁**:
+
+- 샘플레이트는 모델 expected SR(Whisper=16kHz)와 다르면 vLLM이 자동 resample. 자동 resample 경로는 PyAV(`av` 패키지) 의존성이 있으므로, 운영 환경에 PyAV가 없으면 `Invalid or unsupported audio file.` 400이 날 수 있습니다 — 안전하게 **16kHz mono로 사전 변환**해 보내는 것을 권장.
+- 스테레오는 다운믹스해 mono로 보내는 편이 정확. 채널 정보가 텍스트에 기여하지 않음.
+
+```bash
+# ffmpeg로 16kHz mono 변환 예시
+ffmpeg -i input.mp3 -ar 16000 -ac 1 -c:a pcm_s16le output.wav
+```
+
+### 3.2 Translation (음성 → 영어 텍스트)
+
+`/v1/audio/translations`로 호출하면 **원어가 무엇이든 영어로 번역된 텍스트**가 반환됩니다.
+
+```bash
+curl http://3.38.195.121:5017/v1/audio/translations \
+  -F "file=@sample_ko.wav" \
+  -F "model=whisper-large-v3" \
+  -F "temperature=0"
+# {"text": "Hello, the weather is nice today."}
+```
+
+> 영어 외 다른 언어로의 번역은 미지원 (OpenAI Audio API 표준 그대로). 다른 언어로 번역이 필요하면 transcription → 별도 번역 LLM 호출.
+
+### 3.3 타임스탬프 (`verbose_json` / word·segment)
+
+`response_format=verbose_json` + `timestamp_granularities[]` 조합으로 segment·word 단위 타임스탬프를 받습니다. 회의록·자막 작업에 사용.
+
+```bash
+curl http://3.38.195.121:5017/v1/audio/transcriptions \
+  -F "file=@meeting_ko.wav" \
+  -F "model=whisper-large-v3" \
+  -F "language=ko" \
+  -F "response_format=verbose_json" \
+  -F "timestamp_granularities[]=segment" \
+  -F "timestamp_granularities[]=word" \
+  -F "temperature=0"
+```
+
+응답:
+
+```json
+{
+  "task": "transcribe",
+  "language": "ko",
+  "duration": 12.5,
+  "text": "지난해 삼 월 김 전 장관의 동료인 …",
+  "segments": [
+    {"id": 0, "start": 0.0, "end": 4.5, "text": "지난해 삼 월 …",
+     "tokens": [...], "temperature": 0.0,
+     "avg_logprob": -0.18, "compression_ratio": 1.05, "no_speech_prob": 0.01}
+  ],
+  "words": [
+    {"word": "지난해", "start": 0.10, "end": 0.62},
+    {"word": "삼",     "start": 0.62, "end": 0.84}
+  ]
+}
+```
+
+**자막 출력**: `response_format=srt` 또는 `vtt`를 주면 바로 자막 파일 형식 문자열로 떨어집니다 — 후가공 불필요.
+
+> Voxtral-Realtime은 `verbose_json` 미지원. 타임스탬프가 필요하면 `model=whisper-large-v3` 또는 `model=Qwen3-ASR-1.7B`로 호출.
+
+### 3.4 Realtime 스트리밍 (Voxtral 옵션)
+
+실시간 마이크 입력 같이 **양방향 스트리밍이 필요한 경우**만 Voxtral 모델로 WebSocket 엔드포인트(`/v1/realtime`)에 접속합니다. OpenAI Realtime API와 동일한 프로토콜.
 
 ```python
 import asyncio, json, websockets
@@ -117,11 +241,11 @@ URL = "ws://3.38.195.121:5017/v1/realtime?model=Voxtral-Mini-4B-Realtime-2602"
 
 async def main():
     async with websockets.connect(URL) as ws:
-        # 첫 이벤트: session.created
+        # 1) 서버가 session.created 송신
         msg = json.loads(await ws.recv())
         print("[server]", msg["type"])
 
-        # session.update — 입력 오디오 포맷/언어 등 협상
+        # 2) 입력 포맷/언어 협상
         await ws.send(json.dumps({
             "type": "session.update",
             "session": {
@@ -130,66 +254,51 @@ async def main():
             },
         }))
 
-        # input_audio_buffer.append — 오디오 chunk를 base64로 push
-        # (PCM16 16kHz 모노 권장. 80ms 단위 chunk가 모델카드 권장 sweet spot)
-        # ... 클라이언트의 마이크/파일을 base64 인코딩해 반복 send ...
+        # 3) PCM16 16kHz mono chunk를 base64로 input_audio_buffer.append 반복 송신
+        # 4) response.create로 응답 트리거
+        # ...
+
 asyncio.run(main())
 ```
-
-> 자세한 Realtime 프로토콜은 OpenAI 공식 문서: <https://platform.openai.com/docs/api-reference/realtime>. vLLM 0.19.1의 `session.created` 페이로드는 OpenAI 표준의 부분집합(`type, id, created`)이며, 클라이언트가 `session.update` / `input_audio_buffer.append` / `response.create` 등을 보내야 후속 이벤트가 흐릅니다.
-
----
-
-## 3. 핵심 기능
-
-### 3.1 Transcriptions (HTTP)
-
-OpenAI Audio API와 동일. multipart/form-data로 audio 파일 + form 필드 업로드.
-
-| 필드 | 필수 | 값 | 설명 |
-|------|:----:|----|------|
-| `file` | O | 파일 | wav/mp3/flac/m4a 등 (vLLM이 librosa로 디코드) |
-| `model` | O | `Voxtral-Mini-4B-Realtime-2602` | `/v1/models`로 확인한 정확한 ID |
-| `language` | 권장 | `ko` 등 ISO-639-1 | 지정 시 언어 자동감지 비용 절약 |
-| `temperature` | 권장 | `0` | 모델카드 권장 (수치 정확도/숫자/고유명사 안정) |
-| `response_format` | 선택 | `json`(기본) / `text` | **Voxtral-Realtime은 `verbose_json` 미지원** (요청 시 400). Whisper/Qwen3-ASR 등 일반 transcription 모델은 `verbose_json` 지원 — 모델 별로 확인 필요 |
-| `timestamp_granularities[]` | 선택 | `word` / `segment` | `verbose_json` 일 때만 의미 있음. Voxtral-Realtime은 미지원 |
-
-게이트웨이 timeout은 600초 — 1시간 미만 오디오는 보통 안전.
-
-### 3.2 Realtime (WebSocket)
-
-OpenAI Realtime API와 동일한 WebSocket 프로토콜. 게이트웨이가 양방향 frame을 그대로 백엔드 vLLM `/v1/realtime`에 relay합니다.
 
 권장 입력 포맷:
 
 | 항목 | 권장값 | 비고 |
 |------|--------|------|
 | 샘플레이트 | 16,000 Hz | Voxtral 학습 기본 |
-| 채널 | mono (1 channel) | 스테레오는 다운믹스 후 전송 |
+| 채널 | mono (1 channel) | 스테레오는 다운믹스 |
 | 인코딩 | PCM16 (little-endian) | base64로 `input_audio_buffer.append`에 첨부 |
 | chunk size | 80ms × N (모델카드 권장 480ms) | 짧을수록 latency↓, 정확도↓ |
 
-**WebSocket close code 매핑** (게이트웨이 추가):
+**WebSocket close code**:
 
-| code | 의미 |
-|------|------|
-| 4429 | 과부하 차단 — `Retry-After` 후 재시도 |
-| 4503 | 사용 가능한 백엔드 없음 |
-| 4500 | 게이트웨이 → 백엔드 연결 실패 |
-| 1000 | 정상 종료 |
+| code | 의미 | 대응 |
+|------|------|------|
+| 4429 | 과부하 차단 | 잠시 후 재시도 (`Retry-After` 헤더 참고) |
+| 4503 | 사용 가능한 백엔드 없음 | 잠시 후 재시도 |
+| 4500 | 게이트웨이 → 백엔드 연결 실패 | 잠시 후 재시도 |
+| 1000 | 정상 종료 | — |
 
-### 3.3 언어 / 샘플링 / 타임스탬프
-
-- **언어 자동 감지 vs 명시**: `language=ko` 명시 시 정확도/속도 모두 유리. 다국어 혼합 음성은 `language` 생략 → 자동 감지.
-- **temperature**: 0이 권장. 0이 아니면 같은 입력에 다른 출력이 나올 수 있고, 숫자/고유명사 안정성↓.
-- **타임스탬프**: `response_format=verbose_json` + `timestamp_granularities[]=word` 조합으로 `words[].start/end` 반환 — **단 Voxtral-Realtime은 미지원**. word/segment 단위 타임스탬프가 필수면 Whisper-large-v3 또는 Qwen3-ASR 인스턴스(`stt/instances/{whisper_v3,qwen3_asr}.yaml`, 직접 :7170/:7171 노출) 사용.
+> Realtime 프로토콜 상세는 OpenAI 공식 문서: <https://platform.openai.com/docs/api-reference/realtime>.
 
 ---
 
 ## 4. 파라미터·응답·에러 레퍼런스
 
-### 4.1 응답 (transcriptions, json)
+### 4.1 자주 쓰는 요청 파라미터 (transcriptions)
+
+| 파라미터 | 필수 | 기본값 | 설명 |
+|----------|:----:|--------|------|
+| `file` | O | — | multipart 업로드 파일 |
+| `model` | O | — | `whisper-large-v3` / `Voxtral-Mini-4B-Realtime-2602` / `Qwen3-ASR-1.7B` |
+| `language` | — | 자동감지 | ISO-639-1 (`ko`, `en`, …). 명시 시 정확도/속도 모두 유리 |
+| `temperature` | — | 0 | 0이 권장. 0이 아니면 같은 입력에 다른 출력 가능 |
+| `response_format` | — | `json` | `json` / `text` / `srt` / `vtt` / `verbose_json` |
+| `timestamp_granularities[]` | — | `[]` | `verbose_json`에서만 의미. `word` / `segment` |
+
+### 4.2 응답 형식
+
+**`json` (기본)**:
 
 ```json
 {
@@ -198,9 +307,7 @@ OpenAI Realtime API와 동일한 WebSocket 프로토콜. 게이트웨이가 양�
 }
 ```
 
-### 4.2 응답 (transcriptions, verbose_json) — Voxtral-Realtime 미지원
-
-> ⚠️ **Voxtral-Mini-4B-Realtime-2602 는 `response_format=verbose_json` 을 지원하지 않습니다** (400 BadRequestError). 아래 형식은 Whisper-large-v3 / Qwen3-ASR 등 일반 transcription 모델에서 반환되는 OpenAI 호환 형태이며, 모델별 지원 여부는 `/v1/models` 응답 또는 운영자 확인 필요.
+**`verbose_json`** (Whisper / Qwen3-ASR만):
 
 ```json
 {
@@ -208,47 +315,59 @@ OpenAI Realtime API와 동일한 WebSocket 프로토콜. 게이트웨이가 양�
   "language": "ko",
   "duration": 4.0,
   "text": "...",
-  "segments": [
-    {"id": 0, "start": 0.0, "end": 1.5, "text": "...",
-     "tokens": [...], "temperature": 0.0,
-     "avg_logprob": -0.2, "compression_ratio": 1.1, "no_speech_prob": 0.01}
-  ]
+  "segments": [{
+    "id": 0, "start": 0.0, "end": 1.5, "text": "...",
+    "tokens": [...], "temperature": 0.0,
+    "avg_logprob": -0.2, "compression_ratio": 1.1, "no_speech_prob": 0.01
+  }],
+  "words": [{"word": "안녕", "start": 0.1, "end": 0.45}]
 }
 ```
 
-### 4.3 에러 (HTTP)
+### 4.3 에러 코드
 
-| 상태 | 의미 | 클라이언트 대응 |
-|------|------|-----------------|
-| 400 | 잘못된 multipart 또는 form 필드 | 요청 본문 확인 |
-| 429 | 과부하 차단 (`max_inflight` 또는 `max_queue` 초과) | `Retry-After` 헤더 후 재시도 |
-| 502 | 게이트웨이 → 백엔드 연결 실패 | 잠시 후 재시도, 운영팀 통보 |
-| 503 | 사용 가능한 백엔드 없음 (재기동 중 등) | 잠시 후 재시도 |
-| 504 | 백엔드 타임아웃 (600초 초과) | 오디오를 더 짧게 분할 |
+| HTTP | 의미 | 흔한 원인 |
+|------|------|----------|
+| **400** | Bad Request | 잘못된 form 필드, 지원하지 않는 `response_format`, 디코드 실패 |
+| **404** | Not Found | 잘못된 모델명 또는 엔드포인트 경로 |
+| **422** | Unprocessable | 요청 바디 파싱 실패 |
+| **429** | Too Many Requests | 과부하 차단 — `Retry-After` 후 재시도 |
+| **500** | Internal Error | 서버 측 문제 — 잠시 후 재시도, 지속 시 운영자 문의 |
+| **502** | Bad Gateway | 게이트웨이 → 백엔드 연결 실패 (5017 게이트웨이만) |
+| **503** | Service Unavailable | 백엔드 미준비 (재기동/웜업 중) |
+| **504** | Gateway Timeout | 백엔드 타임아웃 — 오디오를 더 짧게 분할 |
 
-### 4.4 에러 본문 형식
+응답 형식:
 
 ```json
-{"error": {"message": "...", "type": "rate_limit_error|server_error|timeout|bad_gateway", "code": "..."}}
+{
+  "error": {
+    "message": "...",
+    "type": "rate_limit_error | server_error | timeout | bad_gateway",
+    "code": "..."
+  }
+}
 ```
 
 ---
 
-## 5. 클라이언트 통합 예제
-
-### 5.1 .env 설정 (chatbot/RAG 등에서 STT 모듈)
+## 5. 클라이언트 통합 (.env)
 
 ```bash
-# 외부에서 호출
+# 외부 호출 (단일 STT 게이트웨이 — 3 모델 모두 model 필드로 라우팅)
 STT_BASE_URL=http://3.38.195.121:5017/v1
-STT_MODEL=Voxtral-Mini-4B-Realtime-2602
+STT_MODEL=whisper-large-v3            # 메인. 필요 시 Qwen3-ASR-1.7B / Voxtral-Mini-4B-Realtime-2602
 STT_LANGUAGE=ko
 
-# 동일 EC2 안에서 호출 (게이트웨이 같은 호스트)
-STT_BASE_URL=http://localhost:5017/v1
+# 동일 EC2 안에서 호출 (같은 호스트)
+# STT_BASE_URL=http://localhost:5017/v1
+
+# Realtime WS는 동일 호스트 + ws:// 스킴
+# STT_REALTIME_URL=ws://3.38.195.121:5017/v1/realtime
+# STT_REALTIME_MODEL=Voxtral-Mini-4B-Realtime-2602
 ```
 
-### 5.2 FastAPI에서 transcription 프록시
+FastAPI 프록시 예시:
 
 ```python
 import os
@@ -270,28 +389,12 @@ async def transcribe(file: UploadFile):
     return {"text": resp.text}
 ```
 
-### 5.3 LangChain (audio agent의 한 노드)
-
-```python
-from langchain_core.tools import tool
-from openai import OpenAI
-
-_stt = OpenAI(base_url="http://3.38.195.121:5017/v1", api_key="not-needed")
-
-@tool
-def transcribe_audio(path: str, language: str = "ko") -> str:
-    """오디오 파일 경로를 받아 한국어 텍스트로 변환."""
-    with open(path, "rb") as f:
-        return _stt.audio.transcriptions.create(
-            file=f, model="Voxtral-Mini-4B-Realtime-2602",
-            language=language, temperature=0,
-        ).text
-```
-
 ---
 
 ## 다음 단계
 
-- 운영자 관점(서버 기동·튜닝·트러블슈팅): [`STT_OPS_GUIDE.md`](STT_OPS_GUIDE.md)
-- 배포 절차(로컬 → S3 → 운영계): [`DEPLOY_GUIDE.md`](DEPLOY_GUIDE.md)
-- 후보 모델 비교 / 시나리오 분석: [`stt/MODEL_STUDY.md`](stt/MODEL_STUDY.md)
+- 서버 운영(기동/중지·모델 교체·튜닝·트러블슈팅): [`STT_OPS_GUIDE.md`](STT_OPS_GUIDE.md)
+- 배포 절차(로컬 → S3 → EC2): [`DEPLOY_GUIDE.md`](DEPLOY_GUIDE.md)
+- vLLM SLM API (Chat): [`VLLM_API_GUIDE.md`](VLLM_API_GUIDE.md)
+- OpenAI Audio API 표준: <https://platform.openai.com/docs/api-reference/audio>
+- OpenAI Realtime API 표준: <https://platform.openai.com/docs/api-reference/realtime>

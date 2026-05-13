@@ -1,9 +1,11 @@
 # ═══════════════════════════════════════════════════════
-# STT Gateway — :5017 (Voxtral Realtime/Transcription)
+# STT Gateway — :5017 (Transcription / Translation / Realtime)
 # ═══════════════════════════════════════════════════════
 #
-# 백엔드: stt/instances/voxtral.yaml (gateway_port=5017 매칭)
+# 백엔드: stt/instances/*.yaml (gateway_port=5017 매칭 자동 등록)
+#   현재 등록: whisper_v3 (:7171), voxtral (:7172), qwen3_asr (:7170)
 # 라우팅: vllm_gateway 본체를 재사용 — chat/completions, transcription, realtime 모두.
+#   클라이언트는 요청 body의 `model` 필드로 백엔드 인스턴스가 선택된다.
 #
 # 백엔드 자동 디스커버리:
 #   discover_from(../instances)의 *.yaml 중 gateway_port == 5017인

@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-05-13 (Gemma 4 31B MTP 메모리 조정 실기동 + tests/ 정리 + speed_test.py 신규)
+last-updated: 2026-05-13 (STT 게이트웨이 단일 진입점화 — 3 모델 모두 `:5017` + STT_API_GUIDE 사용자 가이드로 재작성)
 ---
 
 # 세션 상태
@@ -34,6 +34,7 @@ last-updated: 2026-05-13 (Gemma 4 31B MTP 메모리 조정 실기동 + tests/ �
 | P2 | **운영계 컨테이너에 STT 의존성 반영 + 모델 동기화**: `aws/requirements.txt`에 추가된 `soundfile/soxr/librosa` 가 운영계 컨테이너 빌드에 반영되도록 재배포. Voxtral 17GB는 외부망 PC → S3 → `/models/STT/` 사전 동기화 (폐쇄망 대비). | Todo |
 | P2 | **RTX PRO 6000 Blackwell 운영 이전 후 fused MoE 튜닝**: `benchmark_moe.py`로 `E=128,N=352,device_name=NVIDIA_RTX_PRO_6000_Blackwell_Workstation_Edition,dtype=fp8_w8a8.json` 생성 → site-packages `vllm/model_executor/layers/fused_moe/configs/`에 배치 → 가능하면 vLLM 본가 PR. 트리거: 운영 환경 셋업 완료 시점 | Todo |
 | P2 | **운영 가이드 wrapper / logging.sh 보강 (옵션 A 후속)**: 2026-05-12 옵션 A 리팩토링으로 `stt/start.sh`·`stt/logging.sh`가 `../vllm/` 본체를 호출하는 thin wrapper가 됨. `STT_OPS_GUIDE.md` / `VLLM_OPS_GUIDE.md` 양쪽에 (1) 본체/wrapper 구조 한 줄 (2) `logging.sh` 운영 명령(S3 호출 카운트 sync) 섹션 추가. | Todo |
+| P1 | **STT 단일 게이트웨이 전환 후속 문서 정정**: 2026-05-13 본 세션에서 `whisper_v3.yaml`·`qwen3_asr.yaml`의 `gateway_port: 5017` 주석 해제 → 3 모델 모두 게이트웨이 뒤. 후속 정정 필요 — `STT_OPS_GUIDE.md`(L5 게이트웨이 단독 표기, L36-41 토폴로지, L78-79 트리 주석, L116-122 status 출력 예시, L185-187 운영 매트릭스 노출 경로, L290 트러블슈팅 `localhost:7171` 직접 호출), `llm-serving/README.md` L14·L47 요약, `agent-guide/PROJECT.md` L94-95 트리 주석·L110 스택 요약. | Todo |
 | P3 | `agent-guide/` MCP 도구 섹션 채우기 (필요 시) | Todo |
 
 ---
@@ -45,6 +46,42 @@ last-updated: 2026-05-13 (Gemma 4 31B MTP 메모리 조정 실기동 + tests/ �
 ---
 
 ## 최근 세션
+
+### 2026-05-13 (두 번째 — STT 게이트웨이 단일 진입점화 + STT_API_GUIDE 사용자 가이드 재작성)
+
+#### 세션 목표
+- `STT_API_GUIDE.md` / `STT_OPS_GUIDE.md` 두 가이드를 `VLLM_API_GUIDE.md` 톤(API 호출 사용자 가이드)로 정리. 메인 모델은 Whisper 기준, 모델 특이사항 없으면 생략. OPS는 유지.
+- 작업 중 사용자가 `whisper_v3.yaml` / `qwen3_asr.yaml`의 `gateway_port: 5017` 주석을 해제 → 3 모델 모두 단일 게이트웨이 뒤로 전환. 이에 따라 STT_API_GUIDE.md와 yaml 헤더 주석을 단일 진입점 전제로 재정정.
+
+#### 변경 파일
+| 파일 | 변경 유형 | 요약 |
+|------|----------|------|
+| `llm-serving/STT_API_GUIDE.md` | 전체 재작성 + 후속 정정 | VLLM_API_GUIDE 톤(§1 한눈에 보기 / §2 첫 호출 / §3 핵심 기능 / §4 레퍼런스 / §5 .env)으로 재구성. 메인 모델 Whisper-large-v3, Voxtral은 §3.4 Realtime 옵션, Qwen3-ASR은 매트릭스 한 행. 운영 메타("PoC", "2026-05-12 의사결정", "시나리오 E", "1순위") 제거. 후속 정정: ① 헤더 `Base URL` 단일 줄 삭제(메인 모델 단일 표기 부적합) ② 매트릭스 `포트` 행 삭제 + 매트릭스 상단에 "단일 게이트웨이 :5017 + `model` 필드 라우팅" 한 줄 명시 ③ base URL 일괄 `7171/7170 → 5017` (curl/Python/LangChain/Node/모델 목록/translation/verbose_json/§5 .env) ④ 각주/엔드포인트 표/§3.4 표현을 "포트 직접" → "모델 필드"로 ⑤ 매트릭스 Translation 행 Voxtral/Qwen3-ASR `✅ → —` 보수화(모델 카드 미명시) ⑥ §3.1/§4.1에서 `prompt` 행 삭제(미검증) ⑦ §2.1/§4.2 응답 예시에 `usage: {type, seconds}` 복원. |
+| `llm-serving/stt/instances/whisper_v3.yaml` | 헤더 주석 정정 | "비교 PoC 단독 인스턴스 — 게이트웨이 미터치, :7171 직접 호출 (gateway_port 주석 처리로 자동 제외)" → "게이트웨이 5017.yaml ← 이 인스턴스(:7171) discover_from 자동 매칭". `gateway_port` 위 주석에서 "비교 PoC 단독 인스턴스는 주석 처리하여 게이트웨이 미매칭으로 운영" 라인 정정 → "같은 gateway_port를 갖는 인스턴스가 여러 개면 model 필드로 라우팅". `port: 7171` 위 "비교 PoC 인스턴스(gateway_port 미지정)는 이 포트를 직접 호출한다" 라인 삭제. |
+| `llm-serving/stt/instances/qwen3_asr.yaml` | 헤더 주석 정정 | 동일 패턴(:7170). |
+| `llm-serving/stt/instances/voxtral.yaml` | 주석 정정 | `gateway_port` / `port` 위 "비교 PoC 단독 인스턴스" 옛 주석 정정. |
+| `llm-serving/stt/gateways/5017.yaml` | 헤더 정정 | "STT Gateway — :5017 (Voxtral Realtime/Transcription)" → "Transcription / Translation / Realtime", 백엔드를 "voxtral.yaml 단일"에서 "stt/instances/*.yaml(gateway_port=5017 매칭 자동 등록) — whisper_v3 :7171, voxtral :7172, qwen3_asr :7170"으로 확장, `model` 필드 라우팅 한 줄 추가. |
+
+#### 결정 사항
+- **단일 게이트웨이 전환은 사용자가 yaml 측에서 시작**: 본 세션 초중반은 OPS 유지 + API만 단순화 옵션으로 진행 중이었음(VLLM_API_GUIDE 톤 재작성). 사용자가 "포트도 저게 맞니" 질문 후 `whisper_v3.yaml`·`qwen3_asr.yaml`의 `gateway_port: 5017` 주석 해제 → 3 모델이 같은 게이트웨이 뒤. 가이드도 단일 진입점 전제로 재정정.
+- **OPS 가이드는 본 세션 미수정**: 사용자 결정에 따라 OPS 유지. 단일 게이트웨이 전환이 후속에 발생하면서 OPS/README/PROJECT에 옛 정보 잔존 — work-verify에서 [심각]/[주의] 보고, 별도 작업으로 분리(P1 추가).
+- **매트릭스 ✅ 표기는 모델 카드 명시 기준으로 보수화**: Voxtral/Qwen3-ASR의 Translation은 모델 카드 미명시 → `—`로. Qwen3-ASR `verbose_json`은 응답 자체는 반환되나 word/segment 타임스탬프 정밀도가 Whisper와 다를 수 있음 → `✅*` + 각주.
+- **`prompt` 파라미터 제거**: OpenAI 표준 필드이지만 vLLM 0.20.2 + STT 모델별 실제 활용 효과 미검증 → §3.1/§4.1에서 삭제(정확성 우선).
+- **포트 직접 호출 표기 → 모델 필드 호출 표기**: "Whisper(`:7171`) 권장" → "`model=whisper-large-v3` 권장" 등. 단일 게이트웨이의 자연스러운 사용 흐름.
+
+#### 검증
+| 항목 | 결과 |
+|------|------|
+| STT_API_GUIDE.md `7170/7171/7172` 잔존 검색 | 0 hit |
+| base URL 일관성 (`3.38.195.121:5017`) | curl/Python/LangChain/Node/§5 .env 모두 일치 |
+| yaml `gateway_port: 5017` 3 인스턴스 활성 | whisper_v3 L41 / qwen3_asr L40 / voxtral L44 — 모두 비주석 |
+| gateways/5017.yaml `discover_from: ../instances` | 3 인스턴스 자동 등록 가능 |
+| work-verify | API_GUIDE + yaml 5종 정합 OK / OPS_GUIDE·README·PROJECT 옛 정보 잔존(별도 P1) |
+
+#### 현재 상태
+- STT 게이트웨이 단일 진입점화 — `gateway_port: 5017` 3 인스턴스 활성, `gateways/5017.yaml`이 model 필드 라우팅으로 3 모델 모두 처리.
+- STT_API_GUIDE.md — VLLM_API_GUIDE 톤 + 단일 진입점 전제로 정합.
+- 후속 정정 잔존: `STT_OPS_GUIDE.md`(L5/L36-41/L78-79/L116-122/L185-187/L290) · `llm-serving/README.md`(L14/L47) · `agent-guide/PROJECT.md`(L94-95/L110) — 본 세션 범위 밖, 다음 세션 P1.
 
 ### 2026-05-13 (Gemma 4 31B MTP 메모리 조정 실기동 + tests/ 정리 + speed_test.py 신규)
 
