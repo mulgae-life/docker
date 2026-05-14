@@ -40,7 +40,7 @@
 # 자기 게이트웨이 포트와 일치하면 backends에 등록한다.
 # vllm_server_launcher.py:_LAUNCHER_KEYS 가 이 키를 vllm serve 인자에서 제외한다.
 # 같은 gateway_port를 갖는 인스턴스가 여러 개면 게이트웨이가 model 필드로 라우팅한다.
-gateway_port: 5017
+gateway_port: 5018
 
 
 # ── 모델 ──────────────────────────────────────────────
@@ -95,7 +95,7 @@ tensor_parallel_size: 1
 #   qwen3_asr  : 0.50 (~23 GiB) — weight ~4 + KV 충분 + 비교 측정용 여유
 #   whisper_v3 : 0.20 (~9 GiB)  — weight ~3 + decoder context 448 token이라 KV 매우 작음
 # 동시 N 세션 운영 전환 시 0.40~0.50 (+max_num_seqs 동기 상향).
-gpu_memory_utilization: 0.35
+gpu_memory_utilization: 0.4
 
 
 # ── 추론 ──────────────────────────────────────────────
@@ -105,7 +105,7 @@ gpu_memory_utilization: 0.35
 #                운영 시작은 보수적 32768 (≈ 43분), 장시간 워크로드 등장 시 상향.
 #   qwen3_asr  : ASR은 LLM 대비 짧은 컨텍스트. 보수적 8192.
 #   whisper_v3 : 모델 config(max_target_positions, 448 token) 자동 감지 → 미지정.
-max_model_len: 32768
+max_model_len: 16384 # 32768
 
 # 동시 처리 시퀀스 수 (continuous batching 상한).
 # vLLM은 N개를 batched parallel로 처리하지만, KV cache 슬롯이 부족하면
