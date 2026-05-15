@@ -108,8 +108,8 @@ uvicorn_log_level: info
 #   gpus: [0]          + tp: 1 → GPU 0 단독
 #   gpus: [0, 1]       + tp: 2 → GPU 0,1 텐서 병렬 (TP=2)
 #   gpus: [0, 1, 2, 3] + tp: 4 → GPU 0,1,2,3 텐서 병렬 (TP=4)
-gpus: [1]
-tensor_parallel_size: 1
+gpus: [0,1]
+tensor_parallel_size: 2
 
 # vLLM이 사용할 GPU 메모리 비율 (0.0~1.0).
 # L40S 46GB × 0.95 = ~43.7GB 사용 가능.
@@ -130,7 +130,7 @@ gpu_memory_utilization: 0.93
 # 2026-04-03 실측 로그 기준으로 엔진이 추정한 상한은 약 46464였고,
 # 기본값은 안정 기동 우선으로 12288을 유지한다.
 # 긴 컨텍스트 실험이 필요하면 CLI override 또는 별도 실험용 config를 사용한다.
-max_model_len: 8192 # 12288, 16384, 65536, 262144 (27B-FP8 + native MTP → KV 여유 ~15GB)
+max_model_len: 32768 # 12288, 16384, 65536, 262144 (27B-FP8 + native MTP → KV 여유 ~15GB)
 
 # 동시 처리 시퀀스 수.
 # 1: 단일 요청 순차 처리 (메모리 절약, 지연 최소).
@@ -138,14 +138,14 @@ max_model_len: 8192 # 12288, 16384, 65536, 262144 (27B-FP8 + native MTP → KV �
 # 멀티모달 모델에서는 encoder cache 용량에 맞춰 제한 필요.
 # max_num_batched_tokens=98304 기준 이미지 1장 ≈ 16384 tokens → 약 5~6장 수용.
 # encoder cache 초과 시 eviction race로 assertion 크래시 발생 가능.
-max_num_seqs: 3
+max_num_seqs: 20
 
 # 한 번에 배치 처리할 최대 토큰 수.
 # 2의 배수 권장. max_model_len보다 작아도 됨 (chunked prefill이 자동 분할).
 # 멀티모달 모델에서는 encoder_cache_size와 동일값으로 복제됨 (scheduler.py:235).
 # 이미지 1장 ≈ 16384 encoder tokens 기준 98304 → 약 6장 캐시 수용.
 # 동시 요청 N장 처리를 위해서는 (N × 이미지 토큰) + 여유 마진으로 산정.
-max_num_batched_tokens: 16384 # 8192, 16384, 32768, 81920, 98304, 163840
+max_num_batched_tokens: 81920 # 8192, 16384, 32768, 81920, 98304, 163840
 
 # 재현 가능한 추론을 위한 전역 시드.
 seed: 42
@@ -230,7 +230,7 @@ language_model_only: false
 # 워크로드 의존성: 동시성 16+ 배치 +24% throughput, prefill-bound는 −7% 회귀.
 speculative_config:
   method: mtp                  # qwen3_next_mtp는 vLLM 0.20.2에서 deprecated → mtp 자동 치환
-  num_speculative_tokens: 1    # vLLM 런타임 경고 반영 보수 시작값 (모델카드 권장 2는 acceptance rate 저하)
+  num_speculative_tokens: 2    # vLLM 런타임 경고 반영 보수 시작값 (모델카드 권장 2는 acceptance rate 저하)
 
 
 # ── 멀티모달 최적화 ───────────────────────────────────
@@ -294,7 +294,7 @@ mm_processor_kwargs: {}
 # 상한을 낮추면 encoder cache/예약 메모리를 절약한다.
 # 챗봇 워크로드 권장 시작점: image=4, audio=0, video=0.
 limit_mm_per_prompt:
-  image: 2
+  image: 5
 #   audio: 0
 #   video: 0
 

@@ -6,7 +6,7 @@ set -euo pipefail
 #
 # 사용법:
 #   ./user.sh up <name> [--root] [--password <pw>] [--gpus <gpus>]
-#                       [--service-port <p>]
+#                       [--service-port <p>] [--extra-ports <range>]
 #   ./user.sh down <name>
 #   ./user.sh rebuild [name]       ← 이미지 변경 후 컨테이너 재생성
 #   ./user.sh list
@@ -16,6 +16,10 @@ set -euo pipefail
 #         - SSH 접속 불가 (PermitRootLogin no) → docker exec 로 접근
 #         - 다중 운용: --service-port 로 컨테이너마다 호스트 포트 분리
 #           (미지정 시 .env LLM_EXTRA_PORTS 폴백)
+#
+# --extra-ports <range>: 일반 모드(--root 아님)에서 기본 자동 할당 range(예: 5041-5049) 외에
+#         추가 호스트 range를 그대로 컨테이너 동일 포트로 노출. 예: 5100-5149
+#         (재생성 시 라벨로 자동 보존)
 #
 # 포트 할당 (자동):
 #   docker-compose 메인: 5000(SSH), 5001-5009
@@ -64,7 +68,8 @@ usage() {
     echo "  $0 list"
     echo ""
     echo "  --root: 내부 OS 계정을 root로 사용 (홈=/volume/root-homes/<name>, SSH 접속 불가)"
-    echo "  --service-port <p>: 외부 노출 서비스 포트 (단일 또는 range, 기본 .env LLM_EXTRA_PORTS)"
+    echo "  --service-port <p>: --root 전용 외부 노출 서비스 포트 (단일 또는 range, 기본 .env LLM_EXTRA_PORTS)"
+    echo "  --extra-ports <r>:  일반 모드 추가 노출 range (예: 5100-5149) — 기본 range에 더해 -p로 추가"
     exit 1
 }
 
@@ -144,6 +149,7 @@ cmd_up() {
     local gpus="all"
     local forced_port=""
     local forced_service_port=""
+    local forced_extra_ports=""
     local as_root=false
 
     # 인자 파싱
@@ -163,6 +169,10 @@ cmd_up() {
                 # --root 다중 운용용: 호스트 서비스 포트(단일/range) 명시
                 [ $# -ge 2 ] || { echo "❌ --service-port에 값이 필요합니다."; usage; }
                 forced_service_port="$2"; shift 2 ;;
+            --extra-ports)
+                # 일반 모드 추가 노출 range — 기본 자동 range에 더해 -p로 한 줄 더 추가
+                [ $# -ge 2 ] || { echo "❌ --extra-ports에 값이 필요합니다."; usage; }
+                forced_extra_ports="$2"; shift 2 ;;
             --root)
                 as_root=true; shift ;;
             -*) echo "알 수 없는 옵션: $1"; usage ;;
@@ -178,11 +188,18 @@ cmd_up() {
     validate_username "$username"
     validate_gpus "$gpus"
     [ -n "$forced_service_port" ] && validate_port_spec "$forced_service_port"
+    [ -n "$forced_extra_ports" ] && validate_port_spec "$forced_extra_ports"
 
     # --service-port 는 --root 다중 운용 전용
     # — 일반 모드(자동 포트 할당)에서 사용하면 silent 무시되어 오해 소지 → fail-fast로 차단
     if ! $as_root && [ -n "$forced_service_port" ]; then
         echo "❌ --service-port 는 --root 모드 전용입니다."
+        usage
+    fi
+
+    # --extra-ports 는 일반 모드 전용 (--root는 --service-port 사용)
+    if $as_root && [ -n "$forced_extra_ports" ]; then
+        echo "❌ --extra-ports 는 일반 모드 전용입니다. --root에서는 --service-port 를 사용하세요."
         usage
     fi
 
@@ -296,6 +313,7 @@ cmd_up() {
     else
         echo "   SSH:          ssh -p ${ssh_port} ${username}@<host>"
         echo "   포트 범위:    ${extra_start}-${extra_end} (1:1 매핑)"
+        [ -n "$forced_extra_ports" ] && echo "   추가 포트:    ${forced_extra_ports} (1:1 매핑, --extra-ports)"
     fi
     echo "   GPU:          ${gpus}"
 
@@ -309,6 +327,10 @@ cmd_up() {
     else
         port_opts+=(-p "${ssh_port}:5555")
         port_opts+=(-p "${extra_start}-${extra_end}:${extra_start}-${extra_end}")
+        # 일반 모드 추가 range — 기본 자동 range 외에 사용자가 명시한 추가 호스트 포트 노출
+        if [ -n "$forced_extra_ports" ]; then
+            port_opts+=(-p "${forced_extra_ports}:${forced_extra_ports}")
+        fi
     fi
 
     docker run -d \
@@ -317,6 +339,7 @@ cmd_up() {
         --label "managed-by=user.sh" \
         --label "as-root=${as_root}" \
         --label "service-port=${extra_ports_spec}" \
+        --label "extra-ports=${forced_extra_ports}" \
         --restart unless-stopped \
         --security-opt apparmor=unconfined \
         --security-opt seccomp=unconfined \
@@ -427,7 +450,7 @@ cmd_rebuild() {
         local env_json
         env_json=$(docker inspect --format='{{json .Config.Env}}' "$cname" 2>/dev/null)
 
-        local old_password old_gpus old_uid old_gid old_ssh_port old_as_root old_service_port
+        local old_password old_gpus old_uid old_gid old_ssh_port old_as_root old_service_port old_extra_ports
         old_password=$(echo "$env_json" | jq -r '.[] | select(startswith("PASSWORD=")) | sub("^PASSWORD=";"")')
         old_gpus=$(echo "$env_json" | jq -r '.[] | select(startswith("ASSIGNED_GPUS=")) | sub("^ASSIGNED_GPUS=";"")')
         # 이전 버전 호환 (NVIDIA_VISIBLE_DEVICES → ASSIGNED_GPUS 마이그레이션)
@@ -446,6 +469,7 @@ cmd_rebuild() {
         # --root 모드 + 포트 인자 복원 (라벨 없는 구버전 컨테이너는 false/빈값으로 간주)
         old_as_root=$(docker inspect --format='{{index .Config.Labels "as-root"}}' "$cname" 2>/dev/null || true)
         old_service_port=$(docker inspect --format='{{index .Config.Labels "service-port"}}' "$cname" 2>/dev/null || true)
+        old_extra_ports=$(docker inspect --format='{{index .Config.Labels "extra-ports"}}' "$cname" 2>/dev/null || true)
 
         old_password="${old_password:-changeme}"
         old_gpus="${old_gpus:-all}"
@@ -471,6 +495,8 @@ cmd_rebuild() {
             [ -n "$old_service_port" ] && root_opts+=(--service-port "$old_service_port")
         else
             [ -n "$old_ssh_port" ] && port_opts=(--ssh-port "$old_ssh_port")
+            # 일반 모드 추가 range 라벨 복원 (라벨 없는 구버전 컨테이너는 빈값 → 미전달)
+            [ -n "$old_extra_ports" ] && port_opts+=(--extra-ports "$old_extra_ports")
         fi
 
         MODE="$old_mode" CONTAINER_UID="$old_uid" CONTAINER_GID="$old_gid" \

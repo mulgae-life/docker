@@ -29,7 +29,7 @@ LLM 서빙 프레임워크 운영 구성 모음. 서버 인프라(EC2/Docker)와
 | [`vllm/tests/`](vllm/tests/) | 테스트 코드 디렉토리 (기능/트래픽/속도 + `results/` 누적 리포트) |
 | [`vllm/tests/test_vllm_server.py`](vllm/tests/test_vllm_server.py) | 서버 헬스/추론 기능 테스트 (9개 카테고리 QA) |
 | [`vllm/tests/traffic_test_vllm.py`](vllm/tests/traffic_test_vllm.py) | smoke/overload 트래픽 테스트와 429 방어 응답 검증 |
-| [`vllm/tests/speed_test.py`](vllm/tests/speed_test.py) | 모델 간 속도 비교 (TTFT · decode TPS · server TPS · ITL 매트릭스 누적) |
+| [`vllm/tests/speed_test.py`](vllm/tests/speed_test.py) | 모델 간 속도 비교 (TTFT · TPS 매트릭스 누적, 입력 ~2k자 고정 × max_tokens [512,2048] × 동시성 [1,5,10]) |
 | [`vllm/slm_research/`](vllm/slm_research/) | SLM 비교 리서치 (Gemma, Qwen) |
 | [`vllm/bugfix/`](vllm/bugfix/) | 운영 중 발견된 이슈 기록 |
 

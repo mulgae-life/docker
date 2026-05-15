@@ -158,6 +158,10 @@ sudo ~/aws/user.sh up jin    --password 1234 --gpus 2,3
 sudo ~/aws/user.sh up song   --password 1234 --gpus 0,1
 sudo ~/aws/user.sh up cho    --password 1234 --gpus 0
 
+# 일반 사용자에게 기본 range(예: 5041-5049) 외에 추가 포트 range가 더 필요할 때
+# (재생성 시 라벨로 자동 보존됨 — 변경하려면 down 후 다시 up)
+sudo ~/aws/user.sh up demo --password 1234 --gpus 0 --extra-ports 5100-5149
+
 # 운영 root 컨테이너 (SSH 불가, docker exec 접근)
 sudo ~/aws/user.sh up prd-job --root --password aiteam12 --gpus all
 

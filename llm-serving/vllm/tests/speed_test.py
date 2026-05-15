@@ -1,7 +1,7 @@
 """vLLM 속도 측정 테스트 — 모델 간 처리량/지연 비교용.
 
-매트릭스: 동시성 × 입력 길이 × 출력 길이 (단일 게이트웨이 기준)
-지표: TTFT(p50/p95), decode TPS(p50/p95), server TPS, ITL(p50)
+매트릭스: 동시성 × 출력 토큰 (입력은 ~2000자 한국어 RAG 컨텍스트 고정)
+지표: TTFT(p50), decode TPS(p50) — 텍스트 출력 속도
 출력: results/speed_results.md 에 누적 append (Markdown 테이블)
 
 모델명은 `{base_url}/v1/models` API에서 자동 추출. `--model`로 명시도 가능.
@@ -15,10 +15,10 @@
     python tests/speed_test.py --base-url http://localhost:5015 --model my-model --label "MyLabel"
 
 매트릭스 기본값:
-    동시성: [1, 5, 10]
-    입력:   [short(~250 tok), long(~2000 tok)]
-    출력:   [200자(max_tokens=400), 500자(max_tokens=1000)]
-    조합 12개 / 게이트웨이당
+    동시성:   [1, 5, 10]
+    입력:     ~2000자 한국어 RAG 컨텍스트 고정 (PROMPT_KO_CONTEXT)
+    max_tok:  [512, 2048]
+    조합 6개 / 게이트웨이당
 """
 
 from __future__ import annotations
@@ -71,16 +71,10 @@ def _endpoint_label(base_url: str) -> str:
     return parsed.netloc or parsed.path or base_url
 
 
-# ── 입력 프롬프트 ─────────────────────────────────────────────────
-# short ≈ 한국어 100자 → 토크나이저 따라 200~300 토큰
-PROMPT_SHORT = (
-    "한국 전통 음식인 김치의 발효 과정을 단계별로 설명해주세요. "
-    "유산균이 어떻게 작용하는지, 시간이 지남에 따라 맛과 영양 성분이 어떻게 변하는지, "
-    "그리고 좋은 김치를 만들기 위한 핵심 요소를 정리해주세요."
-)
-
-# long: RAG 컨텍스트 시뮬용 긴 자료(약 1800자 한국어 → 2000~2500 토큰)
-PROMPT_LONG_CTX = """다음은 한국의 기후, 농업, 발효 식품에 관한 자료입니다. 이 자료를 참고해 마지막 질문에 답변해주세요.
+# ── 입력 프롬프트 (~2000자 한국어 RAG 컨텍스트 고정) ────────────────
+# 토크나이저별 다르지만 한국어 1자 ≈ 1.5~2 토큰, 본 컨텍스트 ≈ 2500~3500 입력 토큰.
+# prefill 부담을 어느 정도 주면서도 모든 모델에서 max_model_len(32768) 안에 충분히 들어가는 길이.
+PROMPT_KO_CONTEXT = """다음은 한국의 기후, 농업, 발효 식품에 관한 자료입니다. 이 자료를 참고해 마지막 질문에 답변해주세요.
 
 [자료 1: 한국의 기후 특성]
 한국은 사계절이 뚜렷한 온대 몬순 기후 지역에 속한다. 여름철에는 고온다습한 북태평양 기단의 영향을 받아 평균 기온이 25도 이상으로 올라가고 강수량이 집중되며, 겨울철에는 한랭건조한 시베리아 기단의 영향으로 영하 10도 이하로 떨어지는 일이 잦다. 봄과 가을은 이동성 고기압이 지배하여 비교적 건조하고 화창한 날씨가 이어진다. 연 강수량은 1000~1400mm로 동아시아 평균보다 다소 많은 편이며, 6~9월에 연 강수량의 60~70%가 집중되는 하계 강수형이다. 이러한 기후 조건은 벼농사 중심의 농업 발달, 그리고 겨울철 식량 보존을 위한 발효 식품 문화의 토대가 되었다.
@@ -97,17 +91,12 @@ PROMPT_LONG_CTX = """다음은 한국의 기후, 농업, 발효 식품에 관한
 [질문]
 """
 
+
 # ── 자료구조 ─────────────────────────────────────────────────────
 @dataclass
 class Scenario:
     concurrency: int
-    input_key: str       # "short" | "long"
-    output_chars: int    # 200 | 500
-
-    @property
-    def max_tokens(self) -> int:
-        # 한국어는 글자당 약 1.5~2 토큰. 안전 마진 포함 ~2배
-        return self.output_chars * 2
+    max_tokens: int      # 512 | 2048
 
 
 @dataclass
@@ -137,9 +126,9 @@ class Aggregate:
     completion_tokens_avg: Optional[float]
 
 
-def _build_prompt(input_key: str, output_chars: int) -> str:
-    base = PROMPT_SHORT if input_key == "short" else PROMPT_LONG_CTX
-    return f"{base}\n위 내용을 한국어로 {output_chars}자 이내로 요약·답변해주세요."
+def _build_prompt() -> str:
+    # 입력은 한 가지로 고정. 모델이 max_tokens 한도까지 채우도록 "자세하고 충분한 분량" 지시.
+    return f"{PROMPT_KO_CONTEXT}위 자료를 참고해 한국어로 자세하고 충분한 분량으로 답변해주세요."
 
 
 # ── 스트리밍 호출 (TTFT 측정용) ───────────────────────────────────
@@ -232,7 +221,7 @@ def _run_scenario(
     total_requests: int,
     timeout: float,
 ) -> tuple[list[RequestSample], float]:
-    prompt = _build_prompt(scenario.input_key, scenario.output_chars)
+    prompt = _build_prompt()
     samples: list[RequestSample] = []
     start_wall = time.monotonic()
     with ThreadPoolExecutor(max_workers=scenario.concurrency) as ex:
@@ -313,7 +302,6 @@ COLUMNS = [
     "timestamp",
     "model",
     "concurrency",
-    "input",
     "max_tok",
     "ok/N",
     "TTFT_ms",
@@ -341,7 +329,6 @@ def _row(
         timestamp,
         endpoint.label,
         str(scenario.concurrency),
-        scenario.input_key,
         str(scenario.max_tokens),
         f"{agg.ok}/{total_requests}",
         _fmt(agg.ttft_p50_ms),
@@ -355,7 +342,10 @@ def _ensure_md_header(path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         "# vLLM Speed Test Results\n\n"
-        "동시성/입력/출력 매트릭스 기준 속도 측정 누적 결과. 실행할 때마다 행이 추가됩니다.\n\n"
+        "동시성 × 출력 토큰 매트릭스 기준 속도 측정 누적 결과. 실행할 때마다 행이 추가됩니다.\n\n"
+        "**테스트 조건**\n"
+        "- 입력 프롬프트: 한국어 RAG 컨텍스트 ~2000자 고정 (`PROMPT_KO_CONTEXT`)\n"
+        "- 매트릭스: 동시성 [1, 5, 10] × max_tokens [512, 2048] = 6 시나리오 / 게이트웨이\n\n"
         "**컬럼**\n"
         "- `TTFT_ms`: 첫 토큰까지 지연 (ms, prefill 성능)\n"
         "- `TPS`: 요청당 출력 토큰 생성 속도 (output tok/s, decode 성능 = 텍스트 출력 속도)\n"
@@ -373,12 +363,11 @@ def _append_row(path: Path, row: str) -> None:
 # ── 매트릭스 ─────────────────────────────────────────────────────
 def _matrix(quick: bool) -> list[Scenario]:
     if quick:
-        return [Scenario(concurrency=1, input_key="short", output_chars=200)]
+        return [Scenario(concurrency=1, max_tokens=512)]
     return [
-        Scenario(c, i, o)
+        Scenario(c, m)
         for c in (1, 5, 10)
-        for i in ("short", "long")
-        for o in (200, 500)
+        for m in (512, 2048)
     ]
 
 
@@ -410,7 +399,7 @@ def main() -> int:
     parser.add_argument(
         "--quick",
         action="store_true",
-        help="동시성 1, short, 200자만 측정 (구문/연결 확인용)",
+        help="동시성 1, max_tokens 512 한 건만 측정 (구문/연결 확인용)",
     )
     parser.add_argument(
         "--timeout",
@@ -465,8 +454,7 @@ def main() -> int:
     for scenario in scenarios:
         n = _requests_per_scenario(scenario.concurrency)
         print(
-            f"  · c={scenario.concurrency} input={scenario.input_key} "
-            f"out={scenario.output_chars}자(max_tok={scenario.max_tokens}) N={n}",
+            f"  · c={scenario.concurrency} max_tok={scenario.max_tokens} N={n}",
             end=" ... ",
             flush=True,
         )

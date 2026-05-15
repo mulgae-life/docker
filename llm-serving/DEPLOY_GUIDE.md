@@ -85,7 +85,7 @@ python tests/test_vllm_server.py --list                                         
 # 속도 비교 테스트 (게이트웨이별로 호출 — 같은 results 파일에 모델명 자동 추출하여 누적 append)
 python tests/speed_test.py --base-url http://localhost:5015                  # Gemma 게이트웨이
 python tests/speed_test.py --base-url http://localhost:5016                  # Qwen 게이트웨이 (같은 파일에 이어 쌓임)
-python tests/speed_test.py --base-url http://localhost:5015 --quick          # 빠른 검증 (동시성 1, short, 200자)
+python tests/speed_test.py --base-url http://localhost:5015 --quick          # 빠른 검증 (동시성 1, max_tokens 512)
 
 # 로그 — 매 실행마다 tests/logs/test_YYYYMMDD_HHMMSS.log에 자동 저장 (ANSI 색 제거)
 ls -lt tests/logs/test_*.log | head -3

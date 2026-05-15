@@ -1078,25 +1078,27 @@ python tests/traffic_test_vllm.py --base-url http://3.38.195.121:5015 --mode smo
 ```bash
 cd llm-serving/vllm
 
-# 게이트웨이별 측정 — 동시성[1,5,10] × 입력[short,long] × 출력[200자,500자] = 12 row / 호출
+# 게이트웨이별 측정 — 동시성[1,5,10] × max_tokens[512,2048] = 6 row / 호출
+# (입력은 ~2000자 한국어 RAG 컨텍스트 고정 — speed_test.py의 PROMPT_KO_CONTEXT)
 python tests/speed_test.py --base-url http://localhost:5015     # Gemma 게이트웨이
 python tests/speed_test.py --base-url http://localhost:5016     # Qwen 게이트웨이 (같은 파일에 누적)
 
 # 모델명 직접 지정 (자동 추출 건너뜀)
 python tests/speed_test.py --base-url http://localhost:5015 --model gemma-4-31B-it --label "Gemma-32k"
 
-# 빠른 구문/연결 확인 (동시성 1, short, 200자만)
+# 빠른 구문/연결 확인 (동시성 1, max_tokens 512만)
 python tests/speed_test.py --base-url http://localhost:5015 --quick
 
 # 결과 경로 변경
 python tests/speed_test.py --base-url http://localhost:5015 --results-path tests/results/2026-05_speed.md
 ```
 
-**측정 지표**
-- `TTFT` (Time To First Token): 첫 토큰까지 지연 (ms, prefill 성능)
-- `decode TPS`: 요청당 생성 속도 (output tok/s, decode 성능)
-- `server TPS`: 전체 elapsed 기준 시스템 처리량 (output tok/s)
-- `ITL` (Inter-Token Latency): 토큰 간 평균 지연 (ms/tok, `1000 / decode_TPS_p50`)
+**결과 테이블 컬럼** (`tests/results/speed_results.md`)
+- `TTFT_ms`: 첫 토큰까지 지연 (ms, prefill 성능)
+- `TPS`: 요청당 출력 토큰 생성 속도 (output tok/s, decode 성능 = 텍스트 출력 속도)
+- `ok/N`: 성공 요청 / 전체 요청 (실패 섞이면 TPS가 왜곡되니 확인용)
+
+> 콘솔에는 추가 진단치(`429`, `err`, `svrTPS` = 전체 elapsed 기준 시스템 처리량)도 같이 출력되지만, 결과 파일에는 핵심 3종만 누적해 모델 간 가독성을 유지합니다.
 
 ### 14.4 테스트 항목 상세
 
