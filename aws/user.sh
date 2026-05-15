@@ -17,8 +17,9 @@ set -euo pipefail
 #         - 다중 운용: --service-port 로 컨테이너마다 호스트 포트 분리
 #           (미지정 시 .env LLM_EXTRA_PORTS 폴백)
 #
-# --extra-ports <range>: 일반 모드(--root 아님)에서 기본 자동 할당 range(예: 5041-5049) 외에
-#         추가 호스트 range를 그대로 컨테이너 동일 포트로 노출. 예: 5100-5149
+# --extra-ports <spec>: 일반 모드(--root 아님)에서 기본 자동 할당 range(예: 5041-5049) 외에
+#         추가 호스트 range를 그대로 컨테이너 동일 포트로 노출.
+#         단일 range: 5100-5149 / 다중 range: 5020-5029,5100-5200 (콤마 구분)
 #         (재생성 시 라벨로 자동 보존)
 #
 # 포트 할당 (자동):
@@ -69,7 +70,8 @@ usage() {
     echo ""
     echo "  --root: 내부 OS 계정을 root로 사용 (홈=/volume/root-homes/<name>, SSH 접속 불가)"
     echo "  --service-port <p>: --root 전용 외부 노출 서비스 포트 (단일 또는 range, 기본 .env LLM_EXTRA_PORTS)"
-    echo "  --extra-ports <r>:  일반 모드 추가 노출 range (예: 5100-5149) — 기본 range에 더해 -p로 추가"
+    echo "  --extra-ports <s>:  일반 모드 추가 노출 range — 기본 range에 더해 -p로 추가"
+    echo "                       단일: 5100-5149 / 다중(콤마): 5020-5029,5100-5200"
     exit 1
 }
 
@@ -188,7 +190,14 @@ cmd_up() {
     validate_username "$username"
     validate_gpus "$gpus"
     [ -n "$forced_service_port" ] && validate_port_spec "$forced_service_port"
-    [ -n "$forced_extra_ports" ] && validate_port_spec "$forced_extra_ports"
+    # --extra-ports 는 콤마 구분 다중 range 허용 (예: 5020-5029,5100-5200)
+    # 각 토큰을 validate_port_spec으로 개별 검증
+    if [ -n "$forced_extra_ports" ]; then
+        IFS=',' read -ra _extra_tokens <<< "$forced_extra_ports"
+        for _tok in "${_extra_tokens[@]}"; do
+            validate_port_spec "$_tok"
+        done
+    fi
 
     # --service-port 는 --root 다중 운용 전용
     # — 일반 모드(자동 포트 할당)에서 사용하면 silent 무시되어 오해 소지 → fail-fast로 차단
@@ -328,8 +337,12 @@ cmd_up() {
         port_opts+=(-p "${ssh_port}:5555")
         port_opts+=(-p "${extra_start}-${extra_end}:${extra_start}-${extra_end}")
         # 일반 모드 추가 range — 기본 자동 range 외에 사용자가 명시한 추가 호스트 포트 노출
+        # 콤마 구분 다중 range 지원 (예: 5020-5029,5100-5200) — 토큰별로 -p 한 줄씩 추가
         if [ -n "$forced_extra_ports" ]; then
-            port_opts+=(-p "${forced_extra_ports}:${forced_extra_ports}")
+            IFS=',' read -ra _ep_tokens <<< "$forced_extra_ports"
+            for _tok in "${_ep_tokens[@]}"; do
+                port_opts+=(-p "${_tok}:${_tok}")
+            done
         fi
     fi
 
