@@ -21,6 +21,9 @@
 #   ./start.sh status            # 상태 확인
 #   ./start.sh restart           # 인자 없음 → 전체 재시작 confirm 프롬프트 [y/N]
 #   ./start.sh restart <name>    # 단일 대상 재시작 (내부적으로 down→up)
+#   ./start.sh logs              # 전체 인스턴스+게이트웨이 로그 tail -F (기본 -n 50)
+#   ./start.sh logs <name>       # 단일 대상 tail -F (instances/<name>.yaml 또는 gateways/<name>.yaml)
+#   ./start.sh logs --lines N    # 초기 라인 수 오버라이드 (예: --lines 200)
 #
 # 안전 정책: 무인자 호출은 [y/N] 기본 No로 묻는다 (사고 방지).
 # 비대화 환경(파이프/cron)에서는 'all' 또는 이름 명시 필수 (prompt 띄울 곳이 없으므로 거부).
@@ -514,6 +517,57 @@ except Exception:
     done < <(list_gateway_yamls)
 }
 
+cmd_logs() {
+    # 인자 파싱 — 이름/all 1개 + --lines N(또는 -n N) 옵션. 순서 무관.
+    # default 결정 근거:
+    #   - 무인자 → 'all' (read-only 명령이라 confirm 불필요, 전체 흐름 관찰이 주 용도)
+    #   - -n 50 (vLLM 부팅 로그가 길어 10은 부족, 100+는 다중 tail 시 첫 화면 압도)
+    local target="" lines="50"
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --lines|-n) lines="${2:-}"; shift 2 ;;
+            --lines=*)  lines="${1#*=}"; shift ;;
+            -n=*)       lines="${1#*=}"; shift ;;
+            *)          [ -z "$target" ] && target="$1" || { echo "ERROR: 인자 과다: $1" >&2; exit 1; }; shift ;;
+        esac
+    done
+    [ -z "$target" ] && target="all"
+    [[ "$lines" =~ ^[0-9]+$ ]] || { echo "ERROR: --lines 값은 정수: '$lines'" >&2; exit 1; }
+
+    local kind
+    kind=$(detect_target_kind "$target") || exit 1
+
+    case "$kind" in
+        instance)
+            local f="$LOG_DIR/vllm_${target}.log"
+            [ -f "$f" ] || { echo "ERROR: $f 없음 (아직 기동되지 않음 — './start.sh up $target' 후 재시도)" >&2; exit 1; }
+            exec tail -n "$lines" -F "$f"
+            ;;
+        gateway)
+            local f="$LOG_DIR/gateway_${target}.log"
+            [ -f "$f" ] || { echo "ERROR: $f 없음 (아직 기동되지 않음 — './start.sh up $target' 후 재시도)" >&2; exit 1; }
+            exec tail -n "$lines" -F "$f"
+            ;;
+        all)
+            # 모든 yaml 정의 대상에 대해 로그 파일 경로 수집.
+            # tail -F는 존재하지 않는 파일도 polling으로 대기 → 일부 미기동 대상이 섞여도 안전.
+            local files=()
+            while IFS= read -r p; do
+                [ -z "$p" ] && continue
+                local n; n=$(basename "$p" .yaml)
+                files+=("$LOG_DIR/vllm_${n}.log")
+            done < <(list_instance_yamls)
+            while IFS= read -r p; do
+                [ -z "$p" ] && continue
+                local n; n=$(basename "$p" .yaml)
+                files+=("$LOG_DIR/gateway_${n}.log")
+            done < <(list_gateway_yamls)
+            [ ${#files[@]} -eq 0 ] && { echo "ERROR: tail 대상 없음 (instances/, gateways/에 yaml 없음)" >&2; exit 1; }
+            exec tail -n "$lines" -F "${files[@]}"
+            ;;
+    esac
+}
+
 cmd_restart() {
     # 여기서 prompt를 한 번만 띄우고, 결정된 target('all' 또는 이름)을 cmd_down/cmd_up에 명시 전달.
     # 그러면 두 함수의 resolve_target_or_confirm은 인자 명시 분기로 빠져 prompt를 다시 띄우지 않는다.
@@ -532,6 +586,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         down|stop)    shift || true; cmd_down "${1:-}" ;;
         status)       cmd_status ;;
         restart)      shift || true; cmd_restart "${1:-}" ;;
-        *)            echo "사용법: $0 {up [name|all] | down|stop [name|all] | restart [name|all] | status}"; exit 1 ;;
+        logs)         shift || true; cmd_logs "$@" ;;
+        *)            echo "사용법: $0 {up [name|all] | down|stop [name|all] | restart [name|all] | status | logs [name|all] [--lines N]}"; exit 1 ;;
     esac
 fi
