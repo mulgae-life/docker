@@ -103,6 +103,9 @@ cd /workspace/llm-serving/vllm
 ./start.sh status            # 상태 확인
 ./start.sh restart           # 인자 없음 → 전체 재시작 confirm 프롬프트 [y/N]
 ./start.sh restart <name>    # 단일 대상 재시작 (내부적으로 down→up)
+./start.sh logs              # 전체 인스턴스+게이트웨이 로그 tail -F (기본 -n 50)
+./start.sh logs <name>       # 단일 대상 tail -F (인스턴스/게이트웨이 자동 라우팅)
+./start.sh logs --lines 200  # 초기 라인 수 오버라이드 (-n N alias 가능)
 ```
 
 > ⚠️ **안전 정책**: 무인자 호출은 [y/N] 기본 No로 묻는다 (다른 모델/게이트웨이를 실수로 stop시키는 사고 방지). 자동화 스크립트/cron 등 비대화 환경에서는 prompt 띄울 곳이 없으므로 무인자 호출이 거부되며 `'all'` 또는 이름을 명시해야 한다.

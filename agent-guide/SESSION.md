@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-05-15 (aws/user.sh `--extra-ports` 다중 range 지원 — 콤마 구분으로 5020-5029,5100-5200 동시 노출)
+last-updated: 2026-05-27 (vllm/start.sh `logs` 서브커맨드 추가 — gpt-chatbot 패턴 이식, default=all + `-n 50`)
 ---
 
 # 세션 상태
@@ -46,6 +46,36 @@ last-updated: 2026-05-15 (aws/user.sh `--extra-ports` 다중 range 지원 — �
 ---
 
 ## 최근 세션
+
+### 2026-05-27 (vllm/start.sh `logs` 서브커맨드 추가)
+
+#### 세션 목표
+- `hgi-gpt-chatbot/gpt-chatbot/start.sh`의 `logs [target]` 패턴을 `llm-serving/vllm/start.sh`에 이식.
+- 인스턴스/게이트웨이 로그 tail을 단일 진입점으로 통합 (기존엔 `tail -F logs/vllm_*.log`/`gateway_*.log` 직접 호출).
+
+#### 변경 파일
+- `llm-serving/vllm/start.sh` — `cmd_logs` 신설 (+60 라인), 헤더 주석 사용법 3줄, 디스패치 1줄. 기존 명령 무변경.
+- `llm-serving/VLLM_OPS_GUIDE.md` §7.1 — usage block에 `logs` 3줄 추가.
+- `llm-serving/STT_OPS_GUIDE.md` §사용법 — `logs voxtral`/`5017`/`--lines 200` 예시 추가.
+- `llm-serving/stt/start.sh` — wrapper 무수정 (`exec bash ../vllm/start.sh "$@"` 구조라 자동 propagate).
+
+#### 결정 사항
+- **default = `all`**: read-only 명령이라 confirm 불필요. `status`가 떴는지 빠른 확인 담당, `logs`는 흐름 관찰 담당으로 역할 분리. 무인자 호출 시 전체 tail이 자연스러움.
+- **`-n 50`**: tail -F 기본 10은 vLLM 부팅 컨텍스트(KV/GPU/모델 로딩) 누락. 100+는 다중 tail(인스턴스 3 + 게이트웨이 2 → 500줄)에서 첫 화면 과부하. 50이 균형.
+- **`--lines` / `-n` 양쪽 alias**: GNU tail 호환 + 짧은 flag.
+- **`detect_target_kind` 재사용**: 인스턴스/게이트웨이 라우팅 로직 중복 회피. 신규 yaml 추가 시 logs 코드 수정 불필요.
+- **`exec tail -F`**: subshell 거치지 않아 SIGINT(Ctrl-C) 즉시 반영.
+
+#### 검증
+- `bash -n start.sh` 통과.
+- 6 케이스 테스트 통과: 인스턴스 단독, 게이트웨이 단독, all default, `-n` alias, 미존재 대상 에러, `--lines` 비정수 거부, 인자 과다 거부.
+- `all` 케이스에서 yaml 6개 중 실제 로그 파일 4개만 헤더 표시 — `tail -F`가 미생성 파일 polling 대기.
+
+#### 현재 상태
+- 운영계 EC2 반영 대기 (대표님 직접): `aws s3 sync` + `~/aws/user.sh` 등 기존 절차로 `llm-serving/vllm/start.sh`만 갱신하면 됨.
+- 의미 변경 없음 — 기존 `up/down/status/restart` 사용자에게 영향 0.
+
+---
 
 ### 2026-05-15 (aws/user.sh `--extra-ports` 다중 range 지원)
 

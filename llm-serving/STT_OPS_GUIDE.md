@@ -104,6 +104,10 @@ cd llm-serving/stt
 ./start.sh status                   # 상태 확인
 ./start.sh restart                  # 인자 없음 → 전체 재시작 confirm 프롬프트 [y/N]
 ./start.sh restart <name>           # 단일 대상 재시작 (내부적으로 down→up)
+./start.sh logs                     # 전체 인스턴스+게이트웨이 로그 tail -F (기본 -n 50)
+./start.sh logs voxtral             # 인스턴스 단독 tail -F (logs/vllm_voxtral.log)
+./start.sh logs 5017                # 게이트웨이 단독 tail -F (logs/gateway_5017.log)
+./start.sh logs --lines 200         # 초기 라인 수 오버라이드 (-n N alias 가능)
 ```
 
 `<name>`이 `instances/<name>.yaml`이면 인스턴스, `gateways/<name>.yaml`이면 게이트웨이로 자동 라우팅. `all` 명시는 확인 없이 전체 적용. 같은 이름이 양쪽에 있으면 즉시 에러.
