@@ -67,8 +67,37 @@ RUN mkdir -p /run/sshd \
 # Python 패키지 (빌드 타임)
 # ============================================
 COPY requirements.txt /tmp/requirements.txt
+# vLLM nightly wheel (gemma4_mtp 포함) — 정식 v0.20.2 베이스엔 Gemma 4 MTP가 없어
+# dev 빌드(0.20.2rc1.dev251+gef34592a1)로 덮어써 호스트 운영 환경을 그대로 재현한다.
+# 정본은 /models/wheels/, 빌드 컨텍스트 사본은 aws/wheels/ (.gitignore).
+COPY wheels/ /tmp/wheels/
+# 설치 순서:
+#  ① requirements.txt   : 일반 의존성
+#  ② vLLM nightly wheel : gemma4_mtp 보강. flashinfer-python/cubin을 ==0.6.8.post1로 설치한다
+#                         (베이스 환경 CUDA에 맞는 cu variant). jit-cache는 vLLM 비의존이라
+#                         베이스 이미지의 0.6.8.post1+cu130 그대로 → 셋 다 0.6.8.post1·동일 cu로 일관.
+#  ③ transformers       : --no-deps로 맨 마지막 고정 (vLLM 핀 의존성 보호).
+# ※ 이전엔 ②와 ③ 사이에서 flashinfer 3종을 cu129·0.6.11로 강제 재고정했으나, cu13 베이스에선
+#    cu129 모듈이 libcudart.so.12를 요구해 EngineCore가 죽었다(개발계 환경과 불일치). vLLM이
+#    환경에 맞는 cu variant로 깔도록 두는 게 맞아 제거했다. (연구계는 cu12.9라 cu129가 맞았던 것.)
 RUN pip install --no-cache-dir -r /tmp/requirements.txt \
+    && pip install --no-cache-dir /tmp/wheels/vllm-*.whl \
     && pip install --no-cache-dir --no-deps "transformers>=5.8.0"
+
+# ============================================
+# CUDA 런타임 라이브러리 ldconfig 등록 (flashinfer JIT 대응)
+# ============================================
+# flashinfer는 sampling 커널을 런타임에 시스템 nvcc로 JIT 컴파일하는데, 그 산출물이
+# libcudart.so.<major>를 동적 링크한다. 연구계(호스트)는 시스템 CUDA lib 경로가 ldconfig에
+# 등록돼 있어 자동으로 찾지만, 컨테이너 베이스 이미지엔 이 등록이 빠져 있어
+# profile_run 의 첫 sampler 커널 로드에서 "libcudart.so.13: cannot open shared object file"로
+# EngineCore가 죽는다 (VRAM 점유까지는 성공한 뒤 여기서 실패).
+# → 시스템 CUDA lib 경로를 ldconfig에 등록해 연구계와 동일하게 만든다. glob이라 CUDA 버전
+#   무관(12.9면 so.12, 13.0이면 so.13을 그 환경에서 그대로 잡는다). 빌드 로그로 등록 확인.
+RUN { for d in /usr/local/cuda*/targets/*/lib /usr/local/cuda*/lib64; do [ -d "$d" ] && echo "$d"; done; } \
+        | sort -u > /etc/ld.so.conf.d/cuda-flashinfer.conf \
+    && ldconfig \
+    && echo "[ldconfig] registered cudart:" && ldconfig -p | grep -i cudart
 
 # ============================================
 # 작업 디렉토리

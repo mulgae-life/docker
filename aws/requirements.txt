@@ -3,9 +3,12 @@
 #
 # 설치: pip install -r requirements.txt && pip install --no-deps "transformers>=5.8.0"
 # ※ transformers는 --no-deps 필수 (vLLM 핀 의존성 보호)
-# ※ vLLM은 베이스 이미지에 포함되어 별도 명시 없음 (v0.20.2 = PR #41745 Gemma 4 MTP 포함).
-# ※ FlashInfer 3종(아래 섹션)은 vLLM speculative decoding(MTP) 런타임 의존성.
-#    버전 mismatch 시 EngineCore가 "flashinfer-jit-cache version ... does not match" 로 실패.
+# ※ vLLM: 베이스(vllm/vllm-openai:v0.20.2)의 정식 빌드엔 Gemma 4 MTP(gemma4_mtp)가 없다.
+#    → Dockerfile.llm이 wheels/의 nightly 빌드(0.20.2rc1.dev251+gef34592a1)로 덮어써서 보강한다.
+#    PR #41745(Gemma 4 MTP)는 v0.22.0 first release — 정식 v0.20.2엔 미포함 (2026-06-01 실측).
+#    누락 시 drafter가 draft_model로 fallback → 멀티모달 Gemma에서 NotImplementedError로 기동 실패.
+# ※ FlashInfer 3종은 vLLM speculative decoding(MTP) 런타임 의존성 — 여기 핀하지 않는다.
+#    vLLM/베이스 이미지가 0.6.8.post1(베이스 CUDA에 맞는 cu variant)로 제공한다 (하단 주석 참조).
 
 # FastAPI + 서빙 (vLLM 이미지에 포함되어있으나 최소 버전 명시)
 fastapi>=0.115.0
@@ -57,18 +60,11 @@ soundfile>=0.13.0
 soxr>=1.1.0
 librosa>=0.11.0
 
-# vLLM Speculative Decoding (MTP) — FlashInfer 의존성
-# ※ flashinfer-jit-cache는 PyPI에 없고 별도 wheel index에서 받는다 (cu129 가정).
-#    --extra-index-url로 명시 — PyPI 우선 + 이 index fallback.
-# ※ 셋 다 동일 버전으로 핀. 하나라도 어긋나면 EngineCore가 flashinfer 버전 체크에서
-#    "flashinfer-jit-cache version ... does not match flashinfer version ..."로 즉시 fail.
-# ※ jit-cache는 cu variant local label(+cu129)이 붙는데, ==0.6.11 핀은 PEP 440에 따라
-#    local label을 무시하고 매칭하므로 cu variant URL은 --extra-index-url의 path로만 제어.
-#    다른 CUDA 버전 환경에서 빌드 시 위 URL의 cu129 부분을 cu128/cu130 등으로 조정.
---extra-index-url https://flashinfer.ai/whl/cu129
-flashinfer-python==0.6.11
-flashinfer-cubin==0.6.11
-flashinfer-jit-cache==0.6.11
+# vLLM Speculative Decoding (MTP) — FlashInfer 3종은 vLLM/베이스 이미지가 제공한다(여기 핀 안 함).
+# ※ vLLM nightly가 flashinfer-python/cubin을 ==0.6.8.post1로 strict 핀하고, jit-cache는 베이스
+#    이미지의 0.6.8.post1(+cu13x)을 그대로 쓴다 → 셋 다 0.6.8.post1·동일 cu variant로 일관된다.
+# ※ 별도로 0.6.11/cu129 등으로 재고정하지 말 것. 베이스 환경의 CUDA와 어긋나면(예: cu129 모듈을
+#    cu13 베이스에 깔면) flashinfer가 libcudart.so.12를 요구하다 EngineCore가 죽는다.
 
 # 테스트
 pytest>=8.0
