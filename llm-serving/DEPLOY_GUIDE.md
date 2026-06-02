@@ -21,13 +21,10 @@
 ## 1. 로컬 → S3 (코드 업로드)
 
 ```bash
-aws s3 sync /workspace/docker/llm-serving/ s3://hgi-ai-res/hjjo/llm-serving/ \
-    --exclude "*/logs/*" --exclude "*/__pycache__/*" \
-    --exclude "*/.vllm_serve_*" --exclude "*/samples/*" \
-    --exclude "*/.archive/*"
+cd /workspace/docker/llm-serving && ./sync.sh push
 ```
 
-> `logs/`, `__pycache__/`, 런처 임시 config(`.vllm_serve_*`)는 런타임 산출물이라 제외.
+> `logs/`, `__pycache__/`, 런처 임시 config(`.vllm_serve_*`·`.runtime/`), `samples/`는 런타임 산출물이라 `sync.sh`가 자동 제외.
 
 ---
 
@@ -38,9 +35,9 @@ aws s3 sync /workspace/docker/llm-serving/ s3://hgi-ai-res/hjjo/llm-serving/ \
 ```bash
 docker exec -it gemma bash               # 컨테이너 이름은 환경에 맞게 (예: gemma, llm-root, jin)
 
-# 컨테이너 안에서
+# 컨테이너 안에서 — 최초 1회는 sync.sh가 아직 없어 raw 명령 (이후 갱신은 ./sync.sh pull)
 sudo aws s3 sync s3://hgi-ai-res/hjjo/llm-serving/ /workspace/llm-serving/
-sudo chmod +x /workspace/llm-serving/*/start.sh
+sudo chmod +x /workspace/llm-serving/*/start.sh /workspace/llm-serving/sync.sh
 ```
 
 > 컨테이너 이름 확인: `docker ps`. user.sh 로 띄운 컨테이너는 이름 그대로(`gemma` 등), 메인 compose 는 `llm-<USERNAME>`.
@@ -100,19 +97,14 @@ grep -B1 -A20 "FAIL " tests/logs/test_20260430_144909.log     # 실패만 추출
 
 ```bash
 # (로컬) 수정 후 S3 재업로드
-cd /workspace/docker
-aws s3 sync ./llm-serving/ s3://hgi-ai-res/hjjo/llm-serving/ \
-    --exclude "*/logs/*" --exclude "*/__pycache__/*" \
-    --exclude "*/.vllm_serve_*" --exclude "*/samples/*" \
-    --exclude "*/.archive/*"
+cd /workspace/docker/llm-serving && ./sync.sh push
 
 # (운영계) 재다운로드 + 재시작
-cd /workspace/
-sudo aws s3 sync s3://hgi-ai-res/hjjo/llm-serving/ ./llm-serving/
-cd llm-serving/vllm && ./start.sh restart <name>  # 또는 stt; 무인자는 [y/N] 전체 재시작 프롬프트, 'all'은 확인 없이 전체
+cd /workspace/llm-serving && sudo ./sync.sh pull
+cd vllm && ./start.sh restart <name>  # 또는 stt; 무인자는 [y/N] 전체 재시작 프롬프트, 'all'은 확인 없이 전체
 ```
 
-> 로컬에서 파일을 삭제했다면 운영계에 잔존하므로 `--delete` 추가. 처음에는 `--dryrun` 으로 확인 권장.
+> 로컬에서 파일을 삭제했다면 운영계에 잔존하므로 `./sync.sh push --delete` 처럼 옵션을 덧붙인다(sync로 그대로 패스스루). 처음에는 `--dryrun` 으로 확인 권장.
 
 ---
 

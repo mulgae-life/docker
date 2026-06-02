@@ -45,12 +45,12 @@ Amazon Linux 2023 + NVIDIA GPU EC2에 vLLM 기반 LLM 환경을 1회 셋업으�
 
 ### 3-1. 로컬 → S3 (코드 변경 시)
 ```bash
-aws s3 sync /workspace/docker/aws s3://hgi-ai-res/hjjo/aws/ 
+cd /workspace/docker/aws && ./sync.sh push
 ```
 
 ### 3-2. EC2 인스턴스 최초 셋업
 ```bash
-# (1) 코드 다운로드
+# (1) 코드 다운로드 — 최초 1회는 sync.sh가 아직 없어 raw 명령 (이후 갱신은 ./sync.sh pull)
 mkdir -p ~/aws && aws s3 sync s3://hgi-ai-res/hjjo/aws/ ~/aws/
 cd ~/aws
 
@@ -242,13 +242,10 @@ docker compose up -d
 ### 9-1. 코드 변경 반영
 ```bash
 # (1) 로컬 → S3
-cd /workspace/docker/aws
-aws s3 sync . s3://hgi-ai-res/hjjo/aws/
+cd /workspace/docker/aws && ./sync.sh push
 
-# (2) EC2 → 다운로드 + 재빌드
-cd ~/aws
-aws s3 sync s3://hgi-ai-res/hjjo/aws/ ~/aws/
-chmod +x setup-ec2.sh user.sh
+# (2) EC2 → 다운로드 + 재빌드 (pull이 *.sh 실행권한도 자동 부여)
+cd ~/aws && ./sync.sh pull
 docker compose build --no-cache && docker compose up -d
 sudo ~/aws/user.sh rebuild              # 사용자 컨테이너 일괄 갱신
 ```
