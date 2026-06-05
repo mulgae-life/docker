@@ -348,3 +348,62 @@ def test_stream_send_timeout_maps_504():
         "http://gw/v1/chat/completions", b"{}", {}, cfg, pool=None, audit=None,
         req_id="rid", client=_SendRaisingClient(httpx.ConnectTimeout("t")), ignore=frozenset()))
     assert out.status_code == 504
+
+
+class _SSEResp:
+    """200으로 응답하며 미리 받은 SSE 라인들을 aiter_lines로 흘리는 업스트림 스텁."""
+    status_code = 200
+
+    def __init__(self, lines: list[str]):
+        self._lines = lines
+        self.closed = False
+
+    async def aiter_lines(self):
+        for ln in self._lines:
+            yield ln
+
+    async def aclose(self):
+        self.closed = True
+
+
+def test_stream_emits_tool_calls_and_finish_reason():
+    """post 모드 방출 SSE가 delta.tool_calls(구조)·인자 마스킹·finish_reason:tool_calls를 보존.
+
+    AI Hub 회귀(2026-06-05): 구버전이 delta.content만 재방출하며 tool_calls를 통째 누락 →
+    agentic 클라이언트가 빈 응답으로 세션 중단. 누적(acc)뿐 아니라 실제 방출 바이트까지 검증한다.
+    """
+    import json
+    chunks = [
+        {"id": "c-1", "created": 1, "model": "gemma-4-31B-it",
+         "choices": [{"index": 0, "delta": {"role": "assistant", "content": ""}, "finish_reason": None}]},
+        {"choices": [{"index": 0, "delta": {"tool_calls": [
+            {"id": "call-1", "type": "function", "index": 0,
+             "function": {"name": "send_mail", "arguments": ""}}]}, "finish_reason": None}]},
+        {"choices": [{"index": 0, "delta": {"tool_calls": [          # 증분 인자(이메일 PII 포함)
+            {"index": 0, "function": {"arguments": '{"to": "hong@test.com"}'}}]}, "finish_reason": None}]},
+        {"choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}]},
+    ]
+    lines = [f"data: {json.dumps(c, ensure_ascii=False)}" for c in chunks] + ["data: [DONE]"]
+    resp = _SSEResp(lines)
+    cfg = PiiConfig(ner_backends=[], stream_mode="post")  # out_enabled 기본 True
+
+    async def _go() -> bytes:
+        out = await _proxy_stream(
+            "http://gw/v1/chat/completions", b"{}", {}, cfg, pool=None, audit=_audit(),
+            req_id="rid", client=_FakeClient(resp), ignore=frozenset())
+        body = b""
+        async for piece in out.body_iterator:
+            body += piece if isinstance(piece, bytes) else piece.encode()
+        return body
+
+    body = asyncio.run(_go())
+    events = [json.loads(p.split("data: ", 1)[1]) for p in body.decode().split("\n\n")
+              if p.strip() and "[DONE]" not in p]
+    head, tail = events[0], events[1]
+    tc = head["choices"][0]["delta"]["tool_calls"][0]
+    assert tc["function"]["name"] == "send_mail"          # 함수 이름 보존
+    assert tc["id"] == "call-1" and tc["type"] == "function"  # id/type 구조 보존
+    assert "[이메일]" in tc["function"]["arguments"]      # 인자 속 PII는 마스킹
+    assert "hong@test.com" not in tc["function"]["arguments"]
+    assert tail["choices"][0]["finish_reason"] == "tool_calls"  # 종료 사유 보존
+    assert resp.closed                                    # 자원 정리
