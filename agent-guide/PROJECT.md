@@ -94,7 +94,7 @@ docker/
     │   ├── hooks.py/config.py/audit.py  # 통합 검사·설정·감사로그(평문 미저장 HMAC)
     │   ├── detectors/                # structured(regex+체크섬) + ner_client(LB) + normalize(NFKC)
     │   ├── configs/                  # proxy.yaml(5015)/proxy.5501.yaml(5501)/audit.salt(시크릿, git·S3 제외)
-    │   └── tests/                    # 단위 + e2e + eval_pii(정확성 평가)
+    │   └── tests/                    # 단위 + e2e + eval_pii(합성 정확성) + recall_gate(실데이터 recall 게이트, data/ 라벨 JSONL)
     └── stt/                          # STT 운영 중 (vllm 페어 패턴 동일, launcher/gateway 본체 재사용)
         ├── README.md
         ├── MODEL_STUDY.md            # 후보 모델 비교 / 시나리오
@@ -144,6 +144,7 @@ docker/
 | `llm-serving/pii/proxy.py` | PII 가드 프록시 — 외부 5015/5501 인수, in(주민·카드 차단/이름·주소·전화 마스킹)·out 검사 후 게이트웨이 포워딩 |
 | `llm-serving/pii/start.sh` | NER(GPU3 공유)+프록시 기동, 다중 포트 (`up/down/status [5015\|5501\|all]`), salt 자동주입 |
 | `llm-serving/pii/tests/eval_pii.py` | PII 정확성 평가 (한국어 합성 케이스셋, 타입별 precision/recall + 과탐) |
+| `llm-serving/pii/tests/recall_gate.py` | 실데이터 recall 게이트 하버스 (라벨 JSONL span-겹침 매칭, person/address/org ≥0.95 미달 시 exit 1, 데이터 없으면 스킵) |
 | `llm-serving/VLLM_API_GUIDE.md` | vLLM 사용자용 API 가이드 (§1~§5: 호출·파라미터·`.env`) |
 | `llm-serving/VLLM_OPS_GUIDE.md` | vLLM 운영자용 가이드 (§6~§15: 기동·튜닝·트러블슈팅·QA) |
 | `llm-serving/STT_API_GUIDE.md` | STT 사용자용 API 가이드 (§1~§5: transcription·realtime·통합) |

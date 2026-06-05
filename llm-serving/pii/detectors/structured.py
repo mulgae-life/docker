@@ -134,7 +134,14 @@ def detect(text: str) -> list[PiiSpan]:
         d = _digits(m.group())
         raw.append(PiiSpan("brn", m.start(), m.end(), m.group(), brn_checksum(d)))
     for m in _ACCOUNT_RE.finditer(text):
-        raw.append(PiiSpan("account", m.start(), m.end(), m.group(), False))
+        # 비표준 그룹핑(예: 4111-111111-111111-11)으로 4-4-4-4 카드 패턴을 피한 카드번호가
+        # account로 강등돼 '차단(422)'을 우회하는 것을 막는다. 13~19자리 + Luhn 통과면 카드로 승격.
+        # account regex에 이미 매칭된 구간만 대상이라(평문 전체 스캔 아님) 오탐 영향이 좁다.
+        digits = _digits(m.group())
+        if 13 <= len(digits) <= 19 and luhn(digits):
+            raw.append(PiiSpan("card", m.start(), m.end(), m.group(), True))
+        else:
+            raw.append(PiiSpan("account", m.start(), m.end(), m.group(), False))
     for m in _PHONE_RE.finditer(text):
         raw.append(PiiSpan("phone", m.start(), m.end(), m.group(), False))
     for m in _EMAIL_RE.finditer(text):

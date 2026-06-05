@@ -8,8 +8,8 @@
 host: "0.0.0.0"
 port: 5015
 
-# ── upstream 게이트웨이 (내부로 이동) ──
-# ※ 적용 시 gateways/5015.yaml 의 gateway.port 를 6015 로 바꾸고 host 는 127.0.0.1 로.
+# ── upstream 게이트웨이 (내부 전용) ──
+# 게이트웨이는 gateways/6015.yaml(gateway.port 6015, host 127.0.0.1)로 이미 내부 이동 완료.
 upstream_url: "http://127.0.0.1:6015"
 
 # ── NER LB 풀 (GPU3, multi-replica/multi-model union) ──
@@ -34,12 +34,15 @@ allow_bypass: false
 # false(기본)는 살아있는 모델 union으로 계속하되 부분 실패를 로그로 남긴다.
 ner_require_all_backends: false
 
-# ── 스트리밍 out: post(완결 후 1회 검사, 누출 0) / off(패스스루) / buffer(점진, 후속) ──
+# ── 스트리밍 out: post(완결 후 1회 검사, 구조 보존) / off(패스스루) ──
 stream_mode: "post"
-hold_chars: 27
 
 # ── 정책: 차단 대상(고유식별정보). 그 외는 마스킹 ──
 block_types: ["rrn", "card"]
+
+# ── 이미지 정책: allow(이미지 허용, 텍스트만 검사) / block(이미지 포함 요청 422 차단) ──
+# 이미지 바이트 속 PII는 검사 불가 → 민감 배포는 block 고려. 연구계는 기본 allow.
+image_policy: "allow"
 
 # ── 서비스별 마스킹 토글 화이트리스트 ──
 # 요청 헤더 X-PII-Ignore-Types로 서비스가 '끌 수 있는' 타입(예: 문서생성의 조직명).

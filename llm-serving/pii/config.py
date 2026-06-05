@@ -51,19 +51,30 @@ class PiiConfig(BaseModel):
     # 기본 False(강제 유지) — 운영자가 의식적으로 켰을 때만 우회 가능. 우회는 감사 기록된다.
     allow_bypass: bool = False
 
+    # ── 우회 토큰(선택) ──
+    # 비어있지 않으면, bypass에 헤더 X-PII-Bypass-Token 값이 이 토큰과 일치해야 한다.
+    # 외부 포트가 열린 환경에서 '헤더 하나로 우회'를 막는 2차 가드(내부망이면 비워둬도 됨).
+    # 시크릿이므로 env(PII_BYPASS_TOKEN)로 주입 권장(yaml 하드코딩 지양).
+    bypass_token: str = Field(default_factory=lambda: os.environ.get("PII_BYPASS_TOKEN", ""))
+
     # ── NER 부분 장애 정책 ──
     # True: NER 모델 그룹 중 하나라도 실패하면 fail-closed(커버리지 손실 방지, 컴플라이언스).
     # False: 살아있는 모델의 union으로 계속(가용성). 부분 실패는 항상 로그로 남긴다.
     ner_require_all_backends: bool = False
 
     # ── 스트리밍 out 검사 ──
-    # buffer: SSE 프레임 누적 후 경계까지 flush / post: 완결 후 1회 / off: 미검사
+    # post: 완결 후 1회 검사·재방출(구조 보존, 토큰 점진성 포기) / off: 미검사 패스스루.
+    # 점진(progressive) 마스킹 모드는 PII 경계 누출 위험이 커 별도 설계 후 도입 예정(현재 미구현).
     # Literal로 오타 시 기동 단계 fail-fast(잘못된 값이 조용히 off로 처리돼 누출되는 것 방지).
-    stream_mode: Literal["buffer", "post", "off"] = "buffer"
-    hold_chars: int = 27  # 보류 윈도우(카드 19자 + 여유). prefix-incremental과 함께 최소화
+    stream_mode: Literal["post", "off"] = "post"
 
     # ── 정책: 차단 타입(그 외는 마스킹) ──
     block_types: list[str] = Field(default_factory=lambda: ["rrn", "card"])
+
+    # ── 이미지(멀티모달) 정책 ──
+    # 이미지 바이트 자체는 PII 검사가 불가능하다(텍스트 파트만 검사). PII 민감 배포에서
+    # allow: 이미지 허용(텍스트만 검사) / block: 이미지 포함 요청을 422로 차단(이미지 PII 누출 차단).
+    image_policy: Literal["allow", "block"] = "allow"
 
     # ── 서비스별 마스킹 토글 화이트리스트 ──
     # 요청 헤더 X-PII-Ignore-Types로 서비스가 '마스킹을 끌 수 있는' 타입 목록.

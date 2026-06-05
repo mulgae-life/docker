@@ -173,7 +173,7 @@ curl http://3.38.195.121:5015/v1/models
 
 `stream: true`를 주면 토큰이 생성되는 즉시 Server-Sent Events로 흘러나옵니다.
 
-> 🔒 **PII 가드 영향 (현재 제약)**: `:5015`는 응답 PII 마스킹을 보장하기 위해 스트리밍을 **완결 후 1회 방출**합니다. 즉 `stream:true`를 줘도 토큰이 점진적으로 오지 않고, 마스킹이 끝난 전체 응답이 도착합니다. 단, **응답 구조는 보존**됩니다 — `id`/`created`/`model`, `usage`(`include_usage` 시), `finish_reason`, `reasoning`↔`content` 분리, `tool_calls` 인자가 그대로 유지되어 OpenAI 클라이언트 파싱이 정상 동작합니다. 토큰 점진 출력이 필요하면 운영자에게 buffer 모드 활성화 여부를 문의하세요(후속 예정). PII가 불필요한 호출이면 [§3.7](#37-pii-우회-bypass-헤더) 우회로 원문 스트리밍을 받을 수 있습니다(운영 허용 시).
+> 🔒 **PII 가드 영향 (현재 제약)**: `:5015`는 응답 PII 마스킹을 보장하기 위해 스트리밍을 **완결 후 1회 방출**합니다. 즉 `stream:true`를 줘도 토큰이 점진적으로 오지 않고, 마스킹이 끝난 전체 응답이 도착합니다. 단, **응답 구조는 보존**됩니다 — `id`/`created`/`model`, `usage`(`include_usage` 시), `finish_reason`, `reasoning`↔`content` 분리, `tool_calls` 인자가 그대로 유지되어 OpenAI 클라이언트 파싱이 정상 동작합니다. 토큰 점진(progressive) 출력은 **현재 미지원**입니다(PII 경계 누출 위험으로 별도 설계 후 도입 예정). PII가 불필요한 호출이면 [§3.7](#37-pii-우회-bypass-헤더) 우회로 원문 스트리밍을 받을 수 있습니다(운영 허용 시).
 
 **curl**:
 
@@ -614,6 +614,8 @@ PII가 전혀 필요 없는 호출(예: 비식별 사내 문서 가공, PII가 �
 | `X-PII-Mode` | `enforce` 또는 생략 | 기본 — PII 검사 적용 |
 
 > ⚠️ **운영 허용 필요**: 이 헤더는 운영자가 프록시 설정에서 `allow_bypass: true`로 **명시적으로 켰을 때만** 동작합니다. 기본값은 `false`라, 끄여 있으면 헤더를 보내도 무시되고 검사가 강제됩니다("헤더 하나로 우회" 방지). 모든 우회 요청은 감사로그에 `action=bypass`로 기록됩니다.
+>
+> 🔑 **토큰 2차 가드(선택)**: 운영자가 `bypass_token`(env `PII_BYPASS_TOKEN`)을 설정한 환경에서는 추가로 헤더 `X-PII-Bypass-Token: <토큰>`이 일치해야 우회됩니다. 외부 포트가 열린 환경에서 "헤더 하나로 우회"를 막는 용도이며, 토큰이 틀리면 검사가 강제됩니다.
 
 ```bash
 # allow_bypass=true 인 환경에서만 우회됨

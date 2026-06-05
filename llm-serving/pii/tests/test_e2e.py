@@ -23,6 +23,7 @@ from proxy import (  # noqa: E402
     _ignore_types,
     _mask_response_json,
     _pii_mode,
+    _proxy_stream,
 )
 
 
@@ -137,6 +138,16 @@ def test_pii_mode_bypass_requires_allow():
     assert _pii_mode(_FakeReq({}), cfg_on) == "enforce"  # 헤더 없으면 기본 enforce
 
 
+def test_pii_mode_bypass_token_required():
+    """bypass_token이 설정되면 토큰 헤더가 일치해야만 우회."""
+    cfg = PiiConfig(ner_backends=[], allow_bypass=True, bypass_token="s3cr3t")
+    # 토큰 없음/불일치 → enforce
+    assert _pii_mode(_FakeReq({"x-pii-mode": "bypass"}), cfg) == "enforce"
+    assert _pii_mode(_FakeReq({"x-pii-mode": "bypass", "x-pii-bypass-token": "wrong"}), cfg) == "enforce"
+    # 일치 → bypass
+    assert _pii_mode(_FakeReq({"x-pii-mode": "bypass", "x-pii-bypass-token": "s3cr3t"}), cfg) == "bypass"
+
+
 # ── P0: 멀티모달 content 배열의 text 파트 검사 ──
 def test_in_multimodal_text_part_masked():
     """content가 배열이어도 {type:text} 파트의 PII는 마스킹된다(우회 차단)."""
@@ -239,9 +250,101 @@ def test_accumulate_stream_preserves_structure():
          "usage": {"total_tokens": 7}},
     ]
     acc = _accumulate_stream(chunks)
-    assert acc["content"] == "안녕 010-1234-5678"
-    assert acc["reasoning"] == "생각1 "          # content와 분리 보존
+    c0 = acc["choices"][0]
+    assert c0["content"] == "안녕 010-1234-5678"
+    assert c0["reasoning"] == "생각1 "           # content와 분리 보존
     assert acc["meta"]["id"] == "x1"             # 메타 보존
     assert acc["usage"] == {"total_tokens": 7}   # usage 보존
-    assert acc["finish_reason"] == "stop"
-    assert acc["tool_calls"][0]["function"]["arguments"] == '{"x":1}'  # 인자 재조립
+    assert c0["finish_reason"] == "stop"
+    assert c0["tool_calls"][0]["function"]["arguments"] == '{"x":1}'  # 인자 재조립
+
+
+def test_accumulate_stream_multiple_choices():
+    """n>1: 여러 choices가 index별로 보존된다(하나로 합쳐 손상되지 않음)."""
+    chunks = [
+        {"id": "y1", "choices": [
+            {"index": 0, "delta": {"role": "assistant", "content": "첫째"}},
+            {"index": 1, "delta": {"role": "assistant", "content": "둘째"}},
+        ]},
+        {"choices": [
+            {"index": 0, "delta": {}, "finish_reason": "stop"},
+            {"index": 1, "delta": {}, "finish_reason": "length"},
+        ]},
+    ]
+    acc = _accumulate_stream(chunks)
+    assert len(acc["choices"]) == 2
+    assert acc["choices"][0]["content"] == "첫째" and acc["choices"][0]["finish_reason"] == "stop"
+    assert acc["choices"][1]["content"] == "둘째" and acc["choices"][1]["finish_reason"] == "length"
+
+
+class _RaisingResp:
+    """200으로 시작했으나 read(aiter_lines) 도중 예외를 던지는 업스트림 응답 스텁."""
+    status_code = 200
+
+    def __init__(self, exc: Exception):
+        self._exc = exc
+        self.closed = False
+
+    async def aiter_lines(self):
+        raise self._exc
+        yield  # 제너레이터로 만들기 위한 미도달 yield
+
+    async def aclose(self):
+        self.closed = True
+
+
+class _FakeClient:
+    """build_request/send만 흉내 — send는 미리 받은 resp를 반환."""
+    def __init__(self, resp):
+        self._resp = resp
+
+    def build_request(self, *a, **k):
+        return object()
+
+    async def send(self, req, stream=True):
+        return self._resp
+
+
+def _run_stream(exc):
+    cfg = PiiConfig(ner_backends=[], stream_mode="post")
+    resp = _RaisingResp(exc)
+    client = _FakeClient(resp)
+    out = asyncio.run(_proxy_stream(
+        "http://gw/v1/chat/completions", b"{}", {}, cfg,
+        pool=None, audit=None, req_id="rid", client=client, ignore=frozenset()))
+    return out, resp
+
+
+def test_stream_read_timeout_maps_504():
+    """post 모드 버퍼링 중 업스트림 타임아웃 → 가짜 SSE가 아니라 504로 매핑(자원 정리 포함)."""
+    out, resp = _run_stream(httpx.ReadTimeout("boom"))
+    assert out.status_code == 504
+    assert resp.closed  # finally에서 aclose 호출됨
+
+
+def test_stream_read_error_maps_502():
+    """업스트림 연결 오류(non-timeout HTTPError) → 502로 매핑."""
+    out, resp = _run_stream(httpx.RemoteProtocolError("reset"))
+    assert out.status_code == 502
+    assert resp.closed
+
+
+class _SendRaisingClient:
+    """send() 단계(연결 빌드)에서 예외를 던지는 클라이언트 스텁."""
+    def __init__(self, exc: Exception):
+        self._exc = exc
+
+    def build_request(self, *a, **k):
+        return object()
+
+    async def send(self, req, stream=True):
+        raise self._exc
+
+
+def test_stream_send_timeout_maps_504():
+    """연결 빌드 단계 타임아웃도 502가 아니라 504로 매핑(read loop와 일관)."""
+    cfg = PiiConfig(ner_backends=[], stream_mode="post")
+    out = asyncio.run(_proxy_stream(
+        "http://gw/v1/chat/completions", b"{}", {}, cfg, pool=None, audit=None,
+        req_id="rid", client=_SendRaisingClient(httpx.ConnectTimeout("t")), ignore=frozenset()))
+    assert out.status_code == 504

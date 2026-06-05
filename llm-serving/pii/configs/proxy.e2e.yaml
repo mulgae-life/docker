@@ -1,9 +1,10 @@
-# PII 프록시 — Full E2E 검증용 (임시)
-# 운영 무영향: 프록시를 임시 포트 15015에 띄우고 upstream을 현 게이트웨이(:5015)로 향하게 한다.
-# (배포 시점에만 프록시가 5015 인수 + 게이트웨이 6015 이동)
+# PII 프록시 — Full E2E 검증용 (임시, 운영 무영향)
+# 임시 포트 15015에 검증 프록시를 띄우고 upstream은 내부 게이트웨이(:6015)를 직접 가리킨다.
+# 배포 완료 후 :5015는 운영 프록시가 점유하므로, upstream을 6015로 두어 이중 프록시
+# (15015→5015→6015)를 피한다. (배포 전 상태라면 upstream을 당시 게이트웨이 포트로 조정)
 host: "127.0.0.1"
 port: 15015
-upstream_url: "http://127.0.0.1:5015"   # 현 게이트웨이 그대로 사용
+upstream_url: "http://127.0.0.1:6015"   # 내부 게이트웨이 직접 (이중 프록시 회피)
 
 ner_backends:
   - { host: "127.0.0.1", port: 8911, model_tag: "vmaca123" }
@@ -13,7 +14,6 @@ in_enabled: true
 out_enabled: true
 fail_mode: "closed"
 stream_mode: "post"
-hold_chars: 27
 block_types: ["rrn", "card"]
 ner_connect_timeout: 1.0
 ner_read_timeout: 3.0

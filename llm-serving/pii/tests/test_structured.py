@@ -116,6 +116,20 @@ def test_dot_no_false_positive_on_ip_version():
     assert detect(normalize_text("빌드 버전 1.2.3.4")) == []
 
 
+def test_nonstandard_grouping_card_promoted_to_block():
+    """비표준 그룹핑(4-6-6-2)으로 4-4-4-4를 피한 카드는 card로 승격돼 차단 대상이 된다."""
+    spans = detect(normalize_text("카드 4111-111111-111111-11"))
+    assert any(s.type == "card" for s in spans)
+    assert has_sensitive(spans) is True  # account 강등으로 인한 차단 회피 방지
+
+
+def test_account_not_promoted_when_short_or_non_luhn():
+    """13자리 미만이거나 Luhn 불통과 계좌는 그대로 account(오탐 승격 방지)."""
+    s1 = detect(normalize_text("계좌 110-234-567890 신한"))  # 12자리
+    assert [s.type for s in s1] == ["account"]
+    assert has_sensitive(s1) is False
+
+
 def test_brn_valid():
     brn = _valid_brn()
     text = f"사업자등록번호 {brn[:3]}-{brn[3:5]}-{brn[5:]}"

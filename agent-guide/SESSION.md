@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-06-05 (PII/DLP 가드 운영 토폴로지 적용 — 연구계 5015 enforcement + 운영계 5501 일반화 + API 문서 점검·반영 + 정확성 평가/버그픽스)
+last-updated: 2026-06-05 (PII 후속 — ORG 과탐 토글 + bypass 토글/토큰 + 코덱스 리뷰 2회(14건) + enforcement 누출 보강 + 스트리밍 재작성 + recall 게이트 하버스)
 ---
 
 # 세션 상태
@@ -24,7 +24,7 @@ last-updated: 2026-06-05 (PII/DLP 가드 운영 토폴로지 적용 — 연구�
 
 | 우선순위 | 작업 | 상태 |
 |---------|------|------|
-| P1 | **PII 가드 운영 적용 후속**: 연구계 `:5015` enforcement 라이브(프록시→게이트웨이 6015→vLLM). 잔존 — ① **운영계 `:5501` 실기동**(GPU0 여유 확보 후 `up prd-gemma`→`up 6501`→`pii: up 5501`) ② **보험 실데이터 recall 게이트**(이름·주소·조직 ≥0.95) — `pii/tests/eval_pii.py` 확장 ③ **스트리밍 buffer 모드**(현 `post`=완결후 1회, TTFT 최적화) ④ 멀티모달(이미지) PII 미검사 — 필요 시 범위 확장 ⑤ 운영 배포 시 `PII_AUDIT_SALT` 확인. 설계: `agent-guide/plans/pii-dlp-gateway.md`. | 부분 완료(연구계 라이브), 운영전환·평가 잔존 |
+| P1 | **PII 가드 운영 적용 후속**: 연구계 `:5015` enforcement 라이브(프록시→게이트웨이 6015→vLLM). 잔존 — ① **운영계 `:5501` 실기동**(GPU0 여유 확보 후 `up prd-gemma`→`up 6501`→`pii: up 5501`. 설정·`ner_require_all_backends:true` 준비 완료) ② **보험 실데이터 recall 게이트 실측**(이름·주소·조직 ≥0.95) — `pii/tests/recall_gate.py` 하버스 구축 완료, **비식별 라벨 JSONL 입수 시 즉시 게이트화** ③ **스트리밍 progressive buffer 모드**(현 `post`=완결후 1회 마스킹, 구조 보존. 점진 방출은 미구현 — 별도 합의 필요) ④ 멀티모달(이미지) PII — `image_policy:block` 옵션만 추가, OCR 검사는 미구현 ⑤ 운영 배포 시 `PII_AUDIT_SALT`·(선택)`PII_BYPASS_TOKEN` 확인. 설계: `agent-guide/plans/pii-dlp-gateway.md`. | 부분 완료(연구계 라이브·하버스 구축), 운영전환·실측 잔존 |
 | P1 | **5015 Gemma 운영 프로파일 확정**: 게이트웨이 `max_inflight_requests=20`, `max_queue_size=40`은 확정. 인스턴스는 TP=2 + `max_model_len 32768` + `gpu_memory_utilization 0.95`로 라이브(2026-05-13 7차 시도). 잔존: 장문 트래픽(평균 프롬프트/출력 길이) 기준 latency·429 비율 측정. | 부분 완료(매트릭스 운영값 확정), 장문 검증 잔존 |
 | P1 | **vLLM Qwen 본체 :7080 이전**: `instances/qwen.yaml`의 `port: 7080`이 의도된 다음 운영 포트. 게이트웨이 :5016은 메모리상 :7071 보유 중이라 즉시 영향 없으나, 다음 게이트웨이 재기동 시 yaml 기준(:7080)으로 디스커버리하므로 그 시점 전에 vLLM 본체를 :7080으로 옮겨야 정합. | Todo |
 | P1 | **Gemma 4 31B / Qwen 3.6 27B MTP 실기동 검증**: 2026-05-13 Gemma 31B TP=2 + max_len 32768 정상 기동 / Qwen 27B 단일카드 정상 기동. 잔존: ① Qwen 5016 가용성 재점검 ② acceptance/TPOT/throughput 사내 벤치 — `tests/speed_test.py`로 매트릭스 누적 측정 가능, `slm_research/mtp.md` §5 워크로드별 권장 참고. | 부분 완료(실기동 OK), 벤치 잔존 |
@@ -47,6 +47,53 @@ last-updated: 2026-06-05 (PII/DLP 가드 운영 토폴로지 적용 — 연구�
 ---
 
 ## 최근 세션
+
+### 2026-06-05 (PII 후속 — ORG 과탐 토글 + bypass 토글/토큰 + 코덱스 리뷰 2회 + enforcement 보강 + 스트리밍 재작성 + recall 하버스)
+
+> 같은 날 초기 토폴로지 적용(커밋 `295ce8c`) **이후의 후속 배치**. 커밋 `b1e33a6`(bypass+코덱스8)·`1270baa`(Literal) + **미커밋 개선 배치**(account→card·image policy·스트리밍 재작성·recall 게이트·eval 확장)를 포함.
+
+#### 세션 목표
+- **서비스팀 ORG 과탐 신고 대응**: 작성부서명·일반어("작성부서")·협력사명이 `[조직]`으로 마스킹되어 문서 머리글 깨짐 → 서비스별 토글로 해결.
+- **PII 우회(bypass) 인자화**: 5015 호출 시 "PII 태우기 / 무시하고 SLM 직행"을 요청 단위로 선택(대표님 요청 — "PII 없이 SLM만 쓰고 싶을 때").
+- **코덱스 리뷰 2회(총 14건) 심층 분석** 후 선별 수용(무조건 수용 금지).
+- **enforcement 누출 보강** + **모든 개선점 최적화**(실데이터 recall 하버스 선구축 포함).
+
+#### 변경 파일 (미커밋 배치 기준 — `git diff` 13 + 신규 2)
+| 파일 | 변경 유형 | 요약 |
+|------|----------|------|
+| `pii/config.py` | 토글/검증 추가 | `allow_bypass`·`bypass_token`(env `PII_BYPASS_TOKEN`)·`ignorable_types`(기본 `["org"]`)·`ner_require_all_backends`·`fail_mode`/`stream_mode` **Literal** 검증·`image_policy: Literal["allow","block"]`. `stream_mode`에서 팬텀 `buffer`/`hold_chars` 제거(정직) |
+| `pii/proxy.py` | enforcement·우회·스트리밍 | `_ignore_types`(block_types는 절대 미적용) · `_pii_mode`(bypass 시 토큰 헤더 일치 요구) · `_has_image_part`/`image_policy`(이미지 포함 시 422 `pii_image_blocked`) · 마스킹 범위 확장(`input_text`·`function_call.arguments`·`tool_calls`) · **스트리밍 재작성**(per-choice 누적, fail-closed 시 **가짜 SSE 대신 503**, n>1 다중 선택지 보존) |
+| `pii/hooks.py` | 과탐 필터 | `_filter_generic_org`(일반어 org 화이트리스트) · `_filter_nonbirth_dates`(출생 문맥 없는 날짜 birth 제외) · `analyze(skip_mask_types=...)`(검출·감사 유지, 마스킹만 스킵) |
+| `pii/detectors/structured.py` | 우회 차단 | rrn/card 구분자 `[-\s]?`→`[-.\s]?`(점 구분자 우회 차단, P0) · `_ACCOUNT_RE` 매치 후 **13~19자리 Luhn 유효 시 card로 재분류**(비표준 그룹핑 `4111-111111-111111-11` 차단) |
+| `pii/detectors/ner_client.py` | fail-closed 옵션 | `require_all_backends` 인자 + 부분 실패 경고 로그(`pii.ner`), 운영계에서 부분 실패 시 raise |
+| `pii/tests/recall_gate.py` | **신규** | 실데이터 recall 게이트 하버스. 라벨 JSONL(`{"text","spans":[{type,start,end}]}`) span-겹침 매칭, 타입별 recall/precision, 임계 미달 `exit 1`/데이터 없음 `exit 0`(스킵). 기본 하한 person/address/org=0.95 |
+| `pii/tests/data/recall_sample.jsonl` | **신규** | 합성 라벨 샘플 8건(커밋 가능). `.gitignore`로 실데이터 차단·이 샘플만 허용 |
+| `pii/.gitignore` | 추가 | `tests/data/*` + `!tests/data/recall_sample.jsonl`(실데이터 PII 유출 방지) |
+| `pii/tests/eval_pii.py` | 케이스 확장 | +약 10건(점 구분자·비표준 그룹핑 카드·복성·아파트 주소·직장+지점·보험사+청구·운전면허·약관/증권/영업점 정상문). 데드코드 `healthy` 제거 |
+| `pii/tests/test_e2e.py`·`test_e2e_http.py`·`test_structured.py` | 회귀 추가 | account→card 승격·image_policy·bypass_token·스트리밍 다중 choice·점 구분자·function_call·input_text |
+| `pii/configs/proxy.yaml`·`proxy.5501.yaml`·`proxy.e2e.yaml` | 설정 동기 | `image_policy`·bypass 관련 추가. **5501만 `ner_require_all_backends: true`**(운영 컴플라이언스). `hold_chars` 제거, `stream_mode: post` |
+| `VLLM_API_GUIDE.md` | 문서 | §3.6 ORG 토글(`X-PII-Ignore-Types`) · §3.7 bypass(`X-PII-Mode`/`X-PII-Bypass-Token`) · 스트리밍/멀티모달 캐비어트 |
+| `VLLM_OPS_GUIDE.md` | 문서 | §6.4 Qwen 정책 · 방화벽 체크리스트 · stale `gateway_port` 파일트리 2곳 `5015→6015` 정정(모델명은 대표님 정책상 유지) |
+
+#### 결정 사항
+- **ORG 과탐 = 서비스별 헤더 토글**(`X-PII-Ignore-Types: org`): 전역 OFF가 아니라 요청 단위. **검출·감사 로그는 유지**하고 **마스킹만 스킵** → 가시성 보존. `block_types`(rrn/card)는 토글 불가(안전 경계). 일반어 화이트리스트(`_filter_generic_org`)·비출생 날짜 필터로 false-positive 자체도 감축.
+- **bypass = config opt-in + 헤더 + (선택)토큰 2차 가드**: `allow_bypass: true`로 켠 프록시에서만 `X-PII-Mode: bypass` 허용. `PII_BYPASS_TOKEN` 설정 시 `X-PII-Bypass-Token` 일치까지 요구 → 외부에서 헤더만으로 우회 불가. 우회도 **감사 로그 기록**.
+- **코덱스 리뷰 #1·#2 선별 수용**: ① 스트리밍 fail-closed 가짜 SSE → **503**으로 수정 ② 스트리밍 n>1 붕괴 → **per-choice 누적·전체 방출** ③ `buffer` 팬텀 모드 → Literal `["post","off"]`로 제거(정직) ④ enum 검증은 이미 `1270baa`에서 완료 ⑤ allow_bypass 외부 우회 → `bypass_token` 가드 추가. **모델명/vLLM 바인딩은 의도적 유지**(전자: 자주 바뀜·대표님 정책 / 후자: 토폴로지 리스크라 문서로만).
+- **코덱스 리뷰 #3(4건) 선별 수용**: ① **P1 스트리밍 read 예외 미매핑** → `_proxy_stream`의 `aiter_lines` 루프에 `httpx.TimeoutException`→**504** / `HTTPError`→**502** 매핑 추가(연결 빌드 502와 대칭, 버퍼링 중이라 가짜 SSE 아님). 회귀 테스트 2건. ② **P2a bypass_token 빈값 우회**는 설계대로(토큰=선택적 2차 가드, 내부망 단순우회 보존) → 강제 대신 **기동 경고 로그**(`allow_bypass=true` + 토큰 미설정 시). ③ **P2b 운영계 image_policy** → 대표님 확인 결과 "운영계도 이미지 입력 받음" → `allow` **유지**(이미지 PII 미검사는 API 가이드 §3.3·in/out 섹션에 이미 명시). ④ **P3 API 문서 buffer 문구 잔존** → "buffer 모드 문의"를 "점진 출력 현재 미지원(후속 설계)"으로 정정.
+- **코덱스 리뷰 #4(4건) 선별 수용**: ① **P2 업스트림 예외 매핑 일관화** → read loop만 고쳤던 것을 **`send()`(연결 빌드)·에러본문 `aread()` 단계까지** 동일 정책으로 확장(타임아웃→504/그 외→502). `_timeout_resp`/`_error_resp` 헬퍼로 DRY, send-phase 회귀 테스트 1건. ② **P3 게이트웨이 rename(5015→6015) 잔재 3건** 정정 — `VLLM_OPS_GUIDE.md:443`(게이트웨이 yaml 목록·내부/외부 구분) · `proxy.yaml:12`(upstream 주석 "적용 시 5015.yaml"→"6015.yaml 이미 적용") · `proxy.e2e.yaml`(upstream `5015→6015` 직접 지정, 배포 후 이중 프록시 회피 명시).
+- **account→card 외과적 재분류**: 이미 account로 매치된 span에 한해 Luhn 통과 시에만 card 승격 → FP 범위 최소. card는 `block_types`라 차단 강화.
+- **운영계만 fail-closed**: `5501`은 `ner_require_all_backends: true`(NER 백엔드 부분 실패 시 raise→차단), 연구계 `5015`는 가용성 우선(부분 실패 허용·경고 로그).
+- **실데이터 recall은 "측정 불가"를 정직히 고지 + 하버스 선구축**: 실데이터 없이 recall 수치 산출은 불가. 대신 `recall_gate.py`를 미리 만들어 비식별 라벨 JSONL 입수 즉시 CI 게이트로 꽂을 수 있게 함. `.gitignore`로 실데이터 커밋 차단.
+
+#### 검증
+- 단위/통합 테스트 **60건 통과**(신규 +16, 코덱스 #3·#4 스트리밍 타임아웃/연결오류 send·read 3건 포함), `ruff (F,E9)` 클린, `py_compile` OK.
+- 합성 eval: precision **100%** / recall **96.6%** / 과마스킹 **0/11**(정상문).
+- `recall_gate.py` 합성 샘플 라이브: person/address/org **recall 1.000** 게이트 통과, 실패·스킵 exit 코드 확인.
+- **연구계 `:5015` 최종 코드 재기동 + 라이브 스모크 통과**(NER 공유 유지, 프록시만 down→up, PID 485805): account→card(`4111-111111-111111-11`) 422 / 점 구분자 카드(`4111.1111.1111.1111`) 422 / 주민 422 / 마스킹 추론 200 / **스트리밍 post 재방출**(finish_reason+`[DONE]` 구조) / `/v1/models` 패스스루 / 기동 경고 없음(allow_bypass=false) / 로그 에러 0.
+
+#### 현재 상태
+- 연구계 `:5015` **신규 코드 라이브**(이번 배치 전부 반영·스모크 통과). 시크릿·실데이터 없음 확인 → **커밋·푸시 진행**.
+- 잔존: 운영계 `:5501` 실기동(GPU0), 보험 실데이터 recall 실측(하버스 준비됨), 스트리밍 progressive buffer(별도 합의), 이미지 OCR PII(정책 옵션만 — 운영계도 이미지 받으므로 `allow` 유지).
 
 ### 2026-06-05 (PII/DLP 가드 운영 적용 + API 문서 점검·반영 + 정확성 평가)
 

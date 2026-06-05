@@ -31,15 +31,20 @@ fail_mode: "closed"
 allow_bypass: false
 
 # ── NER 부분 장애: true면 모델 그룹 하나라도 실패 시 fail-closed(커버리지 손실 방지) ──
-# false(기본)는 살아있는 모델 union으로 계속하되 부분 실패를 로그로 남긴다.
-ner_require_all_backends: false
+# 운영계는 컴플라이언스 우선 → true. 한 모델(vmaca/townboy)만 죽어도 이름/주소/조직 마스킹
+# 커버리지가 떨어지므로 fail-closed(503)로 막는다. (주민/카드 차단은 structured regex라 영향 없음.)
+# 가용성 트레이드오프: 한 모델 flap 시 503 증가 → 호출 측 재시도 정책과 함께 운용.
+ner_require_all_backends: true
 
-# ── 스트리밍 out: post(완결 후 1회 검사, 누출 0) / off(패스스루) / buffer(점진, 후속) ──
+# ── 스트리밍 out: post(완결 후 1회 검사, 구조 보존) / off(패스스루) ──
 stream_mode: "post"
-hold_chars: 27
 
 # ── 정책: 차단 대상(고유식별정보). 그 외는 마스킹 ──
 block_types: ["rrn", "card"]
+
+# ── 이미지 정책: allow(이미지 허용, 텍스트만 검사) / block(이미지 포함 요청 422 차단) ──
+# 이미지 바이트 속 PII는 검사 불가 → 운영계는 정책에 따라 block 검토.
+image_policy: "allow"
 
 # ── 서비스별 마스킹 토글 화이트리스트 ──
 # 요청 헤더 X-PII-Ignore-Types로 서비스가 '끌 수 있는' 타입(예: 문서생성의 조직명).

@@ -62,6 +62,21 @@ CASES: list[tuple[str, str, set[str], str]] = [
 
     # ── 경계 (우회 시도) ──
     ("evade_fullwidth", "주민번호 ９０１０１０－１２３４５６０ 입니다.", {"rrn"}, "전각 우회(NFKC)"),
+    ("evade_dot_card",  "결제카드 4111.1111.1111.1111 입니다.",      {"card"},    "점 구분자 우회"),
+    ("evade_group_card","카드 4111-111111-111111-11 등록",           {"card"},    "비표준 그룹핑(account 강등 방지)"),
+
+    # ── 비정형 PII 확장 (실데이터 분포 근사) ──
+    ("name_full3",   "계약자 성함은 남궁민수입니다.",                {"person"},  "복성(2자 성)"),
+    ("name_with_age","피보험자 정우성(45세) 확인했습니다.",          {"person"},  "이름+괄호나이"),
+    ("addr_apartment","자택은 서울 송파구 올림픽로 300 롯데타워 25층", {"address"}, "도로명+층"),
+    ("org_workplace","근무지는 삼성생명 강남지점입니다.",            {"org"},     "직장+지점"),
+    ("mix_insurer_claim","한화손해보험 담당 이서연 010-2222-3333", {"org", "person", "phone"}, "조직+이름+전화"),
+    ("driver_license","운전면허 11-12-345678-90 갱신 문의",          {"driver"},  "운전면허번호"),
+
+    # ── 정상문 확장 (보험 도메인 FP 체크) ──
+    ("norm_clause",  "자기차량손해 담보는 면책금 20만원입니다.",      set(), "약관 용어"),
+    ("norm_policy_no","증권번호 형식은 영문3자리로 시작합니다.",      set(), "일반 안내"),
+    ("norm_branch",  "가까운 영업점을 방문하시면 됩니다.",            set(), "일반 명사"),
 ]
 
 
@@ -76,7 +91,6 @@ async def main() -> int:
         pool.add_backend(host, port, tag)
     await pool.health_check()
 
-    healthy = [b for b in pool.backends if getattr(b, "healthy", True)] if hasattr(pool, "backends") else None
     print(f"NER 백엔드: {NER_BACKENDS}  (health_check 완료)\n")
 
     tp: dict[str, int] = defaultdict(int)

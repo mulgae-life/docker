@@ -372,10 +372,10 @@ find "$MODEL_DIR" -maxdepth 1 \( -name '*.safetensors' -o -name '*.bin' \)  # �
 ```
 llm-serving/vllm/
 ├── instances/
-│   ├── gemma.yaml          (gateway_port: 5015, port: 7070, gpus: [0])
-│   └── qwen.yaml           (gateway_port: 5016, port: 7080, gpus: [1])
+│   ├── gemma.yaml          (gateway_port: 6015, port: 7070, gpus: [0])   # 외부는 PII 프록시 :5015
+│   └── qwen.yaml           (gateway_port: 5016, port: 7080, gpus: [1])   # PII 미적용
 └── gateways/
-    ├── 5015.yaml           (gateway.port: 5015, discover_from: ../instances)
+    ├── 6015.yaml           (gateway.port: 6015 내부전용, discover_from: ../instances)
     └── 5016.yaml           (gateway.port: 5016, discover_from: ../instances)
 ```
 
@@ -440,12 +440,12 @@ CLI 인자  >  instances/<name>.yaml  >  vLLM 기본값
 
 ### 9.3 게이트웨이 yaml (`gateways/<port>.yaml`) 주요 설정
 
-두 게이트웨이 yaml(`5015.yaml`, `5016.yaml`)도 주석/구조 100% 동일, 포트만 다릅니다.
+게이트웨이 yaml(PII 적용분 `6015.yaml`·`6501.yaml`은 내부 전용 `127.0.0.1`, Qwen `5016.yaml`은 외부)도 주석/구조 100% 동일, 포트·바인딩 host만 다릅니다.
 
 | 키 | 분류 | 설명 |
 |----|------|------|
 | `gateway.host` | 서버 | `0.0.0.0` |
-| `gateway.port` | 서버 | 게이트웨이 포트 (외부 노출 대상). `discover_from`의 매칭 키. |
+| `gateway.port` | 서버 | 게이트웨이 포트. PII 적용분(6015/6501)은 내부 전용, Qwen(5016)은 외부. `discover_from`의 매칭 키. |
 | `gateway.log_level` | 서버 | `info` |
 | **`discover_from`** | 디스커버리 | 인스턴스 yaml 디렉토리(상대 경로). `../instances` |
 | `backends` | 디스커버리 | (선택) 수동 명시 시 `discover_from`보다 우선 — escape hatch |
@@ -1280,13 +1280,13 @@ llm-serving/
 │   │   ├── speed_test.py        (모델 간 속도 매트릭스 누적)
 │   │   └── results/             (speed_results.md 등 누적 리포트)
 │   ├── instances/               ← 인스턴스 단위 yaml (vLLM 1대 = 1 yaml)
-│   │   ├── gemma.yaml           (gateway_port: 5015, port hint: 7070, gpus: [0])
-│   │   ├── qwen.yaml            (gateway_port: 5016, port hint: 7080, gpus: [1])
+│   │   ├── gemma.yaml           (gateway_port: 6015, port hint: 7070, gpus: [0])  # 외부는 PII :5015
+│   │   ├── qwen.yaml            (gateway_port: 5016, port hint: 7080, gpus: [1])  # PII 미적용
 │   │   └── .runtime/            ← launcher가 기록하는 실제 사용 포트/PID (gitignore 대상)
 │   │       ├── gemma.json       (port, pid, model, started_at)
 │   │       └── qwen.json
 │   ├── gateways/                ← 게이트웨이 단위 yaml
-│   │   ├── 5015.yaml            (Gemma 페어, max_inflight=2, max_queue=18)
+│   │   ├── 6015.yaml            (Gemma 페어 내부전용, max_inflight=2, max_queue=18)
 │   │   └── 5016.yaml            (Qwen 페어,  max_inflight=2, max_queue=4)
 │   ├── slm_research/            ← 모델 비교/연구 노트 (Gemma 4, Qwen 3.5/3.6)
 │   ├── bugfix/                  ← 인시던트 기록 (원인 → 수정 → 재발 방지)

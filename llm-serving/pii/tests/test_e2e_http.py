@@ -107,6 +107,32 @@ def test_e2e_multimodal_text_part_masked():
     asyncio.run(run())
 
 
+def test_e2e_image_policy_block():
+    """image_policy=block이면 이미지 포함 요청을 422 차단(이미지 PII 미검사 누출 방지)."""
+    async def run():
+        app, captured = _build({"choices": [{"message": {"content": "ok"}}]}, image_policy="block")
+        r = await _post(app, {"messages": [{"role": "user", "content": [
+            {"type": "text", "text": "이 사진 설명"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAA"}},
+        ]}]})
+        assert r.status_code == 422
+        assert r.json()["error"]["type"] == "pii_image_blocked"
+        assert "body" not in captured  # 게이트웨이 미호출
+    asyncio.run(run())
+
+
+def test_e2e_image_policy_allow_passes():
+    """image_policy=allow(기본)면 이미지 요청 통과(텍스트 파트만 검사)."""
+    async def run():
+        app, captured = _build({"choices": [{"message": {"role": "assistant", "content": "네"}}]})
+        r = await _post(app, {"messages": [{"role": "user", "content": [
+            {"type": "text", "text": "설명해줘"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAA"}},
+        ]}]})
+        assert r.status_code == 200
+    asyncio.run(run())
+
+
 def test_e2e_bypass_disabled_still_masks():
     """allow_bypass=False(기본)면 X-PII-Mode:bypass 헤더가 와도 마스킹 강제."""
     async def run():
