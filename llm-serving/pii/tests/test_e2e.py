@@ -116,6 +116,18 @@ def test_ignore_block_type_even_if_misconfigured():
 
 
 # ── bypass 게이팅 (allow_bypass) ──
+def test_invalid_fail_mode_rejected():
+    """fail_mode/stream_mode 오타는 기동 단계에서 거부(조용한 fail-open 강등 방지)."""
+    import pytest
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        PiiConfig(ner_backends=[], fail_mode="close")     # 오타
+    with pytest.raises(ValidationError):
+        PiiConfig(ner_backends=[], stream_mode="postt")   # 오타
+    # 정상 값은 통과
+    assert PiiConfig(ner_backends=[], fail_mode="open").fail_mode == "open"
+
+
 def test_pii_mode_bypass_requires_allow():
     """allow_bypass=False면 헤더가 와도 enforce(우회 불가)."""
     cfg_off = PiiConfig(ner_backends=[])  # allow_bypass 기본 False

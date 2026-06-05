@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import os
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, Field
@@ -42,7 +43,8 @@ class PiiConfig(BaseModel):
     # ── 장애 모드: PII 엔진 불가 시 동작 ──
     # closed: 차단(누출 방지, 컴플라이언스 기본) / open: 통과(가용성, 명시 opt-in)
     # open이라도 구조화 regex(주민/카드)는 항상 적용된다(누출 방지).
-    fail_mode: str = "closed"
+    # Literal로 오타 시 기동 단계에서 fail-fast(잘못된 값이 조용히 fail-open으로 강등되는 것 방지).
+    fail_mode: Literal["closed", "open"] = "closed"
 
     # ── 전면 우회(bypass) 허용 여부 ──
     # True일 때만 요청 헤더 X-PII-Mode: bypass 로 PII 검사를 통째 건너뛸 수 있다.
@@ -56,7 +58,8 @@ class PiiConfig(BaseModel):
 
     # ── 스트리밍 out 검사 ──
     # buffer: SSE 프레임 누적 후 경계까지 flush / post: 완결 후 1회 / off: 미검사
-    stream_mode: str = "buffer"
+    # Literal로 오타 시 기동 단계 fail-fast(잘못된 값이 조용히 off로 처리돼 누출되는 것 방지).
+    stream_mode: Literal["buffer", "post", "off"] = "buffer"
     hold_chars: int = 27  # 보류 윈도우(카드 19자 + 여유). prefix-incremental과 함께 최소화
 
     # ── 정책: 차단 타입(그 외는 마스킹) ──
