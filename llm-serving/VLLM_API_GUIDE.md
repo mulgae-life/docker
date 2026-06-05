@@ -1,7 +1,7 @@
 # vLLM SLM API 가이드 (사용자용)
 
 > **대상**: API 사용자 (개발자, 챗봇/RAG 통합)
-> **메인 모델**: `gemma-4-26B-A4B-it` (Google Gemma 4, 멀티모달)
+> **메인 모델**: `gemma-4-31B-it` (Google Gemma 4, 멀티모달, MTP 가속)
 > **Base URL**: `http://3.38.195.121:5015/v1` (외부)
 > **API 호환**: OpenAI Chat Completions 100% — 기존 OpenAI SDK · LangChain `ChatOpenAI` · `curl` 그대로
 > **인증**: 불필요 (`Authorization` 헤더 생략 가능)
@@ -32,7 +32,8 @@
 | 항목 | **Gemma (메인)** | Qwen3.6 (옵션) |
 |------|------------------|----------------|
 | Base URL | `http://3.38.195.121:5015/v1` | `http://3.38.195.121:5016/v1` |
-| 모델명 (`model` 필드) | **`gemma-4-26B-A4B-it`** | `Qwen3.6-35B-A3B-FP8` |
+| 모델명 (`model` 필드) | **`gemma-4-31B-it`** | `Qwen3.6-27B-FP8` |
+| 추론 가속 | MTP(speculative decoding) | MTP(speculative decoding) |
 | API 키 | 불필요 | 불필요 |
 | 멀티모달 (이미지) | ✅ | ✅ |
 | Tool Calling | ✅ | ✅ |
@@ -57,7 +58,7 @@
 > - **차단 (HTTP 422)**: 주민등록번호·신용카드번호가 포함되면 추론 전에 거부됩니다 (`type: pii_blocked`). 이런 정보는 보내지 마세요.
 > - **자동 마스킹**: 이름·전화·주소·조직·계좌·사업자등록번호·이메일은 `[이름]`·`[전화번호]` 등으로 치환되어 모델에 전달되고, **응답에서도** 동일하게 마스킹됩니다.
 > - **조직명 마스킹 끄기 (서비스 선택)**: 문서 생성처럼 부서명·회사명을 보존해야 하는 서비스는 요청 헤더 `X-PII-Ignore-Types: org` 로 **조직(ORG) 마스킹만** 끌 수 있습니다. 핵심 PII(주민·카드·이름·전화·주소 등)는 헤더와 무관하게 **항상 마스킹**됩니다 (서버 화이트리스트로 끌 수 있는 타입을 통제). 상세는 [§3.6](#36-pii-마스킹-토글-헤더).
-> - **PII 없이 SLM 직행 (운영 허용 시)**: 운영자가 `allow_bypass`를 켠 환경에서는 요청 헤더 `X-PII-Mode: bypass` 로 **PII 검사를 통째 건너뛰고** 모델에 원문을 보낼 수 있습니다 (기본은 비활성·강제 검사). 상세는 [§3.7](#37-pii-우회-bypass-헤더).
+> - **PII 없이 SLM 직행**: 요청 헤더 `X-PII-Mode: bypass` 로 **PII 검사를 통째 건너뛰고** 모델에 원문을 보낼 수 있습니다 (현재 5015·5501 기본 활성, 헤더 없으면 강제 검사). 상세는 [§3.7](#37-pii-우회-bypass-헤더).
 > - **스트리밍**: 응답 PII 검사를 위해 `stream:true`라도 완결 후 한 번에 전달됩니다(토큰 점진 출력만 일시 비활성). `usage`·`finish_reason`·`reasoning` 분리 등 응답 구조는 보존됩니다 — [§3.1](#31-스트리밍-sse).
 > - **이미지 입력**: 멀티모달 요청의 **텍스트 파트는 검사·마스킹**됩니다. 단, **이미지 바이트 자체**는 검사 대상이 아닙니다(설계상 한계 — [§3.3](#33-이미지-멀티모달-vision)).
 > - **도구 호출**: `tool_calls`의 함수 인자(JSON) 안 PII도 요청·응답 양방향으로 마스킹됩니다.
@@ -75,7 +76,7 @@
 curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-26B-A4B-it",
+    "model": "gemma-4-31B-it",
     "messages": [
       {"role": "system", "content": "간결하게 답변해."},
       {"role": "user",   "content": "대한민국의 수도는?"}
@@ -90,7 +91,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 {
   "id": "chatcmpl-abc123",
   "object": "chat.completion",
-  "model": "gemma-4-26B-A4B-it",
+  "model": "gemma-4-31B-it",
   "choices": [{
     "index": 0,
     "message": {"role": "assistant", "content": "서울입니다."},
@@ -111,7 +112,7 @@ client = OpenAI(
 )
 
 resp = client.chat.completions.create(
-    model="gemma-4-26B-A4B-it",
+    model="gemma-4-31B-it",
     messages=[
         {"role": "system", "content": "간결하게 답변해."},
         {"role": "user",   "content": "파이썬이란?"},
@@ -129,7 +130,7 @@ from langchain_openai import ChatOpenAI
 
 llm = ChatOpenAI(
     base_url="http://3.38.195.121:5015/v1",
-    model="gemma-4-26B-A4B-it",
+    model="gemma-4-31B-it",
     api_key="not-needed",
     temperature=0.7,
     max_tokens=200,
@@ -149,7 +150,7 @@ const client = new OpenAI({
 });
 
 const resp = await client.chat.completions.create({
-  model: "gemma-4-26B-A4B-it",
+  model: "gemma-4-31B-it",
   messages: [{ role: "user", content: "안녕" }],
   max_tokens: 100,
 });
@@ -163,7 +164,7 @@ console.log(resp.choices[0].message.content);
 curl http://3.38.195.121:5015/v1/models
 ```
 
-응답에 `served_model_name` (예: `gemma-4-26B-A4B-it`)과 `max_model_len`(현재 컨텍스트 한도)이 들어 있어, 클라이언트에서 모델명·컨텍스트 한도를 자동 감지하는 데 쓸 수 있습니다.
+응답에 `served_model_name` (예: `gemma-4-31B-it`)과 `max_model_len`(현재 컨텍스트 한도)이 들어 있어, 클라이언트에서 모델명·컨텍스트 한도를 자동 감지하는 데 쓸 수 있습니다.
 
 ---
 
@@ -173,7 +174,7 @@ curl http://3.38.195.121:5015/v1/models
 
 `stream: true`를 주면 토큰이 생성되는 즉시 Server-Sent Events로 흘러나옵니다.
 
-> 🔒 **PII 가드 영향 (현재 제약)**: `:5015`는 응답 PII 마스킹을 보장하기 위해 스트리밍을 **완결 후 1회 방출**합니다. 즉 `stream:true`를 줘도 토큰이 점진적으로 오지 않고, 마스킹이 끝난 전체 응답이 도착합니다. 단, **응답 구조는 보존**됩니다 — `id`/`created`/`model`, `usage`(`include_usage` 시), `finish_reason`, `reasoning`↔`content` 분리, `tool_calls` 인자가 그대로 유지되어 OpenAI 클라이언트 파싱이 정상 동작합니다. 토큰 점진(progressive) 출력은 **현재 미지원**입니다(PII 경계 누출 위험으로 별도 설계 후 도입 예정). PII가 불필요한 호출이면 [§3.7](#37-pii-우회-bypass-헤더) 우회로 원문 스트리밍을 받을 수 있습니다(운영 허용 시).
+> 🔒 **PII 가드 영향 (현재 제약)**: `:5015`는 응답 PII 마스킹을 보장하기 위해 스트리밍을 **완결 후 1회 방출**합니다. 즉 `stream:true`를 줘도 토큰이 점진적으로 오지 않고, 마스킹이 끝난 전체 응답이 도착합니다. 단, **응답 구조는 보존**됩니다 — `id`/`created`/`model`, `usage`(`include_usage` 시), `finish_reason`, `reasoning`↔`content` 분리, `tool_calls` 인자가 그대로 유지되어 OpenAI 클라이언트 파싱이 정상 동작합니다. 토큰 점진(progressive) 출력은 **현재 미지원**입니다(PII 경계 누출 위험으로 별도 설계 후 도입 예정). PII가 불필요한 호출이면 [§3.7](#37-pii-우회-bypass-헤더) 우회로 원문 스트리밍을 받을 수 있습니다.
 
 **curl**:
 
@@ -181,7 +182,7 @@ curl http://3.38.195.121:5015/v1/models
 curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-26B-A4B-it",
+    "model": "gemma-4-31B-it",
     "messages": [{"role": "user", "content": "긴 시 한 편 써줘"}],
     "max_tokens": 500,
     "stream": true,
@@ -209,7 +210,7 @@ data: [DONE]
 
 ```python
 stream = client.chat.completions.create(
-    model="gemma-4-26B-A4B-it",
+    model="gemma-4-31B-it",
     messages=[{"role": "user", "content": "긴 시 한 편"}],
     max_tokens=500,
     stream=True,
@@ -247,7 +248,7 @@ for chunk in stream:
 curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-26B-A4B-it",
+    "model": "gemma-4-31B-it",
     "messages": [
       {"role": "user", "content": "한 자리 소수를 모두 나열해줘. 이유도 설명해."}
     ],
@@ -276,7 +277,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 
 ```python
 resp = client.chat.completions.create(
-    model="gemma-4-26B-A4B-it",
+    model="gemma-4-31B-it",
     messages=[{"role": "user", "content": "12를 소인수분해해줘"}],
     max_tokens=1500,
     extra_body={
@@ -319,7 +320,7 @@ print(resp.choices[0].message.content)
 curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-26B-A4B-it",
+    "model": "gemma-4-31B-it",
     "messages": [{
       "role": "user",
       "content": [
@@ -342,7 +343,7 @@ B64=$(base64 -w0 ./screenshot.png)
 curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d "{
-    \"model\": \"gemma-4-26B-A4B-it\",
+    \"model\": \"gemma-4-31B-it\",
     \"messages\": [{
       \"role\": \"user\",
       \"content\": [
@@ -366,7 +367,7 @@ with open("./document.png", "rb") as f:
     b64 = base64.b64encode(f.read()).decode()
 
 resp = client.chat.completions.create(
-    model="gemma-4-26B-A4B-it",
+    model="gemma-4-31B-it",
     messages=[{
         "role": "user",
         "content": [
@@ -385,7 +386,7 @@ print(resp.choices[0].message.content)
 
 ```python
 resp = client.chat.completions.create(
-    model="gemma-4-26B-A4B-it",
+    model="gemma-4-31B-it",
     messages=[{
         "role": "user",
         "content": [
@@ -422,7 +423,7 @@ print("답변:", resp.choices[0].message.content)
 curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-26B-A4B-it",
+    "model": "gemma-4-31B-it",
     "messages": [{"role": "user", "content": "서울 날씨 알려줘"}],
     "tools": [{
       "type": "function",
@@ -470,7 +471,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-26B-A4B-it",
+    "model": "gemma-4-31B-it",
     "messages": [
       {"role": "user", "content": "서울 날씨 알려줘"},
       {
@@ -519,7 +520,7 @@ def get_weather(city: str) -> str:
 
 llm = ChatOpenAI(
     base_url="http://3.38.195.121:5015/v1",
-    model="gemma-4-26B-A4B-it",
+    model="gemma-4-31B-it",
     api_key="not-needed",
 )
 llm_with_tools = llm.bind_tools([get_weather])
@@ -543,13 +544,13 @@ messages = [
 ]
 
 resp1 = client.chat.completions.create(
-    model="gemma-4-26B-A4B-it", messages=messages, max_tokens=100,
+    model="gemma-4-31B-it", messages=messages, max_tokens=100,
 )
 messages.append({"role": "assistant", "content": resp1.choices[0].message.content})
 
 messages.append({"role": "user", "content": "내 이름이 뭐였지?"})
 resp2 = client.chat.completions.create(
-    model="gemma-4-26B-A4B-it", messages=messages, max_tokens=100,
+    model="gemma-4-31B-it", messages=messages, max_tokens=100,
 )
 print(resp2.choices[0].message.content)   # → "홍길동님이라고 하셨습니다."
 ```
@@ -584,7 +585,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "X-PII-Ignore-Types: org" \
   -d '{
-    "model": "gemma-4-26B-A4B-it",
+    "model": "gemma-4-31B-it",
     "messages": [{"role": "user",
       "content": "작성부서 디지털AI센터, 담당자 홍길동 010-1234-5678 기준으로 보고서 헤더를 만들어줘."}]
   }'
@@ -613,16 +614,16 @@ PII가 전혀 필요 없는 호출(예: 비식별 사내 문서 가공, PII가 �
 | `X-PII-Mode` | `bypass` | 해당 요청의 PII 검사(in/out) 전체 생략, 원문 직행 |
 | `X-PII-Mode` | `enforce` 또는 생략 | 기본 — PII 검사 적용 |
 
-> ⚠️ **운영 허용 필요**: 이 헤더는 운영자가 프록시 설정에서 `allow_bypass: true`로 **명시적으로 켰을 때만** 동작합니다. 기본값은 `false`라, 끄여 있으면 헤더를 보내도 무시되고 검사가 강제됩니다("헤더 하나로 우회" 방지). 모든 우회 요청은 감사로그에 `action=bypass`로 기록됩니다.
+> ⚠️ **현재 기본 활성화**: 이 우회는 프록시 설정 `allow_bypass`로 게이팅됩니다. **현재 5015·5501은 기본값이 `true`라 헤더만으로 우회**됩니다(토큰 미설정). 강제 검사로 묶으려면 해당 프록시 설정에서 `allow_bypass: false`로 끄면 됩니다(끄면 헤더를 보내도 무시되고 검사가 강제됨). 모든 우회 요청은 감사로그에 `action=bypass`로 기록됩니다.
 >
 > 🔑 **토큰 2차 가드(선택)**: 운영자가 `bypass_token`(env `PII_BYPASS_TOKEN`)을 설정한 환경에서는 추가로 헤더 `X-PII-Bypass-Token: <토큰>`이 일치해야 우회됩니다. 외부 포트가 열린 환경에서 "헤더 하나로 우회"를 막는 용도이며, 토큰이 틀리면 검사가 강제됩니다.
 
 ```bash
-# allow_bypass=true 인 환경에서만 우회됨
+# 현재 5015·5501은 기본 활성(allow_bypass=true) — 헤더만으로 우회됨
 curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "X-PII-Mode: bypass" \
-  -d '{"model": "gemma-4-26B-A4B-it",
+  -d '{"model": "gemma-4-31B-it",
        "messages": [{"role": "user", "content": "비식별 공지문 초안을 다듬어줘 ..."}]}'
 ```
 
@@ -636,7 +637,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 
 | 파라미터 | 필수 | 기본값 | 설명 |
 |----------|:----:|--------|------|
-| `model` | O | — | `gemma-4-26B-A4B-it` 또는 `Qwen3.6-35B-A3B-FP8` |
+| `model` | O | — | `gemma-4-31B-it` 또는 `Qwen3.6-27B-FP8` |
 | `messages` | O | — | 대화 메시지 배열 |
 | `max_tokens` | — | 모델 한계 | 최대 생성 토큰 수. Thinking ON이면 1,000+ 권장 |
 | `temperature` | — | 모델별 | 0=결정적, 1.0=기본. Gemma 4 권장 1.0, Qwen3.6 코딩 0.6 |
@@ -659,7 +660,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
   "id": "chatcmpl-xxx",
   "object": "chat.completion",
   "created": 1738200000,
-  "model": "gemma-4-26B-A4B-it",
+  "model": "gemma-4-31B-it",
   "choices": [{
     "index": 0,
     "message": {
@@ -714,10 +715,10 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 
 | 모델 | 모드 | temperature | top_p | top_k | presence_penalty | 출처 |
 |------|------|:-----------:|:-----:|:-----:|:----------------:|------|
-| Gemma 4 26B-A4B | 일반 | 1.0 | 0.95 | 64 | 0 | 모델 `generation_config.json` 기본값 |
-| Qwen3.6-35B-A3B | Thinking·일반 | 1.0 | 0.95 | 20 | **1.5** | Qwen3.6 모델 카드 |
-| Qwen3.6-35B-A3B | Thinking·코딩 | 0.6 | 0.95 | 20 | 0 | Qwen3.6 모델 카드 |
-| Qwen3.6-35B-A3B | Instruct·일반 | 0.7 | 0.8 | 20 | **1.5** | Qwen3.6 모델 카드 |
+| Gemma 4 31B | 일반 | 1.0 | 0.95 | 64 | 0 | 모델 `generation_config.json` 기본값 |
+| Qwen3.6-27B | Thinking·일반 | 1.0 | 0.95 | 20 | **1.5** | Qwen3.6 모델 카드 |
+| Qwen3.6-27B | Thinking·코딩 | 0.6 | 0.95 | 20 | 0 | Qwen3.6 모델 카드 |
+| Qwen3.6-27B | Instruct·일반 | 0.7 | 0.8 | 20 | **1.5** | Qwen3.6 모델 카드 |
 
 > 모델 `generation_config.json`이 자동 적용되므로 보통 명시 생략 가능. 한국어 응답에서 언어 혼합이 보이면 `presence_penalty` 1.0~1.2 권장. 결정적 출력이 필요하면 `temperature: 0` + `seed` 명시.
 
@@ -731,8 +732,8 @@ LangChain `ChatOpenAI` 기반 chatbot-poc는 `.env`만 바꾸면 즉시 vLLM SLM
 PROVIDER=huggingface
 HF_BASE_URL=http://3.38.195.121:5015/v1   # Gemma 게이트웨이
 # HF_BASE_URL=http://3.38.195.121:5016/v1 # Qwen 게이트웨이
-CHAT_MODEL=gemma-4-26B-A4B-it             # 또는 Qwen3.6-35B-A3B-FP8
-RERANKER_MODEL=gemma-4-26B-A4B-it
+CHAT_MODEL=gemma-4-31B-it             # 또는 Qwen3.6-27B-FP8
+RERANKER_MODEL=gemma-4-31B-it
 ```
 
 > ⚠️ **`PROVIDER`는 단일 스택** — Chat과 Embedding이 함께 전환됩니다. 임베딩은 OpenAI 유지하면서 Chat만 vLLM으로 쓰려면 provider 분리가 필요합니다.

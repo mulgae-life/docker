@@ -4,8 +4,8 @@
 > **API 호출 사용법**: [`VLLM_API_GUIDE.md`](VLLM_API_GUIDE.md) 참고.
 
 > **현재 운영**: 두 모델 격리 페어 (각 게이트웨이 ↔ 단일 vLLM)
->   - `:5015` ← `instances/gemma.yaml` (Gemma 4 26B A4B, GPU 0, vLLM `:7070`)
->   - `:5016` ← `instances/qwen.yaml` (Qwen3.6 35B-A3B FP8, GPU 1, vLLM `:7080`)
+>   - `:5015` ← `instances/gemma.yaml` (Gemma 4 31B, GPU 0, vLLM `:7070`)
+>   - `:5016` ← `instances/qwen.yaml` (Qwen3.6 27B FP8, GPU 1, vLLM `:7080`)
 > **인프라**: AWS L40S 46GB × 4장.
 > **vLLM 버전**: 0.19.0+.
 
@@ -56,7 +56,7 @@ chatbot-poc (.env)
 │ vLLM :7070 (GPU 0)           │    │ vLLM :7080 (GPU 1)           │
 │ instances/gemma.yaml         │    │ instances/qwen.yaml          │
 │   gateway_port: 6015 ────────┘    │   gateway_port: 5016 ────────┘
-│   model: gemma-4-26B-A4B-it  │    │   model: Qwen3.6-35B-A3B-FP8 │
+│   model: gemma-4-31B-it      │    │   model: Qwen3.6-27B-FP8     │
 └──────────────────────────────┘    └──────────────────────────────┘
 ```
 > ⚠️ gemma 경로는 외부 입구가 **PII 프록시(:5015)**, 게이트웨이는 **6015 내부 전용**이다(아래 🔒 박스). **Qwen(:5016)은 현재 PII 미적용** — 게이트웨이 포트가 그대로 외부 노출되며 PII 검사를 거치지 않는다(정책 결정 필요 — [§6.4](#64-qwen-5016-pii-정책)).
@@ -236,7 +236,7 @@ cd /workspace/llm-serving/vllm
 
 # 모델 로컬 경로를 positional 인자로 직접 넘김
 CUDA_VISIBLE_DEVICES=0 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
-  vllm serve /models/LLM/google/gemma-4-26B-A4B-it --config /tmp/gemma_vllm_only.yaml
+  vllm serve /models/LLM/google/gemma-4-31B-it --config /tmp/gemma_vllm_only.yaml
 # (gemma_vllm_only.yaml은 instances/gemma.yaml에서 메타 키 제거 버전)
 ```
 
@@ -261,7 +261,7 @@ CUDA_VISIBLE_DEVICES=0 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
 > - ✅ 외부 오픈: **`:5015`(연구)·`:5501`(운영) PII 프록시만**.
 > - ❌ 외부 차단: **게이트웨이 `:6015`/`:6501`**, **vLLM `:7070`/`:7080`**, **NER `:8911`/`:8901`**. 하나라도 외부에서 닿으면 PII 검사를 건너뛰는 직행 경로가 생깁니다(인스턴스 yaml `host: 0.0.0.0`이면 특히 주의 — 가능하면 게이트웨이/vLLM 동일 호스트에서 `127.0.0.1` 바인딩 권장).
 > - ⚠️ **Qwen `:5016`은 PII 미적용**이라 외부 오픈 시 비검사 경로임을 인지([§6.4](#64-qwen-5016-pii-정책)).
-> - 📋 **bypass 사용 시**: `allow_bypass: true`로 켰다면 감사로그에서 `action=bypass` 비율을 주기적으로 모니터링해 의도치 않은 우회를 탐지하세요.
+> - 📋 **bypass 헤더 주의**: 현재 5015·5501은 기본 활성(`allow_bypass: true`, 토큰 미설정)이라 **헤더 `X-PII-Mode: bypass` 하나로 검사가 우회**됩니다. PII 강제가 필요한 배포는 해당 프록시에서 `allow_bypass: false`로 끄거나 `PII_BYPASS_TOKEN`을 설정하세요. 우회 요청은 감사로그 `action=bypass`로 기록되니 비율을 주기적으로 모니터링하세요.
 
 vLLM에 `--api-key`를 설정한 경우:
 
@@ -325,7 +325,7 @@ python vllm_server_launcher.py -c instances/qwen.yaml  --download-only
 HF_TOKEN=hf_xxx python vllm_server_launcher.py -c instances/<name>.yaml --download-only
 
 # 3) 모델 override (yaml의 model을 무시하고 다른 모델 받기)
-python vllm_server_launcher.py -c instances/qwen.yaml --download-only -m Qwen/Qwen3.6-35B-A3B-FP8
+python vllm_server_launcher.py -c instances/qwen.yaml --download-only -m Qwen/Qwen3.6-27B-FP8
 ```
 
 > `--download-only`는 내부적으로 `download_model()`을 호출하므로 **실제 서빙과 동일한 경로 규칙**을 씁니다. 안전한 표준 방식입니다.
@@ -336,13 +336,13 @@ python vllm_server_launcher.py -c instances/qwen.yaml --download-only -m Qwen/Qw
 - 폐쇄망으로 모델 디렉토리를 이관한다.
 - 실제 서빙은 항상 `HF_HUB_OFFLINE=1` + `TRANSFORMERS_OFFLINE=1` (런처·start.sh는 자동 적용).
 - 다운로드 경로는 반드시 `{download_dir}/{HF repo_id}` 레이아웃을 지킬 것. 예:
-  - config: `model: Qwen/Qwen3.6-35B-A3B-FP8`, `download_dir: /models/LLM`
-  - 실제 경로: `/models/LLM/Qwen/Qwen3.6-35B-A3B-FP8`
+  - config: `model: Qwen/Qwen3.6-27B-FP8`, `download_dir: /models/LLM`
+  - 실제 경로: `/models/LLM/Qwen/Qwen3.6-27B-FP8`
 
 ### 8.4 다운로드 확인
 
 ```bash
-MODEL_DIR="/models/LLM/Qwen/Qwen3.6-35B-A3B-FP8"
+MODEL_DIR="/models/LLM/Qwen/Qwen3.6-27B-FP8"
 
 test -f "$MODEL_DIR/config.json"              # 모델 config
 test -f "$MODEL_DIR/tokenizer_config.json"    # 토크나이저
@@ -467,8 +467,8 @@ PROVIDER=huggingface
 # 페어 게이트웨이 중 선택:
 HF_BASE_URL=http://3.38.195.121:5015/v1     # Gemma 페어
 # HF_BASE_URL=http://3.38.195.121:5016/v1   # Qwen 페어
-CHAT_MODEL=gemma-4-26B-A4B-it               # 또는 Qwen3.6-35B-A3B-FP8
-RERANKER_MODEL=gemma-4-26B-A4B-it
+CHAT_MODEL=gemma-4-31B-it                   # 또는 Qwen3.6-27B-FP8
+RERANKER_MODEL=gemma-4-31B-it
 ```
 
 > **`CHAT_MODEL`은 반드시 `served_model_name`(미설정 시 `model`에서 자동 추출)과 일치**해야 vLLM이 요청을 받습니다.
@@ -555,7 +555,7 @@ curl http://3.38.195.121:5016/server-status
 ```bash
 cat > /tmp/qwen_req.json <<'EOF'
 {
-  "model": "Qwen3.6-35B-A3B-FP8",
+  "model": "Qwen3.6-27B-FP8",
   "messages": [
     {"role": "system", "content": "자세하게 답변해줘."},
     {"role": "user", "content": "미국인과 한국인의 차이점 비교 설명해줘"}
@@ -575,7 +575,7 @@ curl http://3.38.195.121:5016/v1/chat/completions \
 **한 줄 명령**:
 
 ```bash
-curl -sS http://3.38.195.121:5016/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"Qwen3.6-35B-A3B-FP8","messages":[{"role":"system","content":"자세하게 답변해줘."},{"role":"user","content":"미국인과 한국인의 차이점 비교 설명해줘"}],"max_tokens":10000,"temperature":1.0,"presence_penalty":1.0,"chat_template_kwargs":{"enable_thinking":true}}'
+curl -sS http://3.38.195.121:5016/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"Qwen3.6-27B-FP8","messages":[{"role":"system","content":"자세하게 답변해줘."},{"role":"user","content":"미국인과 한국인의 차이점 비교 설명해줘"}],"max_tokens":10000,"temperature":1.0,"presence_penalty":1.0,"chat_template_kwargs":{"enable_thinking":true}}'
 ```
 
 **Thinking OFF — 빠른 응답**:
@@ -583,7 +583,7 @@ curl -sS http://3.38.195.121:5016/v1/chat/completions -H "Content-Type: applicat
 ```bash
 cat > /tmp/qwen_req_nothink.json <<'EOF'
 {
-  "model": "Qwen3.6-35B-A3B-FP8",
+  "model": "Qwen3.6-27B-FP8",
   "messages": [
     {"role": "user", "content": "미국인과 한국인의 차이점 간단히 설명"}
   ],
@@ -628,12 +628,12 @@ curl -sS http://3.38.195.121:5016/v1/chat/completions \
 # Gemma 인스턴스 직접 (내부 포트 :7070)
 curl http://127.0.0.1:7070/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"model":"gemma-4-26B-A4B-it","messages":[{"role":"user","content":"ping"}],"max_tokens":20}'
+  -d '{"model":"gemma-4-31B-it","messages":[{"role":"user","content":"ping"}],"max_tokens":20}'
 
 # Qwen 인스턴스 직접 (내부 포트 :7080)
 curl http://127.0.0.1:7080/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"model":"Qwen3.6-35B-A3B-FP8","messages":[{"role":"user","content":"ping"}],"max_tokens":20}'
+  -d '{"model":"Qwen3.6-27B-FP8","messages":[{"role":"user","content":"ping"}],"max_tokens":20}'
 ```
 
 > ⚠️ vLLM 포트는 **외부 비개방**이라 운영계 호스트 안에서만 접근됩니다. 외부에서 접근하려면 게이트웨이를 거쳐야 합니다.
@@ -646,14 +646,14 @@ curl http://127.0.0.1:7080/v1/chat/completions \
 
 ### 11.1 지원 모델 비교
 
-| | **Qwen3.6-35B-A3B-FP8 (현재)** | Qwen3.5-27B-FP8 | Gemma 4 26B-A4B-it | Gemma 4 31B-it |
+| | **Qwen3.6-27B-FP8 (현재)** | Qwen3.5-27B-FP8 | Gemma 4 26B-A4B-it | Gemma 4 31B-it |
 |---|---|---|---|---|
-| **HF 모델 ID** | `Qwen/Qwen3.6-35B-A3B-FP8` | `Qwen/Qwen3.5-27B-FP8` | `google/gemma-4-26B-A4B-it` | `google/gemma-4-31B-it` |
-| **파라미터** | 3B active / 35B total (Hybrid MoE) | 27B (Dense) | 26B active / ~45B total (MoE) | 30.7B (Dense) |
+| **HF 모델 ID** | `Qwen/Qwen3.6-27B-FP8` | `Qwen/Qwen3.5-27B-FP8` | `google/gemma-4-26B-A4B-it` | `google/gemma-4-31B-it` |
+| **파라미터** | 27B (Dense, Mamba-hybrid) | 27B (Dense) | 26B active / ~45B total (MoE) | 30.7B (Dense) |
 | **아키텍처** | Gated DeltaNet 75% + Gated Attention 25% (Mamba-hybrid) | Transformer | MoE | Transformer |
 | **기본 dtype** | FP8 (사전 양자화) | FP8 (사전 양자화) | BF16 | BF16 |
 | **양자화 필요?** | 불필요 | 불필요 | `quantization: fp8` (온라인) | `quantization: fp8` (온라인) |
-| **가중치 크기** | ~35 GB | ~27 GB | ~25 GB | ~29 GB |
+| **가중치 크기** | ~29 GB | ~27 GB | ~25 GB | ~29 GB |
 | **라이선스** | Apache 2.0 | Apache 2.0 | Gemma | Apache 2.0 |
 | **HF 토큰** | 불필요 | 불필요 | 불필요 | 불필요 |
 | **컨텍스트 (네이티브/YaRN)** | 262K / 1.01M | 131K | 128K | 256K |
@@ -674,10 +674,10 @@ curl http://127.0.0.1:7080/v1/chat/completions \
 기존 인스턴스를 다른 모델로 교체하려면 해당 `instances/<name>.yaml`의 모델 관련 키만 바꾸면 됩니다(포트·GPU는 모델 무관). **새 모델을 추가**하는 경우엔 `instances/<new>.yaml`을 복사하여 만들고 게이트웨이를 재기동하면 자동 디스커버리됩니다.
 
 ```yaml
-# ── Qwen3.6-35B-A3B-FP8 (현재, Hybrid MoE) ──
-model: Qwen/Qwen3.6-35B-A3B-FP8
+# ── Qwen3.6-27B-FP8 (현재, Mamba-hybrid Dense) ──
+model: Qwen/Qwen3.6-27B-FP8
 # quantization 생략 (사전 양자화 체크포인트, 자동 감지)
-served_model_name: [Qwen3.6-35B-A3B-FP8]
+served_model_name: [Qwen3.6-27B-FP8]
 tool_call_parser: qwen3_xml              # 모델 카드 권장은 qwen3_coder
 reasoning_parser: qwen3
 # Mamba-hybrid 운영 필수
@@ -735,7 +735,7 @@ mm_processor_cache_type: shm
 
 | 모델 | 가중치 | KV Cache 가용 | 권장 `max_model_len` |
 |------|--------|--------------|---------------------|
-| Qwen3.6-35B-A3B-FP8 | ~35 GB | 부족 | **비권장** (TP=2 사용) |
+| Qwen3.6-27B-FP8 | ~29 GB | 부족 | **비권장** (TP=2 사용) |
 | Gemma 4 31B FP8 (온라인) | ~29 GB | ~14.7 GB | 12288 |
 | Qwen3.5-27B FP8 | ~27 GB | ~16.7 GB | 12288~16384 |
 | 14B BF16 | ~28 GB | ~15.7 GB | 12288~32768 |
@@ -745,7 +745,7 @@ mm_processor_cache_type: shm
 
 | 모델 | 가중치 (rank당) | KV Cache 가용 | 권장 `max_model_len` |
 |------|-----------------|---------------|----------------------|
-| **Qwen3.6-35B-A3B-FP8 (현재)** | ~17.5 GB | 넉넉 (Mamba-hybrid로 Full-Attn 대비 절감) | 262144 (실기동 확인) |
+| **Qwen3.6-27B-FP8 (현재)** | ~14.5 GB | 넉넉 (Mamba-hybrid로 Full-Attn 대비 절감) | 262144 (실기동 확인) |
 | Qwen3.5-27B FP8 | ~13.5 GB | ~60.4 GB | 65536~131072 |
 | Gemma 4 31B FP8 (온라인) | ~14.5 GB | ~58.4 GB | 65536~131072 |
 
@@ -832,10 +832,10 @@ vllm serve google/gemma-4-31B-it \
 
 ### 12.1 MTP Speculative Decoding
 
-Qwen3.6-35B-A3B는 Multi-Token Prediction으로 사전·사후 학습됐습니다. vLLM Speculative Decoding으로 **2토큰 예측**을 활성화하면 처리량이 향상됩니다 (B200 기준 실측 ~96K tokens/s, 수락률 90%).
+Qwen3.6-27B-FP8은 Multi-Token Prediction으로 사전·사후 학습됐습니다. vLLM Speculative Decoding으로 **2토큰 예측**을 활성화하면 처리량이 향상됩니다 (동일 Mamba-hybrid 계열 35B-A3B B200 실측 ~96K tokens/s·수락률 90% 참고 — 27B 자체 수치는 실기동 측정 필요).
 
 ```bash
-vllm serve Qwen/Qwen3.6-35B-A3B-FP8 \
+vllm serve Qwen/Qwen3.6-27B-FP8 \
   --tensor-parallel-size 2 \
   --max-model-len 262144 \
   --reasoning-parser qwen3 \
@@ -850,7 +850,7 @@ Qwen3.6 고유 신규 옵션. 멀티턴 대화에서 **이전 턴 reasoning**을
 
 ```json
 {
-  "model": "Qwen3.6-35B-A3B-FP8",
+  "model": "Qwen3.6-27B-FP8",
   "messages": [ ... ],
   "chat_template_kwargs": {
     "enable_thinking": true,
@@ -868,7 +868,7 @@ Qwen3.6는 YaRN으로 `max_model_len`을 1,010,000까지 확장할 수 있습니
 
 ```bash
 # 참고용 — 실제 운영에서는 262144 유지
-VLLM_ALLOW_LONG_MAX_MODEL_LEN=1 vllm serve Qwen/Qwen3.6-35B-A3B-FP8 \
+VLLM_ALLOW_LONG_MAX_MODEL_LEN=1 vllm serve Qwen/Qwen3.6-27B-FP8 \
   --hf-overrides '{"text_config": {"rope_parameters": {"mrope_interleaved": true, "mrope_section": [11, 11, 10], "rope_type": "yarn", "rope_theta": 10000000, "partial_rotary_factor": 0.25, "factor": 4.0, "original_max_position_embeddings": 262144}}}' \
   --max-model-len 1010000
 ```
@@ -949,7 +949,7 @@ AssertionError: Encoder cache miss for <hash>.
 
 > ⚠️ **`disable_chunked_mm_input: true`를 Qwen3.6에서 절대 설정하지 마세요.**
 
-Qwen3.6-35B-A3B는 Mamba-hybrid 구조라서, `enable_prefix_caching: true`가 켜지면 vLLM이 `mamba_cache_mode='align'`을 자동 적용합니다.
+Qwen3.6-27B-FP8은 Mamba-hybrid 구조라서, `enable_prefix_caching: true`가 켜지면 vLLM이 `mamba_cache_mode='align'`을 자동 적용합니다.
 
 - align 모드는 attention block_size를 1056 같은 큰 값으로 확장합니다.
 - 따라서 MM 입력을 block_size 배수로 쪼갤 유연성이 반드시 필요합니다.
@@ -1320,6 +1320,6 @@ llm-serving/
 
 - [vLLM 공식 문서](https://docs.vllm.ai/)
 - [vLLM GitHub Issues](https://github.com/vllm-project/vllm/issues)
-- [Gemma 4 (Google) HuggingFace](https://huggingface.co/google/gemma-4-26B-A4B-it)
-- [Qwen3.6 HuggingFace 모델 카드](https://huggingface.co/Qwen/Qwen3.6-35B-A3B-FP8)
+- [Gemma 4 (Google) HuggingFace](https://huggingface.co/google/gemma-4-31B-it)
+- [Qwen3.6 HuggingFace 모델 카드](https://huggingface.co/Qwen/Qwen3.6-27B-FP8)
 - [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat) (vLLM이 호환하는 API 명세)

@@ -134,9 +134,10 @@ def test_e2e_image_policy_allow_passes():
 
 
 def test_e2e_bypass_disabled_still_masks():
-    """allow_bypass=False(기본)면 X-PII-Mode:bypass 헤더가 와도 마스킹 강제."""
+    """allow_bypass=False면 X-PII-Mode:bypass 헤더가 와도 마스킹 강제."""
     async def run():
-        app, captured = _build({"choices": [{"message": {"role": "assistant", "content": "넵"}}]})
+        app, captured = _build({"choices": [{"message": {"role": "assistant", "content": "넵"}}]},
+                               allow_bypass=False)
         r = await _post(app, {"messages": [{"role": "user", "content": "010-1234-5678"}]},
                         headers={"X-PII-Mode": "bypass"})
         assert r.status_code == 200

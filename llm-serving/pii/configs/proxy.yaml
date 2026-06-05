@@ -27,8 +27,8 @@ out_enabled: true
 fail_mode: "closed"
 
 # ── 전면 우회 허용: true면 헤더 X-PII-Mode:bypass 로 PII 검사 통째 생략 가능 ──
-# 기본 false(강제 유지). PII 없이 SLM만 쓰고 싶을 때 운영자가 의식적으로 켠다. 우회는 감사 기록됨.
-allow_bypass: false
+# true: 헤더 X-PII-Mode:bypass 하나로 PII 없이 SLM만 호출 가능(토큰 미설정). 우회는 감사 기록됨.
+allow_bypass: true
 
 # ── NER 부분 장애: true면 모델 그룹 하나라도 실패 시 fail-closed(커버리지 손실 방지) ──
 # false(기본)는 살아있는 모델 union으로 계속하되 부분 실패를 로그로 남긴다.

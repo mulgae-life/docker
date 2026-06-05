@@ -311,7 +311,7 @@ FP8 가중치 ~35 GB. chatbot-poc 현행 구성은 **L40S 46GB × 2장, TP=2**. 
 
 | 이슈 | 핵심 원인 | 본 모델과의 관계 |
 |------|----------|-----------------|
-| `AssertionError: Encoder cache miss` (동시 이미지 요청 중) | vLLM 기본 `async_scheduling=True`가 scheduler 장부와 worker encoder cache 상태 사이 1-step 시차를 만들어 eviction race 유발 | Qwen3.6-35B-A3B-FP8 운영 중 직접 관측. `async_scheduling: false` + `max_num_seqs` 상한으로 방어 |
+| `AssertionError: Encoder cache miss` (동시 이미지 요청 중) | vLLM 기본 `async_scheduling=True`가 scheduler 장부와 worker encoder cache 상태 사이 1-step 시차를 만들어 eviction race 유발 | Qwen3.6-35B-A3B-FP8 운영 당시 직접 관측(현재는 27B-FP8, 동일 Mamba-hybrid 계열이라 동일 방어선 적용). `async_scheduling: false` + `max_num_seqs` 상한으로 방어 |
 | `AssertionError: Chunked MM input is required` | Mamba-hybrid + prefix caching이 `mamba_cache_mode='align'` 자동 활성 → attention block_size 확장 → `validate_block_size()`가 `disable_chunked_mm_input=True`를 거부 | **Qwen3.6 고유 제약**. 일반 VL 모델용 방어 플래그인 `disable_chunked_mm_input`을 본 모델에 적용 금지 |
 | YAML `async_scheduling: false` 무시 | vLLM YAML 파서가 bool `false`를 drop → auto-enable 로직이 `True`로 덮음 | Launcher에서 `--no-async-scheduling` CLI 플래그 직접 주입으로 해결 |
 

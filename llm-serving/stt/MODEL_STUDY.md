@@ -11,7 +11,7 @@
 |------|------|
 | **개발 GPU** | NVIDIA L40S 46GB × 2 (Ada, SM 8.9) |
 | **운영 GPU** | NVIDIA RTX PRO 6000 Blackwell Workstation 96GB (Blackwell, SM 10.x) — 셋업 예정 |
-| **기존 인프라** | vLLM 0.19.1 + 게이트웨이 (`llm-serving/vllm/`) — Gemma 4 26B-A4B (MoE, FP8) 운영 중 |
+| **기존 인프라** | vLLM 0.19.1 + 게이트웨이 (`llm-serving/vllm/`) — Gemma 4 31B (Dense, FP8 온라인) 운영 중 |
 | **통합 방향** | **vLLM 통합형** — 기존 게이트웨이가 LLM/STT 동시 라우팅. `llm-serving/stt/`는 vLLM 런처 변형으로 구성 |
 | **언어 우선순위** | 한국어 ≫ 영어 ≫ 기타 |
 
@@ -32,7 +32,7 @@
 | **라이선스** | 🔴 필수 | 상업 사용 가능한 오픈 가중치 (Apache 2.0 / MIT 우선) |
 | **vLLM 호환성** | 🔴 필수 | 공식 지원 또는 day-zero. NeMo 전용은 후순위 |
 | **정확도 (WER)** | 🟡 높음 | FLEURS / Common Voice / 자체 한국어 셋 |
-| **모델 크기 / VRAM** | 🟡 높음 | Gemma 4 26B-A4B와 GPU 공존 가능 여부 |
+| **모델 크기 / VRAM** | 🟡 높음 | Gemma 4 31B와 GPU 공존 가능 여부 |
 | **지연 (Latency)** | 🟢 중 | 시나리오에 따라 (배치 vs 실시간) |
 | **유지보수 활성도** | 🟢 중 | 출시일·repo 활성도·이슈 응답성 |
 | **부가 기능** | 🟢 중 | 디아라이제이션, 단어 단위 타임스탬프, 음성 출력 |
@@ -120,7 +120,7 @@
 
 **고려 사항**:
 - STT 전용으로는 오버스펙. 음성 출력·이미지·비디오까지 활용할 계획일 때 가치 극대화
-- Gemma 4 26B-A4B와 동일한 MoE 운영 패턴 → 우리 vLLM 노하우 그대로 적용
+- MoE 구조 → 기존 vLLM 운영 노하우 적용 가능 (과거 Gemma 4 26B-A4B MoE 운영 경험 보유; 현재 메인은 31B Dense)
 
 ### 4.3 Qwen3-ASR-1.7B / 0.6B (Alibaba)
 

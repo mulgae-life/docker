@@ -47,9 +47,10 @@ class PiiConfig(BaseModel):
     fail_mode: Literal["closed", "open"] = "closed"
 
     # ── 전면 우회(bypass) 허용 여부 ──
-    # True일 때만 요청 헤더 X-PII-Mode: bypass 로 PII 검사를 통째 건너뛸 수 있다.
-    # 기본 False(강제 유지) — 운영자가 의식적으로 켰을 때만 우회 가능. 우회는 감사 기록된다.
-    allow_bypass: bool = False
+    # True면 요청 헤더 X-PII-Mode: bypass 로 PII 검사를 통째 건너뛸 수 있다(우회는 감사 기록).
+    # 기본 True(우회 허용) — 강제(enforce)로 묶으려면 False로.
+    # 토큰 미설정 시 헤더 하나로 우회되니 외부 포트는 주의.
+    allow_bypass: bool = True
 
     # ── 우회 토큰(선택) ──
     # 비어있지 않으면, bypass에 헤더 X-PII-Bypass-Token 값이 이 토큰과 일치해야 한다.

@@ -221,7 +221,7 @@ vllm serve google/gemma-4-31B-it \
 
 > 주의: 아래 권장의 실측 근거는 GB10·B200 환경이라 **L40S에서는 직접 검증되지 않음**. 도입 시 사내 벤치 필수.
 
-### 5.1 Qwen 3.6-35B-A3B-FP8 (현재 운영 모델)
+### 5.1 Qwen 3.6-35B-A3B-FP8 (조사 당시 운영 모델; 현재는 27B-FP8)
 
 ```bash
 vllm serve Qwen/Qwen3.6-35B-A3B-FP8 \

@@ -131,7 +131,7 @@ def test_invalid_fail_mode_rejected():
 
 def test_pii_mode_bypass_requires_allow():
     """allow_bypass=False면 헤더가 와도 enforce(우회 불가)."""
-    cfg_off = PiiConfig(ner_backends=[])  # allow_bypass 기본 False
+    cfg_off = PiiConfig(ner_backends=[], allow_bypass=False)  # 명시적으로 우회 차단
     assert _pii_mode(_FakeReq({"x-pii-mode": "bypass"}), cfg_off) == "enforce"
     cfg_on = PiiConfig(ner_backends=[], allow_bypass=True)
     assert _pii_mode(_FakeReq({"x-pii-mode": "bypass"}), cfg_on) == "bypass"

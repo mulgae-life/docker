@@ -384,7 +384,7 @@ vllm serve Qwen/Qwen3.5-397B-A17B-FP8 \
 | 권장 모델 | 상태 | 비고 |
 |-----------|:----:|------|
 | **9B (BF16)** | ✅ 안전 | 단일 장비 가능, 2장이면 여유 충분 |
-| **27B-FP8** | ⚠️ 주의 | TP=2 사용 시 [#35924](https://github.com/vllm-project/vllm/issues/35924) 이슈 재현 가능성 있음 (27B는 TP≥1부터 보고). 현재 운영은 Qwen3.6-35B-A3B-FP8이므로 직접 영향 없음 |
+| **27B-FP8** | ⚠️ 주의 | TP=2 사용 시 [#35924](https://github.com/vllm-project/vllm/issues/35924) 이슈 재현 가능성 있음 (27B는 TP≥1부터 보고). 현재 운영은 Qwen3.6-27B-FP8(Mamba-hybrid)이며, 본 #35924는 Qwen3.5-27B(Transformer) 보고 건이라 아키텍처가 달라 직접 영향 가능성은 낮음(실기동 확인 권장) |
 | **35B-A3B-FP8** | ⚠️ 주의 | 실제 ~35 GB 가중치 + KV 캐시 → 2장 분산 시 MoE + Expert Parallel 필요. `--max-model-len` 축소 권장 |
 | **122B-A10B-FP8 이상** | ❌ | L40S×2로는 불가 |
 

@@ -124,7 +124,7 @@ last-updated: 2026-06-05 (PII 후속 — ORG 과탐 토글 + bypass 토글/토�
 #### 결정 사항
 - **enforcement = 포트 인수**: 방화벽이 여는 단일 외부 포트(5015/5501)를 PII 프록시가 차지하고 게이트웨이를 내부(6015/6501)로 밀어내야 우회가 원천 차단됨. **파일명=실제 포트** 원칙으로 게이트웨이 yaml을 rename(5015→6015).
 - **NER 풀 공유**: 연구/운영 프록시가 같은 NER 서버(8911/8901, GPU3)를 공유 — 모델 중복 적재 방지.
-- **모델명 문서 유지**: 문서(`26B-A4B`/`35B-A3B`/`max_len 65536`)와 실제 서빙(`31B`/`27B`/`32768`)이 불일치하나, 대표님 지시로 **유지**(자주 바뀜). 점검 결과만 보고.
+- **모델명 문서 정합** (2026-06-05): 대표님 지시로 운영/사용자 문서(`VLLM_API_GUIDE`·`VLLM_OPS_GUIDE`)를 실제 서빙(`gemma-4-31B-it`/`Qwen3.6-27B-FP8`)에 정합 완료. 27B-FP8은 config 검증 결과 **Dense + Mamba-hybrid(DeltaNet 75%/Attn 25%) + MTP + VL**(35B-A3B는 MoE였음). 연구 문서(`slm_research/*`)는 특정 모델(35B-A3B 등) 조사 기록이라 모델명 치환 시 스펙이 거짓이 되어 보존.
 - **salt 관리**: umask 600 자동생성 + `sync.sh`/`.gitignore`에서 S3·git 제외(환경별 시크릿).
 - **평가 우선 디버깅**: 합성 케이스셋이 버그 2건을 드러냄 → `structured.detect()` 단독은 정상인데 `analyze()`(merge)에서만 깨지는 함정 확인. 회귀 교훈 memory `lessons_pii_merge_priority`.
 

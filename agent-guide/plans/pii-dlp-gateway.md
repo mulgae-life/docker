@@ -82,7 +82,7 @@
 | 게이트웨이는 yaml `host:0.0.0.0` + `port:5015`로 uvicorn 바인딩 | `vllm_gateway.py` L1178-1183, `gateways/5015.yaml` L27-29 |
 | `port`는 "방화벽/보안그룹 오픈 대상", `host:0.0.0.0`은 "외부 접속 허용" (의도된 설계) | `gateways/5015.yaml` L24-25 주석 |
 | AI 서비스는 **인증 없이** `http://<ip>:5015/v1/chat/completions` 호출 | `VLLM_API_GUIDE.md` L7, L65 |
-| 메인 모델 = `gemma-4-26B-A4B-it` (MoE 멀티모달) | `VLLM_API_GUIDE.md` L35 |
+| 메인 모델 = `gemma-4-31B-it` (멀티모달) | `VLLM_API_GUIDE.md` L35 |
 | chat forward: raw body → admission(L844) → LB(L861) → 백엔드 | `vllm_gateway.py` L830-880 |
 | **out 비스트림 검사점** = `resp.json()` 직후 | L891-892 |
 | **out 스트림 검사점** = `resp.aiter_bytes()` 순수 바이트 패스스루 (버퍼링 없음) | L938-941 |
