@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-06-05 (PII 후속 — ORG 과탐 토글 + bypass 토글/토큰 + 코덱스 리뷰 2회(14건) + enforcement 누출 보강 + 스트리밍 재작성 + recall 게이트 하버스)
+last-updated: 2026-06-05 (PII NER 토폴로지 정정(공유→격리) + 한국어 PII 모델 재조사·3모델 실측평가 + townboy 라이선스 규명 + 리포트/NOTICE 작성)
 ---
 
 # 세션 상태
@@ -47,6 +47,39 @@ last-updated: 2026-06-05 (PII 후속 — ORG 과탐 토글 + bypass 토글/토�
 ---
 
 ## 최근 세션
+
+### 2026-06-05 (PII NER 토폴로지 정정 + 모델 재조사·실측평가·라이선스 규명)
+
+> 아래 PII 후속 배치 **이후**. NER "연구계와 공유" 주석 오류 지적에서 출발 → 한국어 PII 모델 재조사(SLM vs NER) → 3모델 실측 평가 → townboy 라이선스 규명 → 리포트/NOTICE 작성.
+
+#### 세션 목표
+- **NER 토폴로지 주석 정정**: "연구계/운영계 NER 공유" 서술이 사실 오류(두 계는 격리된 별도 서버, 각자 자기 localhost NER) → 코드·문서·메모리 10곳 정정.
+- **한국어 PII 모델 재조사**: "최신 최고성능 한국어 PII/DLP 모델" + "최근 SLM이 더 나을 수도" 검증.
+- **실측 평가 + 라이선스 리스크 해소** (대표님 "둘 다 진행").
+
+#### 변경 파일
+| 파일 | 변경 | 요약 |
+|------|------|------|
+| `pii/start.sh`, `configs/proxy.5501.yaml`, `VLLM_OPS_GUIDE.md` | 정정(커밋 `3c23160`) | NER "공유→격리" 10곳 |
+| `pii/NOTICE.md` | 신규(미커밋) | CC-BY/MIT 출처표기(라이선스 의무 이행) |
+| `pii/pii_model_research.md` | 신규(미커밋) | 모델 조사·실측평가·라이선스 리포트(`slm_research/` 대칭) |
+| `memory/project_pii_gateway.md` | 정정 | NER 공유→격리 |
+| `pii/.archive/2026-06-05_model-eval/` | 신규 | 3모델 비교 평가 스크립트 보존 |
+
+#### 결정 사항
+- **SLM 전환 비권장**: 인코더 NER이 PII 추출 우위(F1 96 vs 79), 생성형은 offset 부재·recall 붕괴·환각으로 마스킹 부적합. 근거: HF blog/RECAP/CAPID/GLiNER 1차 본문.
+- **모델 교체 불필요(현 구성 유지)**: 실측 P/R — vmaca 85.7/60, **townboy 90.5/95(최고)**, frameby 75/75. frameby는 org 0%·person 71%로 교체 시 보안 후퇴 + BIOES라 `ner_server` 표준 pipeline 비호환(끝글자 누락).
+- **townboy 라이선스 해소**: base KPF-BERT(MIT) + 데이터 KDPII(CC-BY-4.0, 연세대 김한샘 연구실) → 상업 사용 가능. 출처표기는 `NOTICE.md`로 이행.
+
+#### 현재 상태
+- 토폴로지 정정: 커밋 완료(`3c23160`). `NOTICE.md`·`pii_model_research.md`: 미커밋(승인 대기).
+- frameby 가중치 2.7GB(`/models/PII/framebyframe/`)·평가 스크립트 보존(후속 재평가용).
+
+#### 후속 과제 (리포트 §7)
+- **person recall 향상** 목표 시 동일 KDPII(CC-BY-4.0)·KPF-BERT(MIT)로 **사내 재학습**(라이선스 자체 확정 + 도메인 튜닝 동시 달성).
+- **org 커버 + 라이선스 명확** 대안 필요 시 `ehd0309/ko-pii-public-v1`(23라벨, CC-BY-SA) 추가 평가.
+
+---
 
 ### 2026-06-05 (PII 후속 — ORG 과탐 토글 + bypass 토글/토큰 + 코덱스 리뷰 2회 + enforcement 보강 + 스트리밍 재작성 + recall 하버스)
 
