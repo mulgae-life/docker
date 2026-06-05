@@ -45,8 +45,8 @@ chatbot-poc (.env)
                 │
                 ▼
 ┌──────────────────────────────┐    ┌──────────────────────────────┐
-│ Gateway :5015                │    │ Gateway :5016                │
-│ gateways/5015.yaml           │    │ gateways/5016.yaml           │
+│ PII :5015 → Gateway :6015    │    │ Gateway :5016 (PII 미적용)   │
+│ gateways/6015.yaml (내부전용) │    │ gateways/5016.yaml           │
 │   discover_from: ../instances│    │   discover_from: ../instances│
 │   • LB  • 헬스체크  • 웜업   │    │   • LB  • 헬스체크  • 웜업   │
 └──────────────────────────────┘    └──────────────────────────────┘
@@ -55,10 +55,11 @@ chatbot-poc (.env)
 ┌──────────────────────────────┐    ┌──────────────────────────────┐
 │ vLLM :7070 (GPU 0)           │    │ vLLM :7080 (GPU 1)           │
 │ instances/gemma.yaml         │    │ instances/qwen.yaml          │
-│   gateway_port: 5015 ────────┘    │   gateway_port: 5016 ────────┘
+│   gateway_port: 6015 ────────┘    │   gateway_port: 5016 ────────┘
 │   model: gemma-4-26B-A4B-it  │    │   model: Qwen3.6-35B-A3B-FP8 │
 └──────────────────────────────┘    └──────────────────────────────┘
 ```
+> ⚠️ gemma 경로는 외부 입구가 **PII 프록시(:5015)**, 게이트웨이는 **6015 내부 전용**이다(아래 🔒 박스). **Qwen(:5016)은 현재 PII 미적용** — 게이트웨이 포트가 그대로 외부 노출되며 PII 검사를 거치지 않는다(정책 결정 필요 — [§6.4](#64-qwen-5016-pii-정책)).
 
 - 각 게이트웨이 yaml은 자기 포트만 알고, `discover_from`(`../instances`)에서 `gateway_port == 자기 포트`인 인스턴스 yaml을 자동 매칭해 backends로 등록한다.
 - **LB 시나리오**: 같은 `gateway_port`를 갖는 인스턴스 yaml을 추가하면 같은 게이트웨이 아래 vLLM 여러 대가 LB된다(단, vLLM `port`가 겹치면 게이트웨이 기동 시 ValueError로 거부).
@@ -98,6 +99,19 @@ chatbot-poc (.env)
 - **자동 디스커버리**: 인스턴스 추가 시 yaml 한 파일만 두면 게이트웨이 재기동 시 자동 등록.
 
 > 게이트웨이 없이도 vLLM에 직접 붙을 수 있습니다. 그때는 `HF_BASE_URL=http://...:7070/v1` 처럼 vLLM 포트를 가리키면 됩니다. (부하분산·웜업 혜택은 사라집니다.)
+
+### 6.4 Qwen :5016 PII 정책
+
+현재 **Qwen(:5016)은 PII 가드를 거치지 않습니다.** gemma 계열(:5015/:5501)만 PII 프록시 뒤로 물러나 있고, Qwen 게이트웨이는 포트가 그대로 외부 노출됩니다.
+
+| 항목 | gemma (:5015/:5501) | Qwen (:5016) |
+|------|--------------------|--------------|
+| 외부 입구 | PII 프록시 | 게이트웨이 직접 |
+| PII 검사 | ✅ in/out | ❌ 없음 |
+
+**정책 결정이 필요합니다.** "모든 LLM 앞단 PII 의무"가 사내 정책이라면 Qwen도 `:5016 → :6016` 프록시 구조로 편입해야 합니다(gemma와 동일 패턴: `gateways/5016.yaml` → `6016.yaml` 내부화 + `configs/proxy.5016.yaml` 추가 + NER 풀 공유). 반대로 Qwen이 **비식별 용도 전용**(예: PII 없는 사내 문서·코드)이라면 의도적 예외로 두되, 본 절에 사유를 명시해 운영자가 혼동하지 않게 합니다.
+
+> 임시로 Qwen에도 PII가 필요하면, gemma 경로(:5015)로 라우팅하거나 위 편입 작업 전까지 호출 측에서 PII를 거르는 것을 권장합니다.
 
 ---
 
@@ -201,15 +215,17 @@ cd /workspace/llm-serving/vllm
 python vllm_server_launcher.py -c instances/gemma.yaml -g 0
 python vllm_server_launcher.py -c instances/qwen.yaml  -g 1
 
-# 2. 게이트웨이 기동
-python vllm_gateway.py -c gateways/5015.yaml
+# 2. 게이트웨이 기동 (gemma 게이트웨이는 PII 적용 후 6015 내부 포트)
+python vllm_gateway.py -c gateways/6015.yaml
 python vllm_gateway.py -c gateways/5016.yaml
 
 # 백그라운드 실행
 mkdir -p logs
-nohup python vllm_gateway.py -c gateways/5015.yaml > logs/gateway_5015.log 2>&1 &
+nohup python vllm_gateway.py -c gateways/6015.yaml > logs/gateway_6015.log 2>&1 &
 nohup python vllm_gateway.py -c gateways/5016.yaml > logs/gateway_5016.log 2>&1 &
 ```
+
+> 🔒 gemma 외부 입구(:5015)는 위 게이트웨이만으로는 열리지 않습니다 — **PII 프록시까지 기동**해야 합니다. PII 포함 전체 기동은 [§7.9](#79-pii-가드-포함-기동) 참고. (Qwen :5016은 PII 미적용이라 게이트웨이 단독으로 외부 노출됩니다.)
 
 ### 7.6 더 로우레벨한 방법 — vllm serve 네이티브
 
@@ -240,6 +256,12 @@ CUDA_VISIBLE_DEVICES=0 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
 ### 7.8 보안 주의
 
 게이트웨이 자체에는 **인증 기능이 없습니다**. 공개망에 직접 노출하지 말고 AWS Security Group, 방화벽, nginx 등으로 접근을 제한하세요.
+
+> 🔒 **PII enforcement 방화벽 체크리스트 (필수)**: PII 가드는 "외부엔 PII 프록시만 열려 있다"는 전제 위에서만 우회 불가능합니다. 다음을 보안그룹/방화벽에 **고정**하세요.
+> - ✅ 외부 오픈: **`:5015`(연구)·`:5501`(운영) PII 프록시만**.
+> - ❌ 외부 차단: **게이트웨이 `:6015`/`:6501`**, **vLLM `:7070`/`:7080`**, **NER `:8911`/`:8901`**. 하나라도 외부에서 닿으면 PII 검사를 건너뛰는 직행 경로가 생깁니다(인스턴스 yaml `host: 0.0.0.0`이면 특히 주의 — 가능하면 게이트웨이/vLLM 동일 호스트에서 `127.0.0.1` 바인딩 권장).
+> - ⚠️ **Qwen `:5016`은 PII 미적용**이라 외부 오픈 시 비검사 경로임을 인지([§6.4](#64-qwen-5016-pii-정책)).
+> - 📋 **bypass 사용 시**: `allow_bypass: true`로 켰다면 감사로그에서 `action=bypass` 비율을 주기적으로 모니터링해 의도치 않은 우회를 탐지하세요.
 
 vLLM에 `--api-key`를 설정한 경우:
 
@@ -474,8 +496,13 @@ vLLM 표준 OpenAI API 외에 게이트웨이가 추가로 노출하는 운영�
 | GET | `/health` | 게이트웨이 자체 + 백엔드 ready 카운터 (`{ready, total}`) |
 | GET | `/server-status` | 백엔드 서버 상세 상태 대시보드 |
 
+> 🔒 **PII 적용 후 접근 포트 주의**: 이 엔드포인트들은 **게이트웨이** 기능이라, gemma 경로에서는 외부 `:5015`(PII 프록시)가 아니라 **내부 게이트웨이 `:6015`**에 있습니다. PII 프록시는 `/health`와 `/v1/*`만 노출하므로 `:5015/server-status`는 404입니다. 운영 호스트에서 `127.0.0.1:6015`로 조회하세요. (Qwen은 PII 미적용이라 `:5016`에서 그대로 동작.)
+
 ```bash
-curl http://3.38.195.121:5015/server-status
+# gemma: 게이트웨이는 내부 전용 → 운영 호스트에서 로컬 조회
+curl http://127.0.0.1:6015/server-status
+# Qwen(:5016)은 PII 미적용이라 외부 포트에서 직접 조회 가능
+curl http://3.38.195.121:5016/server-status
 ```
 
 ```json
@@ -1117,7 +1144,7 @@ python tests/traffic_test_vllm.py --base-url http://3.38.195.121:5015 --mode ove
 python tests/traffic_test_vllm.py --base-url http://3.38.195.121:5015 --mode smoke --requests 20 --concurrency 20 --max-tokens 32
 ```
 
-운영 전에는 `max_tokens >= 512` 또는 실제 서비스 평균 프롬프트/출력 길이로 한 번 더 확인합니다. 테스트 후 `/health`와 `/server-status`가 모두 200이어야 통과입니다.
+운영 전에는 `max_tokens >= 512` 또는 실제 서비스 평균 프롬프트/출력 길이로 한 번 더 확인합니다. 테스트 후 `/health`가 200이어야 통과입니다(gemma 경로의 `/server-status`는 내부 게이트웨이 `127.0.0.1:6015`에서 확인 — [§10.1](#101-게이트웨이-전용-엔드포인트)). 위 `--base-url :5015`는 PII 프록시를 경유하므로 마스킹 오버헤드가 포함된 실경로 성능입니다(순수 게이트웨이 성능은 내부 `:6015`로 측정).
 
 ### 14.3.1 속도 비교 테스트 (모델 간 매트릭스 누적)
 

@@ -98,6 +98,24 @@ def test_card_space_separator():
     assert any(s.type == "card" for s in spans)
 
 
+def test_card_dot_separator_detected():
+    """점(.) 구분 카드번호도 검출(결정적 우회 차단)."""
+    spans = detect(normalize_text("카드 4111.1111.1111.1111 결제"))
+    assert any(s.type == "card" for s in spans)
+
+
+def test_rrn_dot_separator_detected():
+    """점(.) 구분 주민번호도 검출."""
+    spans = detect(normalize_text("주민 900101.1234567"))
+    assert any(s.type == "rrn" for s in spans)
+
+
+def test_dot_no_false_positive_on_ip_version():
+    """IP·버전 문자열은 card/rrn으로 오탐하지 않는다(4그룹×4자리 조건 불충족)."""
+    assert detect(normalize_text("서버 192.168.0.1 점검")) == []
+    assert detect(normalize_text("빌드 버전 1.2.3.4")) == []
+
+
 def test_brn_valid():
     brn = _valid_brn()
     text = f"사업자등록번호 {brn[:3]}-{brn[3:5]}-{brn[5:]}"

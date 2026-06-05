@@ -17,7 +17,19 @@ import httpx  # noqa: E402
 from audit import AuditLogger  # noqa: E402
 from config import PiiConfig  # noqa: E402
 from detectors.ner_client import NerPool  # noqa: E402
-from proxy import _check_in, _mask_response_json  # noqa: E402
+from proxy import (  # noqa: E402
+    _accumulate_stream,
+    _check_in,
+    _ignore_types,
+    _mask_response_json,
+    _pii_mode,
+)
+
+
+class _FakeReq:
+    """_ignore_types용 최소 Request 스텁(.headers.get만 사용)."""
+    def __init__(self, headers: dict[str, str]) -> None:
+        self.headers = headers
 
 
 def _cfg() -> PiiConfig:
@@ -37,7 +49,7 @@ def test_in_block_rrn():
     """주민번호(고유식별정보)는 차단 + 마스킹."""
     async def run():
         msgs = [{"role": "user", "content": "제 주민번호는 900101-1234567 입니다"}]
-        blocked = await _check_in(msgs, _cfg(), _pool(), _audit(), "r1")
+        blocked = await _check_in(msgs, _cfg(), _pool(), _audit(), "r1", frozenset())
         assert blocked is True
         assert "[주민등록번호]" in msgs[0]["content"]
     asyncio.run(run())
@@ -47,7 +59,7 @@ def test_in_mask_phone_not_blocked():
     """전화번호는 마스킹하되 차단하지 않음."""
     async def run():
         msgs = [{"role": "user", "content": "연락처 010-1234-5678 로 연락주세요"}]
-        blocked = await _check_in(msgs, _cfg(), _pool(), _audit(), "r2")
+        blocked = await _check_in(msgs, _cfg(), _pool(), _audit(), "r2", frozenset())
         assert blocked is False
         assert "[전화번호]" in msgs[0]["content"]
     asyncio.run(run())
@@ -57,7 +69,7 @@ def test_in_clean_passthrough():
     """PII 없는 입력은 원문 그대로 통과."""
     async def run():
         msgs = [{"role": "user", "content": "보험 상담 받고 싶어요"}]
-        blocked = await _check_in(msgs, _cfg(), _pool(), _audit(), "r3")
+        blocked = await _check_in(msgs, _cfg(), _pool(), _audit(), "r3", frozenset())
         assert blocked is False
         assert msgs[0]["content"] == "보험 상담 받고 싶어요"
     asyncio.run(run())
@@ -68,7 +80,7 @@ def test_out_mask_card_in_content():
     async def run():
         data = {"choices": [{"message": {"role": "assistant",
                 "content": "확인된 카드번호는 4111-1111-1111-1111 입니다"}}]}
-        out = await _mask_response_json(data, _cfg(), _pool(), _audit(), "r4")
+        out = await _mask_response_json(data, _cfg(), _pool(), _audit(), "r4", frozenset())
         assert "[신용카드번호]" in out["choices"][0]["message"]["content"]
     asyncio.run(run())
 
@@ -78,6 +90,146 @@ def test_out_mask_reasoning_field():
     async def run():
         data = {"choices": [{"message": {"role": "assistant", "content": "네",
                 "reasoning": "이메일 a@b.com 참고하세요"}}]}
-        out = await _mask_response_json(data, _cfg(), _pool(), _audit(), "r5")
+        out = await _mask_response_json(data, _cfg(), _pool(), _audit(), "r5", frozenset())
         assert "[이메일]" in out["choices"][0]["message"]["reasoning"]
     asyncio.run(run())
+
+
+def test_ignore_types_whitelist_and_block_guard():
+    """X-PII-Ignore-Types: 화이트리스트(org)만 허용, 핵심/차단 타입은 토글 불가."""
+    cfg = _cfg()  # 기본 ignorable_types=["org"], block_types=["rrn","card"]
+    # 정상: org만 통과
+    assert _ignore_types(_FakeReq({"x-pii-ignore-types": "org"}), cfg) == frozenset({"org"})
+    # 화이트리스트 밖(person) 무시, org만 채택
+    assert _ignore_types(_FakeReq({"x-pii-ignore-types": "org,person"}), cfg) == frozenset({"org"})
+    # 차단 타입(rrn/card)은 화이트리스트에 없어 토글 불가 → 빈 집합
+    assert _ignore_types(_FakeReq({"x-pii-ignore-types": "rrn,card"}), cfg) == frozenset()
+    # 헤더 없음 → 빈 집합(전부 마스킹)
+    assert _ignore_types(_FakeReq({}), cfg) == frozenset()
+
+
+def test_ignore_block_type_even_if_misconfigured():
+    """ignorable_types에 실수로 차단 타입을 넣어도 차집합 가드로 토글 불가."""
+    cfg = PiiConfig(ner_backends=[], ignorable_types=["org", "rrn"])
+    # rrn은 block_types와 겹쳐 차집합에서 제외 → org만 토글 가능
+    assert _ignore_types(_FakeReq({"x-pii-ignore-types": "org,rrn"}), cfg) == frozenset({"org"})
+
+
+# ── bypass 게이팅 (allow_bypass) ──
+def test_pii_mode_bypass_requires_allow():
+    """allow_bypass=False면 헤더가 와도 enforce(우회 불가)."""
+    cfg_off = PiiConfig(ner_backends=[])  # allow_bypass 기본 False
+    assert _pii_mode(_FakeReq({"x-pii-mode": "bypass"}), cfg_off) == "enforce"
+    cfg_on = PiiConfig(ner_backends=[], allow_bypass=True)
+    assert _pii_mode(_FakeReq({"x-pii-mode": "bypass"}), cfg_on) == "bypass"
+    assert _pii_mode(_FakeReq({}), cfg_on) == "enforce"  # 헤더 없으면 기본 enforce
+
+
+# ── P0: 멀티모달 content 배열의 text 파트 검사 ──
+def test_in_multimodal_text_part_masked():
+    """content가 배열이어도 {type:text} 파트의 PII는 마스킹된다(우회 차단)."""
+    async def run():
+        msgs = [{"role": "user", "content": [
+            {"type": "text", "text": "내 번호 010-1234-5678"},
+            {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAA"}},
+        ]}]
+        blocked = await _check_in(msgs, _cfg(), _pool(), _audit(), "m1", frozenset())
+        assert blocked is False
+        assert "[전화번호]" in msgs[0]["content"][0]["text"]
+        # 이미지 파트는 그대로 보존
+        assert msgs[0]["content"][1]["type"] == "image_url"
+    asyncio.run(run())
+
+
+def test_in_multimodal_rrn_blocked():
+    """멀티모달 text 파트의 주민번호도 차단 대상."""
+    async def run():
+        msgs = [{"role": "user", "content": [
+            {"type": "text", "text": "주민번호 900101-1234567"},
+        ]}]
+        blocked = await _check_in(msgs, _cfg(), _pool(), _audit(), "m2", frozenset())
+        assert blocked is True
+        assert "[주민등록번호]" in msgs[0]["content"][0]["text"]
+    asyncio.run(run())
+
+
+# ── P1: tool_calls.arguments 검사 ──
+def test_in_tool_call_arguments_masked():
+    """assistant tool_calls의 함수 인자 JSON 안 PII도 마스킹."""
+    async def run():
+        msgs = [{"role": "assistant", "content": "", "tool_calls": [
+            {"id": "c1", "type": "function",
+             "function": {"name": "send", "arguments": '{"email":"a@b.com"}'}},
+        ]}]
+        await _check_in(msgs, _cfg(), _pool(), _audit(), "t1", frozenset())
+        assert "[이메일]" in msgs[0]["tool_calls"][0]["function"]["arguments"]
+    asyncio.run(run())
+
+
+def test_out_tool_call_arguments_masked():
+    """응답 tool_calls 인자의 PII도 마스킹."""
+    async def run():
+        data = {"choices": [{"message": {"role": "assistant", "content": "",
+                "tool_calls": [{"id": "c1", "type": "function",
+                                "function": {"name": "pay", "arguments": '{"card":"4111-1111-1111-1111"}'}}]}}]}
+        out = await _mask_response_json(data, _cfg(), _pool(), _audit(), "t2", frozenset())
+        assert "[신용카드번호]" in out["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"]
+    asyncio.run(run())
+
+
+def test_in_legacy_function_call_masked():
+    """레거시 단수 function_call.arguments의 PII도 검사(우회 방지)."""
+    async def run():
+        msgs = [{"role": "assistant", "content": "",
+                 "function_call": {"name": "pay", "arguments": '{"card":"4111-1111-1111-1111"}'}}]
+        blocked = await _check_in(msgs, _cfg(), _pool(), _audit(), "fc1", frozenset())
+        assert blocked is True  # 카드=차단대상
+        assert "[신용카드번호]" in msgs[0]["function_call"]["arguments"]
+    asyncio.run(run())
+
+
+def test_in_nonstandard_text_part_masked():
+    """content 배열의 비표준 text 키(input_text 등)도 검사(우회 방지)."""
+    async def run():
+        msgs = [{"role": "user", "content": [
+            {"type": "input_text", "text": "주민 900101-1234567"},
+        ]}]
+        blocked = await _check_in(msgs, _cfg(), _pool(), _audit(), "it1", frozenset())
+        assert blocked is True
+        assert "[주민등록번호]" in msgs[0]["content"][0]["text"]
+    asyncio.run(run())
+
+
+# ── P2: fail-open 시에도 구조화 regex 적용 (pool=None) ──
+def test_failopen_structured_still_applied():
+    """NER 없이(pool=None) 호출돼도 구조화 주민번호는 마스킹·차단된다."""
+    async def run():
+        msgs = [{"role": "user", "content": "주민 900101-1234567 카드 4111-1111-1111-1111"}]
+        blocked = await _check_in(msgs, _cfg(), None, _audit(), "f1", frozenset())
+        assert blocked is True
+        assert "[주민등록번호]" in msgs[0]["content"]
+        assert "[신용카드번호]" in msgs[0]["content"]
+    asyncio.run(run())
+
+
+# ── P1: 스트리밍 누적이 구조(content/reasoning/usage/tool_calls)를 보존 ──
+def test_accumulate_stream_preserves_structure():
+    chunks = [
+        {"id": "x1", "created": 1, "model": "gemma", "object": "chat.completion.chunk",
+         "choices": [{"index": 0, "delta": {"role": "assistant", "content": "안녕 "}}]},
+        {"choices": [{"index": 0, "delta": {"reasoning": "생각1 "}}]},
+        {"choices": [{"index": 0, "delta": {"content": "010-1234-5678"}}]},
+        {"choices": [{"index": 0, "delta": {
+            "tool_calls": [{"index": 0, "id": "c1", "function": {"name": "f", "arguments": '{"x":'}}]}}]},
+        {"choices": [{"index": 0, "delta": {
+            "tool_calls": [{"index": 0, "function": {"arguments": '1}'}}]}}]},
+        {"choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+         "usage": {"total_tokens": 7}},
+    ]
+    acc = _accumulate_stream(chunks)
+    assert acc["content"] == "안녕 010-1234-5678"
+    assert acc["reasoning"] == "생각1 "          # content와 분리 보존
+    assert acc["meta"]["id"] == "x1"             # 메타 보존
+    assert acc["usage"] == {"total_tokens": 7}   # usage 보존
+    assert acc["finish_reason"] == "stop"
+    assert acc["tool_calls"][0]["function"]["arguments"] == '{"x":1}'  # 인자 재조립

@@ -55,10 +55,17 @@ class AnalysisResult:
     text: str                       # 정규화된 텍스트(offset 기준)
     detections: list[Detection]
     has_block: bool                 # 차단 대상(block_types) 포함 여부
+    skip_mask_types: frozenset[str] = frozenset()  # 서비스 정책상 마스킹만 스킵(감사엔 기록)
 
     @property
     def masked(self) -> str:
-        return mask(self.text, self.detections)
+        # skip_mask_types(예: org)는 detection은 남기되 마스킹에서만 제외한다.
+        dets = [d for d in self.detections if d.type not in self.skip_mask_types]
+        return mask(self.text, dets)
+
+    def is_skipped(self, d: Detection) -> bool:
+        """서비스 토글로 마스킹이 스킵된 detection인지(감사 action 구분용)."""
+        return d.type in self.skip_mask_types
 
 
 def _to_detections(s_spans: list[PiiSpan], n_spans: list[NerSpan]) -> list[Detection]:
@@ -110,6 +117,38 @@ def _filter_vague_address(text: str, dets: list[Detection]) -> list[Detection]:
             if not (d.type == "address" and not is_specific_address(text[d.start:d.end]))]
 
 
+# org 단독 일반어/접미어 — 단독으로는 조직명이 아니다(부분 span·일반어 과탐 방지).
+# 예: townboy가 "디지털AI센터"에서 "센터"만 잡거나, "작성부서"라는 일반어를 org로 잡는 경우.
+# span 전체가 이 집합과 정확히 일치할 때만 제거하므로 "인사부"·"AI센터" 등 실제 조직명은 보존된다.
+_ORG_GENERIC = frozenset({
+    "센터", "팀", "그룹", "본부", "실", "과", "부", "부서", "작성부서",
+    "회사", "사업부", "지점", "지사", "지부", "협력사", "담당부서",
+})
+
+
+def _filter_generic_org(text: str, dets: list[Detection]) -> list[Detection]:
+    """org 중 단독 일반어/접미어(센터·팀·작성부서…)는 조직명이 아니므로 제거한다."""
+    return [d for d in dets
+            if not (d.type == "org" and text[d.start:d.end].strip() in _ORG_GENERIC)]
+
+
+# 생년월일 문맥 신호 — 일반 날짜(보고서 작성일 등)를 생년월일로 오탐하는 것을 막는다.
+# 주소 구체성 필터와 동일 취지로, span 앞 윈도우에 출생 단서가 있을 때만 birth를 PII로 채택.
+_BIRTH_CONTEXT_RE = re.compile(r"(생년월일|생년|생일|출생|년생|D\.?O\.?B)")
+
+
+def _filter_nonbirth_dates(text: str, dets: list[Detection]) -> list[Detection]:
+    """birth 중 출생 문맥 신호가 없는 일반 날짜는 제거한다(작성일·기준일 과마스킹 방지)."""
+    out: list[Detection] = []
+    for d in dets:
+        if d.type == "birth":
+            ctx = text[max(0, d.start - 12):d.end]  # span 앞 12자 + span 자체
+            if not _BIRTH_CONTEXT_RE.search(ctx):
+                continue
+        out.append(d)
+    return out
+
+
 async def analyze(
     text: str,
     ner_pool: NerPool | None,
@@ -117,11 +156,15 @@ async def analyze(
     block_types: list[str],
     connect_to: float,
     read_to: float,
+    skip_mask_types: frozenset[str] = frozenset(),
 ) -> AnalysisResult:
-    """텍스트를 정규화→구조화+NER detect→병합→정책 판정한다.
+    """텍스트를 정규화→구조화+NER detect→병합→과탐 필터→정책 판정한다.
 
     NER 풀 장애 시 `NerPool.detect`가 NerUnavailable을 던지며, 호출 측(프록시)이
     fail-closed로 처리한다. 구조화 regex는 NER과 무관하게 항상 동작(graceful degrade).
+
+    skip_mask_types: 서비스 토글(X-PII-Ignore-Types)로 마스킹만 스킵할 타입.
+        detection·감사는 그대로 남기고 `masked`에서만 제외한다.
     """
     norm = normalize_text(text)
     s_spans = detect_structured(norm)
@@ -129,6 +172,9 @@ async def analyze(
     if ner_pool is not None:
         n_spans = await ner_pool.detect(norm, connect_to=connect_to, read_to=read_to)
     dets = merge(_to_detections(s_spans, n_spans))
-    dets = _filter_vague_address(norm, dets)  # 단순 지명 과마스킹 방지
+    dets = _filter_vague_address(norm, dets)   # 단순 지명 과마스킹 방지
+    dets = _filter_generic_org(norm, dets)     # 부분 span·일반어 org 과마스킹 방지
+    dets = _filter_nonbirth_dates(norm, dets)  # 일반 날짜→생년월일 오탐 방지
     has_block = any(d.type in block_types for d in dets)
-    return AnalysisResult(text=norm, detections=dets, has_block=has_block)
+    return AnalysisResult(text=norm, detections=dets, has_block=has_block,
+                          skip_mask_types=skip_mask_types)

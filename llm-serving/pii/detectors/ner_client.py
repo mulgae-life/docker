@@ -8,9 +8,12 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import dataclass
 
 import httpx
+
+_log = logging.getLogger("pii.ner")
 
 # 모델 raw 라벨 → 통합 PII 타입. 비정형(person/address/org) + 정형 안전망(rrn/card/...).
 _LABEL_MAP: dict[str, dict[str, str]] = {
@@ -58,9 +61,12 @@ class _Backend:
 class NerPool:
     """모델 tag별 replica 풀. tag 내 least-conn LB, tag 간 union."""
 
-    def __init__(self, client: httpx.AsyncClient, *, score_threshold: float = 0.5) -> None:
+    def __init__(self, client: httpx.AsyncClient, *, score_threshold: float = 0.5,
+                 require_all_backends: bool = False) -> None:
         self._client = client
         self._threshold = score_threshold
+        # True면 모델 그룹 하나라도 실패 시 fail-closed(부분 커버리지 손실 방지).
+        self._require_all = require_all_backends
         self._groups: dict[str, list[_Backend]] = {}
         self._lock = asyncio.Lock()
 
@@ -124,9 +130,18 @@ class NerPool:
                 errors.append(r)
             else:
                 spans.extend(r)
-        # 일부 모델 성공 시 union 반환. 전부 실패해야 fail-closed.
-        if errors and not spans and len(errors) == len(self._groups):
+        # 전 그룹 실패면 항상 fail-closed.
+        if errors and len(errors) == len(self._groups):
             raise NerUnavailable(f"NER 풀 전체 실패: {errors}")
+        # 부분 실패(일부 그룹만 실패): 살아있는 그룹 커버리지가 누락된다(예: vmaca 다운→이름/주소/조직
+        # 탐지 손실). 'silently' 통과를 막기 위해 항상 경고 로그를 남기고, require_all이면 fail-closed.
+        if errors:
+            failed = len(errors)
+            total = len(self._groups)
+            _log.warning("NER 부분 장애: %d/%d 그룹 실패 → 탐지 커버리지 저하 가능. errors=%s",
+                         failed, total, errors)
+            if self._require_all:
+                raise NerUnavailable(f"NER 부분 장애(require_all): {failed}/{total} 그룹 실패")
         return spans
 
     async def health_check(self) -> None:
