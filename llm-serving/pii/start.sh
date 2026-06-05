@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
-# PII 가드 기동 — NER 서버(GPU3, 공유) + 프록시(포트별)
+# PII 가드 기동 — NER 서버(GPU3) + 프록시(포트별)
 #
 # 사용법:
 #   ./start.sh up            # NER + 연구계 프록시(5015)  (기본)
 #   ./start.sh up 5015       # NER + 연구계 프록시(5015)
 #   ./start.sh up 5501       # NER + 운영계 프록시(5501)
-#   ./start.sh up all        # NER + 연구계 + 운영계 프록시 둘 다
+#   ./start.sh up all        # (단일 호스트 공존 시) NER + 5015 + 5501 둘 다 — 격리 운영은 각 서버서 자기 포트만
 #   ./start.sh down [port|all]   # 프록시 종료(all 이면 NER 포함 전부)
 #   ./start.sh status        # health 확인
 #
 # 토폴로지: PII 프록시(외부 5015/5501) → 게이트웨이(내부 6015/6501) → vLLM.
-# NER 서버는 token-classification(vLLM 비대상)이라 transformers로 GPU3에 서빙하며,
-# 연구계/운영계 프록시가 같은 NER 풀(8911/8901)을 공유한다(모델 중복 적재 방지).
+# NER 서버는 token-classification(vLLM 비대상)이라 transformers로 GPU3에 서빙한다.
+# 연구계/운영계는 격리된 별도 서버다. 각 서버가 자기 localhost(8911/8901)에 NER을
+# 띄우고 자기 포트 프록시만 바라본다(연구↔운영 NER은 물리 분리, 공유 아님).
 # 모델은 /models/PII 에 위치. 프록시 설정은 configs/proxy.yaml(5015), proxy.5501.yaml(5501).
 set -u
 
@@ -148,7 +149,7 @@ cmd_down() {
         exit 1
     fi
     stop_proxy "$target" "${PROXY_CONFIGS[$target]}"
-    echo "[INFO]  NER은 공유 자원이라 유지. 전체 종료는 './start.sh down all'"
+    echo "[INFO]  NER은 로딩 비용이 커 유지(프록시만 재기동 시). 전체 종료는 './start.sh down all'"
 }
 
 cmd_status() {
