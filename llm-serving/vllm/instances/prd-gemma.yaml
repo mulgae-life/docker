@@ -5,8 +5,9 @@
 # 대상 GPU: L40S 46GB × 1장 (GPU 0)
 #
 # 게이트웨이 페어:
-#   gateways/5015.yaml(:5015) ← 이 인스턴스(:7070)
-#   discover_from 자동 매칭으로 등록됨 (gateway_port == 5015)
+#   gateways/6501.yaml(:6501, 내부 전용) ← 이 인스턴스(:7070)
+#   외부 입구는 PII 프록시(:5501)가 인수, 게이트웨이는 6501로 한 칸 물러남.
+#   discover_from 자동 매칭으로 등록됨 (gateway_port == 6501)
 #
 # 사용법:
 #   ./start.sh up gemma                                   # start.sh를 통한 단일 기동
@@ -32,7 +33,7 @@
 # vllm_server_launcher.py:_LAUNCHER_KEYS가 이 키를 vllm serve 인자에서 제외한다.
 #
 # 같은 gateway_port를 갖는 인스턴스가 여러 개면 LB 라우팅 대상이 된다.
-gateway_port: 5501
+gateway_port: 6501
 
 
 # ── 모델 ──────────────────────────────────────────────

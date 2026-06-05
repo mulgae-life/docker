@@ -12,6 +12,8 @@
 > 🆕 **2026-04-30 구조 변경**: 단일 `vllm_config.yaml` + `vllm_gateway_config.yaml` → **인스턴스 단위 `instances/<name>.yaml`** + **게이트웨이 단위 `gateways/<port>.yaml`**. 게이트웨이는 인스턴스 yaml의 `gateway_port` 메타 키로 backends를 자동 매칭(`discover_from`). 구식 yaml은 `agent-guide/.archive/2026-04-30_vllm-config-migration/`에 보존.
 >
 > 🆕 **포트 자동 회피**: 인스턴스 yaml의 `port`는 **hint**. launcher가 사용 중인 포트면 +1, +2 … 비어있는 첫 포트로 자동 회피하고, 실제 포트를 `instances/.runtime/<name>.json`에 기록한다. 게이트웨이는 이 파일을 우선 참조하여 backends를 등록하므로 **복붙 LB 시나리오에서 port를 깜빡해도 자동으로 다른 포트에 띄우고 게이트웨이가 LB**된다.
+>
+> 🆕 **2026-06-04 PII/DLP 가드 (enforcement)**: 사내 정책으로 LLM 앞단에 PII 가드가 의무화됨. 외부에 열린 단일 포트를 **PII 프록시가 인수**하고 게이트웨이는 내부 포트로 한 칸 물러난다 — 연구계 `:5015`→게이트웨이 `:6015`, 운영계 `:5501`→게이트웨이 `:6501`. **외부 호출 주소(`:5015`/`:5501`)는 불변**. PII 프록시·NER 서버 코드는 [`pii/`](pii/), 설계는 [`agent-guide/plans/pii-dlp-gateway.md`](../agent-guide/plans/pii-dlp-gateway.md), 기동 절차는 아래 [§7.9](#79-pii-가드-포함-기동)를 참고. ⚠️ 게이트웨이 yaml 파일명·`gateway.port`가 6015/6501로 바뀌었으므로 `./start.sh up 6015`처럼 **새 포트로 호출**한다.
 
 ---
 
@@ -61,7 +63,21 @@ chatbot-poc (.env)
 - 각 게이트웨이 yaml은 자기 포트만 알고, `discover_from`(`../instances`)에서 `gateway_port == 자기 포트`인 인스턴스 yaml을 자동 매칭해 backends로 등록한다.
 - **LB 시나리오**: 같은 `gateway_port`를 갖는 인스턴스 yaml을 추가하면 같은 게이트웨이 아래 vLLM 여러 대가 LB된다(단, vLLM `port`가 겹치면 게이트웨이 기동 시 ValueError로 거부).
 - **격리**: 다른 `gateway_port`를 가진 인스턴스끼리는 서로 영향 없음.
-- **외부 노출**: 게이트웨이 포트(:5015, :5016)만 개방. vLLM 포트는 내부 전용.
+- **외부 노출**: PII 가드 적용 후 외부에 여는 포트는 **PII 프록시(:5015/:5501)**다. 게이트웨이(:6015/:6501)와 vLLM 포트는 내부 전용. (PII 미적용 게이트웨이 — 예 `:5016` qwen — 은 게이트웨이 포트가 그대로 외부 노출.)
+
+> 🔒 **PII 가드 적용 토폴로지** (위 구성도의 `:5015` gemma 페어 기준):
+> ```
+> AI서비스 → :5015 (PII 프록시, 외부 유일 입구)
+>              │  in 검사(주민/카드 차단·이름/주소/전화 마스킹)
+>              ▼
+>           :6015 (게이트웨이, 127.0.0.1)  ── LB·웜업·헬스체크
+>              ▼
+>           :7070 (vLLM gemma, GPU 0,1)
+>              ▲
+>      + NER 서버 2종 (GPU3, :8911 vmaca123 / :8901 townboy) ← 프록시가 비정형 PII 검사 시 호출
+>              │  out 검사(응답 마스킹) 후 클라이언트로 반환
+> ```
+> 방화벽이 외부 단일 포트(:5015)만 열어, PII 프록시를 거치지 않고는 게이트웨이/vLLM에 도달할 수 없다(enforcement). NER 풀은 연구계(:5015)·운영계(:5501) 프록시가 공유한다.
 
 ### 6.2 구성요소 역할
 
@@ -234,6 +250,35 @@ vLLM에 `--api-key`를 설정한 경우:
 # gateways/<port>.yaml
 backend_api_key: "your-secret-key"   # vLLM --api-key 값과 일치
 ```
+
+### 7.9 PII 가드 포함 기동
+
+PII 적용 게이트웨이는 **3계층(PII 프록시 → 게이트웨이 → vLLM)**을 안쪽부터 기동한다. NER 서버(GPU3)는 연구/운영 프록시가 공유한다.
+
+```bash
+# ── 연구계 (외부 :5015) ──
+cd /workspace/llm-serving/vllm
+./start.sh up gemma          # ① vLLM 인스턴스 (GPU 0,1)
+./start.sh up 6015           # ② 게이트웨이 (내부 127.0.0.1:6015)
+cd ../pii
+bash start.sh up             # ③ NER 2종(GPU3) + PII 프록시 (외부 :5015 인수)  ※ 기본=5015
+
+# ── 운영계 (외부 :5501) — GPU 여유 확보 후 ──
+cd /workspace/llm-serving/vllm
+./start.sh up prd-gemma      # GPU 0
+./start.sh up 6501           # 게이트웨이 (내부 127.0.0.1:6501)
+cd ../pii
+bash start.sh up 5501        # NER(공유, 이미 떠있으면 skip) + 5501 프록시
+
+# ── 상태 / 중지 ──
+cd ../pii && bash start.sh status        # NER + 프록시(5015/5501)
+bash start.sh down 5015                  # 특정 프록시만 (NER 유지)
+bash start.sh down all                   # 프록시 전부 + NER
+```
+
+> - **PII 감사로그 salt**: `pii/start.sh`가 `configs/audit.salt`(없으면 자동 생성, 권한 600)에서 읽어 `PII_AUDIT_SALT`로 주입한다. salt는 환경별 시크릿이라 git/S3 동기화에서 제외된다(`.gitignore`, `sync.sh`).
+> - **검사 정책**: 주민·카드 = 차단(422), 이름·주소·전화·조직·계좌·사업자·이메일 = 마스킹. 설정은 `pii/configs/proxy.yaml`(5015)·`proxy.5501.yaml`(5501).
+> - **정확성 회귀 평가**: `cd pii && python tests/eval_pii.py` (한국어 합성 케이스셋, 타입별 precision/recall + 과탐).
 
 ---
 

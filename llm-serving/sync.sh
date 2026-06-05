@@ -29,6 +29,7 @@ SYNC_EXCLUDES=(
     --exclude '*/.runtime/*'
     --exclude '*/samples/*'
     --exclude '*/.archive/*'
+    --exclude '*/audit.salt'      # PII 감사로그 HMAC 시크릿 — 환경별 분리, S3 업로드 금지
 )
 
 require_aws() {

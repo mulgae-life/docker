@@ -1,0 +1,21 @@
+# PII 프록시 — Full E2E 검증용 (임시)
+# 운영 무영향: 프록시를 임시 포트 15015에 띄우고 upstream을 현 게이트웨이(:5015)로 향하게 한다.
+# (배포 시점에만 프록시가 5015 인수 + 게이트웨이 6015 이동)
+host: "127.0.0.1"
+port: 15015
+upstream_url: "http://127.0.0.1:5015"   # 현 게이트웨이 그대로 사용
+
+ner_backends:
+  - { host: "127.0.0.1", port: 8911, model_tag: "vmaca123" }
+  - { host: "127.0.0.1", port: 8901, model_tag: "townboy" }
+
+in_enabled: true
+out_enabled: true
+fail_mode: "closed"
+stream_mode: "post"
+hold_chars: 27
+block_types: ["rrn", "card"]
+ner_connect_timeout: 1.0
+ner_read_timeout: 3.0
+upstream_timeout: 300.0
+audit_log_path: "logs/pii_audit_e2e.log"

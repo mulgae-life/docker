@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-05-27 (vllm/start.sh `logs` 서브커맨드 추가 — gpt-chatbot 패턴 이식, default=all + `-n 50`)
+last-updated: 2026-06-05 (PII/DLP 가드 운영 토폴로지 적용 — 연구계 5015 enforcement + 운영계 5501 일반화 + API 문서 점검·반영 + 정확성 평가/버그픽스)
 ---
 
 # 세션 상태
@@ -24,6 +24,7 @@ last-updated: 2026-05-27 (vllm/start.sh `logs` 서브커맨드 추가 — gpt-ch
 
 | 우선순위 | 작업 | 상태 |
 |---------|------|------|
+| P1 | **PII 가드 운영 적용 후속**: 연구계 `:5015` enforcement 라이브(프록시→게이트웨이 6015→vLLM). 잔존 — ① **운영계 `:5501` 실기동**(GPU0 여유 확보 후 `up prd-gemma`→`up 6501`→`pii: up 5501`) ② **보험 실데이터 recall 게이트**(이름·주소·조직 ≥0.95) — `pii/tests/eval_pii.py` 확장 ③ **스트리밍 buffer 모드**(현 `post`=완결후 1회, TTFT 최적화) ④ 멀티모달(이미지) PII 미검사 — 필요 시 범위 확장 ⑤ 운영 배포 시 `PII_AUDIT_SALT` 확인. 설계: `agent-guide/plans/pii-dlp-gateway.md`. | 부분 완료(연구계 라이브), 운영전환·평가 잔존 |
 | P1 | **5015 Gemma 운영 프로파일 확정**: 게이트웨이 `max_inflight_requests=20`, `max_queue_size=40`은 확정. 인스턴스는 TP=2 + `max_model_len 32768` + `gpu_memory_utilization 0.95`로 라이브(2026-05-13 7차 시도). 잔존: 장문 트래픽(평균 프롬프트/출력 길이) 기준 latency·429 비율 측정. | 부분 완료(매트릭스 운영값 확정), 장문 검증 잔존 |
 | P1 | **vLLM Qwen 본체 :7080 이전**: `instances/qwen.yaml`의 `port: 7080`이 의도된 다음 운영 포트. 게이트웨이 :5016은 메모리상 :7071 보유 중이라 즉시 영향 없으나, 다음 게이트웨이 재기동 시 yaml 기준(:7080)으로 디스커버리하므로 그 시점 전에 vLLM 본체를 :7080으로 옮겨야 정합. | Todo |
 | P1 | **Gemma 4 31B / Qwen 3.6 27B MTP 실기동 검증**: 2026-05-13 Gemma 31B TP=2 + max_len 32768 정상 기동 / Qwen 27B 단일카드 정상 기동. 잔존: ① Qwen 5016 가용성 재점검 ② acceptance/TPOT/throughput 사내 벤치 — `tests/speed_test.py`로 매트릭스 누적 측정 가능, `slm_research/mtp.md` §5 워크로드별 권장 참고. | 부분 완료(실기동 OK), 벤치 잔존 |
@@ -46,6 +47,47 @@ last-updated: 2026-05-27 (vllm/start.sh `logs` 서브커맨드 추가 — gpt-ch
 ---
 
 ## 최근 세션
+
+### 2026-06-05 (PII/DLP 가드 운영 적용 + API 문서 점검·반영 + 정확성 평가)
+
+#### 세션 목표
+- PII PoC(2026-06-04 완료)를 **실제 운영 토폴로지에 적용**: 연구계 `:5015` enforcement(프록시가 외부 포트 인수, 게이트웨이 내부 이동).
+- 보완 2건 + 운영계 `:5501` 일반화.
+- 기존 API 명세 점검(누락/오류) + PII 추가분 문서 반영.
+- PII 정확성 평가(합성 케이스셋).
+
+#### 변경 파일
+| 파일 | 변경 유형 | 요약 |
+|------|----------|------|
+| `vllm/gateways/5015.yaml`→`6015.yaml` | 이동+수정 | 연구계 게이트웨이 내부 이동(port 6015, host 127.0.0.1). 외부 5015는 PII 프록시가 인수 |
+| `vllm/gateways/5501.yaml`→`6501.yaml` | 이동+수정 | 운영계 게이트웨이 내부 이동(port 6501) |
+| `vllm/instances/gemma.yaml` · `prd-gemma.yaml` | 수정 | `gateway_port` 6015 / 6501 동기화 + 주석 정합 |
+| `pii/proxy.py` | 수정 | `GET /v1/models` upstream 패스스루 추가(OpenAI SDK 검증 대응) |
+| `pii/start.sh` | 재작성 | salt 자동주입(`configs/audit.salt`, umask 600) + 다중 포트 `up/down/status [5015\|5501\|all]`, NER 풀 공유 |
+| `pii/configs/proxy.5501.yaml` | 신규 | 운영계 프록시 설정(upstream 6501, NER 공유) |
+| `pii/.gitignore` | 신규 | audit.salt/logs 제외 |
+| `pii/hooks.py` | 수정 | **버그픽스** — `_PRIORITY`/`_TYPE_KO`에 `brn` 누락 → brn→account 뒤바뀜 |
+| `pii/detectors/structured.py` | 수정 | **버그픽스** — `_PHONE_RE` 휴대폰만 커버 → 지역번호(`0\d{1,2}`)로 확장 |
+| `pii/tests/eval_pii.py` | 신규 | 한국어 합성 케이스셋 정확성 평가(타입별 P/R + 과탐) |
+| `sync.sh` | 수정 | `--exclude '*/audit.salt'` (S3 유출 차단) |
+| `VLLM_API_GUIDE.md` | 수정 | 🔒 PII 박스 · 422 `pii_blocked`/503 `pii_unavailable` 에러 · 스트리밍·멀티모달 주의 |
+| `VLLM_OPS_GUIDE.md` | 수정 | 헤더 PII 노트 · §6 3계층 토폴로지 · §7.9 PII 기동 절차 |
+| `README.md` | 수정 | 구성 표에 `pii/` 행 |
+
+#### 결정 사항
+- **enforcement = 포트 인수**: 방화벽이 여는 단일 외부 포트(5015/5501)를 PII 프록시가 차지하고 게이트웨이를 내부(6015/6501)로 밀어내야 우회가 원천 차단됨. **파일명=실제 포트** 원칙으로 게이트웨이 yaml을 rename(5015→6015).
+- **NER 풀 공유**: 연구/운영 프록시가 같은 NER 서버(8911/8901, GPU3)를 공유 — 모델 중복 적재 방지.
+- **모델명 문서 유지**: 문서(`26B-A4B`/`35B-A3B`/`max_len 65536`)와 실제 서빙(`31B`/`27B`/`32768`)이 불일치하나, 대표님 지시로 **유지**(자주 바뀜). 점검 결과만 보고.
+- **salt 관리**: umask 600 자동생성 + `sync.sh`/`.gitignore`에서 S3·git 제외(환경별 시크릿).
+- **평가 우선 디버깅**: 합성 케이스셋이 버그 2건을 드러냄 → `structured.detect()` 단독은 정상인데 `analyze()`(merge)에서만 깨지는 함정 확인. 회귀 교훈 memory `lessons_pii_merge_priority`.
+
+#### 검증
+- 연구계 5015 E2E: 주민 422 차단 / 이름·전화 마스킹 / `/v1/models` gemma 반환 / salt 지문 적용(NOSALT 탈출).
+- 정확성 평가: precision 88.2→**100%**, recall 83.3→**94.4%**, 과탐 0. 단위테스트 29개 회귀 없음.
+- 4계층 health(NER×2 + 프록시 5015 + 게이트웨이 6015) 200.
+
+#### 현재 상태
+- 연구계 `:5015` PII enforcement **라이브**. 운영계 `:5501`은 설정·스크립트 준비 완료, **실기동 대기**(GPU0 여유 필요 — gemma TP2 점유 중).
 
 ### 2026-05-27 (vllm/start.sh `logs` 서브커맨드 추가)
 

@@ -32,7 +32,7 @@
 # vllm_server_launcher.py:_LAUNCHER_KEYS가 이 키를 vllm serve 인자에서 제외한다.
 #
 # 같은 gateway_port를 갖는 인스턴스가 여러 개면 LB 라우팅 대상이 된다.
-gateway_port: 5015
+gateway_port: 6015
 
 
 # ── 모델 ──────────────────────────────────────────────

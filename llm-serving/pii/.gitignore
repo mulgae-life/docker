@@ -1,0 +1,7 @@
+# 감사로그 salt (시크릿 — 절대 커밋 금지)
+configs/audit.salt
+
+# 런타임 산출물
+logs/
+__pycache__/
+.pytest_cache/

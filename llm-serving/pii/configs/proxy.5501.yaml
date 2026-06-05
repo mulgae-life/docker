@@ -1,0 +1,42 @@
+# ═══════════════════════════════════════════════════════
+# PII 프록시 설정 (운영계)
+# ═══════════════════════════════════════════════════════
+# 외부에 열린 단일 포트(5501)를 이 프록시가 인수하고, 기존 게이트웨이는
+# 내부 포트(6501)로 한 칸 물러난다(enforcement). 연구계는 5015/6015.
+# NER 풀(GPU3)은 연구계와 공유한다(8911/8901) — 모델 메모리 중복 적재 방지.
+
+# ── 프록시 바인딩 (외부 유일 입구) ──
+host: "0.0.0.0"
+port: 5501
+
+# ── upstream 게이트웨이 (내부로 이동) ──
+# ※ 적용 시 gateways/6501.yaml 의 gateway.port 가 6501, host 가 127.0.0.1 이어야 한다.
+upstream_url: "http://127.0.0.1:6501"
+
+# ── NER LB 풀 (GPU3, 연구계와 공유) ──
+ner_backends:
+  - { host: "127.0.0.1", port: 8911, model_tag: "vmaca123" }   # 3축(이름/주소/조직), 통짜주소
+  - { host: "127.0.0.1", port: 8901, model_tag: "townboy" }    # 광범위(정형 안전망)
+
+# ── 검사 토글 ──
+in_enabled: true
+out_enabled: true
+
+# ── 장애 모드: closed(차단, 컴플라이언스 기본) / open(통과, 명시 opt-in) ──
+fail_mode: "closed"
+
+# ── 스트리밍 out: post(완결 후 1회 검사, 누출 0) / off(패스스루) / buffer(점진, 후속) ──
+stream_mode: "post"
+hold_chars: 27
+
+# ── 정책: 차단 대상(고유식별정보). 그 외는 마스킹 ──
+block_types: ["rrn", "card"]
+
+# ── 타임아웃(초) ──
+ner_connect_timeout: 1.0
+ner_read_timeout: 3.0
+upstream_timeout: 300.0
+
+# ── 감사로그 (평문 미저장, salt는 env PII_AUDIT_SALT) ──
+# 운영/연구 로그 분리: 파일명에 포트 태그.
+audit_log_path: "logs/pii_audit.5501.log"

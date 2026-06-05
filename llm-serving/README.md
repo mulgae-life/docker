@@ -10,6 +10,7 @@ LLM 서빙 프레임워크 운영 구성 모음. 서버 인프라(EC2/Docker)와
 | 프레임워크 | 상태 | 용도 |
 |-----------|:----:|------|
 | [`vllm/`](vllm/) | ✅ 운영 | vLLM 서버 + 멀티 GPU 게이트웨이 (한 인스턴스에서 다중 모델 라우팅, OpenAI 호환) |
+| [`pii/`](pii/) | ✅ 운영 | **PII/DLP 가드** — LLM 앞단 개인정보 검사. 외부 단일 포트(`:5015`/`:5501`)를 인수해 in(주민·카드 차단/이름·주소·전화 마스킹)·out(응답 마스킹) 검사 후 게이트웨이로 포워딩. 구조화(regex+체크섬)+비정형(NER GPU3) |
 | `sglang/` | 🔜 예정 | SGLang 기반 서빙 |
 | [`stt/`](stt/) | ✅ 운영 | vLLM 기반 STT — Voxtral-Mini-4B-Realtime을 게이트웨이 :5017로 노출 (OpenAI Audio + Realtime API). Qwen3-ASR / Whisper-large-v3는 한국어 비교 PoC 대기 |
 

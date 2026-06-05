@@ -1,0 +1,41 @@
+# ═══════════════════════════════════════════════════════
+# PII 프록시 설정 (연구계)
+# ═══════════════════════════════════════════════════════
+# 외부에 열린 단일 포트(5015)를 이 프록시가 인수하고, 기존 게이트웨이는
+# 내부 포트(6015)로 한 칸 물러난다(enforcement). 운영계는 5015→5501, 6015→6501.
+
+# ── 프록시 바인딩 (외부 유일 입구) ──
+host: "0.0.0.0"
+port: 5015
+
+# ── upstream 게이트웨이 (내부로 이동) ──
+# ※ 적용 시 gateways/5015.yaml 의 gateway.port 를 6015 로 바꾸고 host 는 127.0.0.1 로.
+upstream_url: "http://127.0.0.1:6015"
+
+# ── NER LB 풀 (GPU3, multi-replica/multi-model union) ──
+ner_backends:
+  - { host: "127.0.0.1", port: 8911, model_tag: "vmaca123" }   # 3축(이름/주소/조직), 통짜주소
+  - { host: "127.0.0.1", port: 8901, model_tag: "townboy" }    # 광범위(정형 안전망)
+  # 처리량 확장 시 같은 model_tag 로 포트만 늘려 replica 추가(least-conn 자동 분산)
+
+# ── 검사 토글 ──
+in_enabled: true
+out_enabled: true
+
+# ── 장애 모드: closed(차단, 컴플라이언스 기본) / open(통과, 명시 opt-in) ──
+fail_mode: "closed"
+
+# ── 스트리밍 out: post(완결 후 1회 검사, 누출 0) / off(패스스루) / buffer(점진, 후속) ──
+stream_mode: "post"
+hold_chars: 27
+
+# ── 정책: 차단 대상(고유식별정보). 그 외는 마스킹 ──
+block_types: ["rrn", "card"]
+
+# ── 타임아웃(초) ──
+ner_connect_timeout: 1.0
+ner_read_timeout: 3.0
+upstream_timeout: 300.0
+
+# ── 감사로그 (평문 미저장, salt는 env PII_AUDIT_SALT) ──
+audit_log_path: "logs/pii_audit.log"
