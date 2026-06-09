@@ -36,6 +36,24 @@ LLM 서빙 프레임워크 운영 구성 모음. 서버 인프라(EC2/Docker)와
 
 운영 인스턴스/게이트웨이 추가는 yaml 한 파일 복사 → 값만 수정 → `./start.sh up <name>` (인스턴스) 또는 게이트웨이 재기동(자동 디스커버리). 자세한 사용법은 [`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md) 참조. 단순 호출만 필요한 사용자는 [`VLLM_API_GUIDE.md`](VLLM_API_GUIDE.md)부터 보세요.
 
+## 🔒 PII/DLP 가드 (현재 운영 중)
+
+LLM 앞단에서 개인정보를 검사하는 보안 레이어. 외부 단일 포트를 프록시가 인수해 in(주민·카드 차단 / 이름·주소·전화 마스킹)·out(응답 마스킹) 검사 후 내부 게이트웨이로 포워딩한다. **gemma·qwen 모든 LLM이 PII 경유** — gemma(연구 `:5015`→`:6015` / 운영 `:5501`→`:6501`), qwen(연구 `:5016`→`:6016` / 운영 `:5502`→`:6502`). **연구계/운영계는 격리된 별도 서버**이며, 각 서버가 자기 NER(GPU3, `:8911`/`:8901`)+프록시만 띄운다(공유 아님). PII 비경유는 STT(:5017)뿐.
+
+| 파일 / 디렉토리 | 역할 |
+|------|------|
+| [`pii/README.md`](pii/README.md) | PII 가드 개요 · 토폴로지 · 기동 · 정책 |
+| [`pii/proxy.py`](pii/proxy.py) | 외부 포트 인수 프록시 (in/out 검사 → 게이트웨이 포워딩, 스트리밍 post 검사) |
+| [`pii/ner_server.py`](pii/ner_server.py) | 비정형 PII NER 서버 (token-classification, GPU3, transformers 서빙) |
+| [`pii/detectors/`](pii/detectors/) | `structured.py`(구조화 regex+체크섬) · `ner_client.py`(NER LB union) · `normalize.py` |
+| [`pii/configs/`](pii/configs/) | gemma `proxy.yaml`(5015)·`proxy.5501.yaml`(5501) · qwen `proxy.5016.yaml`·`proxy.5502.yaml` · `proxy.e2e.yaml`(테스트) |
+| [`pii/start.sh`](pii/start.sh) | NER + 프록시 기동 (`up [5015\|5016\|5501\|5502\|all]` / `down` / `status`) |
+| [`pii/tests/`](pii/tests/) | E2E + 한국어 합성 케이스셋 회귀 평가(`eval_pii.py`) |
+| [`pii/NOTICE.md`](pii/NOTICE.md) | NER 모델 서드파티 출처·라이선스 고지 |
+| [`pii/pii_model_research.md`](pii/pii_model_research.md) | 한국어 PII 모델 조사·3종 실측 평가 리포트 |
+
+검출은 **2-track**: 구조화(regex+체크섬, 결정적·모델 대체 불가) + 비정형(NER GPU3, 이름/주소/조직). 기동·정책·트러블슈팅 상세는 [`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md) §7.9.
+
 ## 🎙️ STT (Voxtral)
 
 vLLM의 `instances/` + `gateways/` 페어 패턴을 STT에도 동일하게 적용. `vllm/vllm_gateway.py`가 chat/completions 외에도 `/v1/audio/transcriptions`, `/v1/realtime` 라우트를 제공하므로 STT 게이트웨이는 **별도 코드 없이 같은 본체를 재사용**합니다.

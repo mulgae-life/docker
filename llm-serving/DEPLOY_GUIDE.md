@@ -1,20 +1,35 @@
 # 🚀 llm-serving 배포 가이드
 
-`llm-serving/` 코드를 **로컬 → S3 → 운영계 컨테이너**로 옮기고 모델을 띄우는 절차.
+`llm-serving/` 코드를 **로컬 → S3 → 운영계 컨테이너**로 옮기고, 모델 서버를 **안쪽(vLLM)부터 바깥(진입점)** 순으로 띄우는 절차.
 
-> 인프라 셋업(EC2/Docker/컨테이너 기동)은 [`../aws/SETUP_GUIDE.md`](../aws/SETUP_GUIDE.md). 본 문서는 그 위에서 **서빙 코드/모델만**.
+> 인프라 셋업(EC2/Docker/컨테이너 기동)은 [`../aws/SETUP_GUIDE.md`](../aws/SETUP_GUIDE.md). 본 문서는 그 위에서 **서빙 코드/모델만** 다룹니다.
 
 ---
 
-## 흐름
+## 한눈에
+
+**① 배포 파이프라인** — 코드는 S3를 경유해 운영계 컨테이너로, 모델은 컨테이너에서 자동 다운로드.
 
 ```
-[로컬]                          [S3]                                [운영계 컨테이너]
-/workspace/docker/llm-serving   →  s3://hgi-ai-res/hjjo/            →  /workspace/llm-serving/
-                                       llm-serving/                       └ ./start.sh
+[로컬]                          [S3]                          [운영계 컨테이너]
+/workspace/docker/llm-serving  →  s3://hgi-ai-res/hjjo/  →  /workspace/llm-serving/
+   (sync.sh push)                   llm-serving/              (sync.sh pull → ./start.sh)
 
-                                                                       /models/  ← 첫 기동 시 자동 다운로드
+                                                            /models/  ← 첫 기동 시 자동 다운로드
 ```
+
+**② 서비스 진입점 맵** — 배포 후 클라이언트가 들어가는 **외부 포트**와 그 뒤 내부 흐름. 외부엔 진입점만 열고 내부 포트는 방화벽으로 차단한다.
+
+```
+ :5015  gemma 연구   →  PII 프록시 → 게이트웨이 :6015 → vLLM :7070  (GPU 0,1)
+ :5016  qwen  연구   →  PII 프록시 → 게이트웨이 :6016 → vLLM :7080  (GPU 0,1)
+ :5501  gemma 운영   →  PII 프록시 → 게이트웨이 :6501 → vLLM :7070  (GPU 0)    · 운영=별도 서버
+ :5502  qwen  운영   →  PII 프록시 → 게이트웨이 :6502 → vLLM :7080  (GPU 0)    · 운영=별도 서버
+ :5017  voxtral STT  →  게이트웨이 → vLLM :7172  (GPU 2)     · PII 비경유(STT 전용)
+ :8911 / :8901  NER (vmaca123 / townboy, GPU 3)  ←  PII 프록시가 호출
+```
+
+> PII 적용 LLM(gemma·qwen)은 **게이트웨이가 내부 포트로 한 칸 물러나고 외부 입구를 PII 프록시가 인수**한다. STT만 PII 비경유라 게이트웨이가 곧 외부 입구다. 그래서 기동 순서가 서로 다르다([§3](#3-기동)). 깊은 토폴로지는 [`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md) §6.
 
 ---
 
@@ -24,11 +39,11 @@
 cd /workspace/docker/llm-serving && ./sync.sh push
 ```
 
-> `logs/`, `__pycache__/`, 런처 임시 config(`.vllm_serve_*`·`.runtime/`), `samples/`는 런타임 산출물이라 `sync.sh`가 자동 제외.
+> `logs/`, `__pycache__/`, 런처 임시 config(`.vllm_serve_*`·`.runtime/`), `samples/`, `audit.salt`는 런타임 산출물/시크릿이라 `sync.sh`가 자동 제외.
 
 ---
 
-## 2. 운영계 → S3 다운로드
+## 2. 운영계 컨테이너 → S3 다운로드
 
 운영계 EC2 호스트에서 컨테이너 진입 후 작업:
 
@@ -44,28 +59,77 @@ sudo chmod +x /workspace/llm-serving/*/start.sh /workspace/llm-serving/sync.sh
 
 ---
 
-## 3. 모델 띄우기
+## 3. 기동
+
+### 3.1 진입점 구조
+
+기동하기 전에 **무엇을 어떤 순서로 띄우는지** 잡고 간다. 핵심은 **PII 경유 여부에 따라 외부 입구가 달라진다**는 것.
+
+| 외부 진입점 | 서비스 | PII | 내부 경로 | 기동 단위 |
+|------------|--------|:---:|-----------|-----------|
+| `:5015` | LLM gemma (연구) | ✅ | 프록시 → 게이트웨이 `:6015` → vLLM `:7070` | `gemma` + `6015` + `pii up` |
+| `:5016` | LLM qwen (연구) | ✅ | 프록시 → 게이트웨이 `:6016` → vLLM `:7080` | `qwen` + `6016` + `pii up 5016` |
+| `:5501` | LLM gemma (운영) | ✅ | 프록시 → 게이트웨이 `:6501` → vLLM `:7070` | `prd-gemma` + `6501` + `pii up 5501` |
+| `:5502` | LLM qwen (운영) | ✅ | 프록시 → 게이트웨이 `:6502` → vLLM `:7080` | `prd-qwen` + `6502` + `pii up 5502` |
+| `:5017` | STT voxtral | ❌ | 게이트웨이 → vLLM `:7172` | `voxtral` + `5017` |
+
+> ✅ PII 서비스는 **안쪽부터**(vLLM → 게이트웨이 → 프록시) 올린다. 프록시가 외부 입구를 인수하므로 게이트웨이·vLLM이 먼저 떠 있어야 한다.
+> ❌ STT는 PII 비경유라 게이트웨이가 외부 입구 — `./start.sh up all`로 인스턴스+게이트웨이를 한 번에 올려도 된다.
+
+### 3.2 gemma + PII 가드 (안쪽부터)
+
+운영계(`:5501`) 기준. 연구계(`:5015`)는 괄호 안 값으로 치환한다. (qwen은 [§3.4](#34-qwen-llm-옵션-gemma와-동일-pii-경유))
 
 ```bash
-# vLLM (LLM) — instances/*.yaml + gateways/*.yaml 자동 순회
+# ① vLLM 인스턴스 — 모델 미보유 시 자동 다운로드(→ /models/LLM/), UP까지 1~5분
 cd /workspace/llm-serving/vllm
-./start.sh up all            # 전체 인스턴스 + 게이트웨이 기동 (확인 없이)
-./start.sh up                # 동일하지만 [y/N] 전체 적용 confirm 프롬프트가 먼저 뜸
-./start.sh up gemma          # 단일 인스턴스만 기동 (instances/gemma.yaml)
-./start.sh status            # UP 확인 (1~5분 소요, 모델 미보유 시 자동 다운로드 → /models/LLM/)
+./start.sh up prd-gemma      # 운영 prd-gemma=GPU0 (연구 gemma=GPU0,1)
+./start.sh status            # UP 확인
 
-# STT — vllm 패턴 동일 (instances/voxtral.yaml ↔ gateways/5017.yaml 페어 자동)
+# ② 게이트웨이 — 내부 전용(127.0.0.1). gateway_port로 위 인스턴스 자동 매칭
+./start.sh up 6501           # (연구: 6015)
+
+# ③ PII 프록시 — NER 2종(GPU3) + 프록시. 외부 :5501 입구를 인수
+cd ../pii
+bash start.sh up 5501        # (연구: 인자 없이 `bash start.sh up` = 5015)
+bash start.sh status         # NER + 프록시 health
+```
+
+> 🔒 **방화벽 전제**: 외부엔 **PII 프록시(gemma `:5015`/`:5501`, qwen `:5016`/`:5502`)만** 열고, 게이트웨이(`:6015`/`:6016`/`:6501`/`:6502`)·vLLM(`:7070`/`:7080`)·NER(`:8911`/`:8901`)은 외부 차단해야 enforcement가 성립한다(인스턴스 yaml `host: 0.0.0.0`이면 특히 주의). 하나라도 외부에서 닿으면 검사를 건너뛰는 직행 경로가 생긴다.
+> 🔑 **감사 salt**: `pii/start.sh`가 `configs/audit.salt`(없으면 권한 600으로 자동 생성)에서 읽어 `PII_AUDIT_SALT`로 주입한다. 환경별 시크릿이라 S3 동기화에서 제외된다.
+> 📋 기동·정책(차단 타입·마스킹·bypass) 상세는 [`pii/README.md`](pii/README.md), [`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md) §7.9.
+
+### 3.3 STT (Voxtral, 독립 서비스)
+
+STT는 PII를 거치지 않고 게이트웨이(`:5017`)가 곧 외부 입구다. vLLM 패턴 동일(`instances/voxtral.yaml` ↔ `gateways/5017.yaml` 페어 자동).
+
+```bash
 cd /workspace/llm-serving/stt
-./start.sh up all            # voxtral(:7172) + 게이트웨이(:5017) 자동 기동 (확인 없이)
+./start.sh up all            # voxtral(:7172, GPU2) + 게이트웨이(:5017) 한 번에 (확인 없이)
 ./start.sh up                # 동일하지만 [y/N] 전체 적용 confirm 프롬프트가 먼저 뜸
-./start.sh up voxtral        # voxtral 인스턴스만 단독 기동
-./start.sh up 5017           # 5017 게이트웨이만 단독 기동
+./start.sh up voxtral        # voxtral 인스턴스만 단독
+./start.sh up 5017           # 5017 게이트웨이만 단독
 ./start.sh status            # UP/STARTING 확인 (모델 미보유 시 자동 다운로드 → /models/STT/, 17GB)
 ```
 
-> ⚠️ **LLM ↔ STT 동시 운영 주의**: voxtral 은 GPU 2 단독이라 LLM(`vllm/instances/{gemma,qwen}.yaml` GPU 0/1)과 충돌 없음. 단 비교용 `qwen3_asr / whisper_v3` 는 GPU 0/1 사용이라 LLM 먼저 stop 필요 (`cd vllm && ./start.sh down <name>` — 다른 모델 영향 방지를 위해 이름 명시 권장; 무인자는 [y/N] 전체 중지 프롬프트). 상세는 [`stt/README.md`](stt/README.md) "운영 주의".
+> ⚠️ **Voxtral 의존성**: 컨테이너 재배포 시 `pip install soundfile soxr librosa` 필요. 영구 등재는 `aws/requirements.txt`. 미설치 시 vLLM 기동 직후 `EngineCore failed to start` + `ImportError: soundfile` 로 fail.
+> ⚠️ **LLM ↔ STT GPU 충돌**: voxtral은 GPU 2 단독이라 LLM(gemma/qwen GPU 0/1)과 충돌 없음. 단 비교용 `qwen3_asr / whisper_v3`는 GPU 0/1 사용이라 LLM 먼저 stop 필요(`cd vllm && ./start.sh down <name>` — 이름 명시 권장; 무인자는 [y/N] 전체 중지). 상세는 [`stt/README.md`](stt/README.md) "운영 주의".
 
-> ⚠️ **Voxtral 의존성**: 운영계 컨테이너 재배포 시 `pip install soundfile soxr librosa` 필요. 영구 등재는 `aws/requirements.txt`. 미설치 시 vLLM 기동 직후 `EngineCore failed to start` + `ImportError: soundfile` 로 fail.
+### 3.4 Qwen (LLM 옵션, gemma와 동일 PII 경유)
+
+Qwen도 gemma처럼 PII 프록시 뒤에 있다(연구 `:5016` / 운영 `:5502`). 안쪽부터 기동하며, NER은 같은 서버의 gemma 프록시와 공유한다.
+
+```bash
+# 연구계 (외부 :5016)
+cd /workspace/llm-serving/vllm
+./start.sh up qwen           # ① 인스턴스(:7080, GPU 0,1)
+./start.sh up 6016           # ② 게이트웨이(내부 127.0.0.1:6016)
+cd ../pii
+bash start.sh up 5016        # ③ PII 프록시(외부 :5016 인수)
+
+# 운영계 (외부 :5502) — prd-qwen=GPU0
+#   up prd-qwen → up 6502 → bash start.sh up 5502
+```
 
 ---
 
@@ -75,18 +139,22 @@ cd /workspace/llm-serving/stt
 cd /workspace/llm-serving/vllm
 
 # QA 테스트 — 모델명은 /v1/models API에서 자동 추출 (--model 불필요)
+# (:5015/:5501은 PII 프록시 인수 포트 — 테스트도 프록시를 그대로 경유한다. 운영계는 5501)
 python tests/test_vllm_server.py --base-url http://localhost:5015
 python tests/test_vllm_server.py --base-url http://localhost:5015 --category infra inference   # 일부만
 python tests/test_vllm_server.py --list                                                         # 카테고리 목록
 
 # 속도 비교 테스트 (게이트웨이별로 호출 — 같은 results 파일에 모델명 자동 추출하여 누적 append)
-python tests/speed_test.py --base-url http://localhost:5015                  # Gemma 게이트웨이
+python tests/speed_test.py --base-url http://localhost:5015                  # Gemma 진입점
 python tests/speed_test.py --base-url http://localhost:5016                  # Qwen 게이트웨이 (같은 파일에 이어 쌓임)
 python tests/speed_test.py --base-url http://localhost:5015 --quick          # 빠른 검증 (동시성 1, max_tokens 512)
 
 # 로그 — 매 실행마다 tests/logs/test_YYYYMMDD_HHMMSS.log에 자동 저장 (ANSI 색 제거)
 ls -lt tests/logs/test_*.log | head -3
 grep -B1 -A20 "FAIL " tests/logs/test_20260430_144909.log     # 실패만 추출
+
+# PII 정확성 회귀 평가 (한국어 합성 케이스셋, 타입별 precision/recall + 과탐)
+cd ../pii && python tests/eval_pii.py
 ```
 
 > 실패/예외 시 detail에 **요청 method·URL·body + 응답 status·body + (예외 시) 전체 traceback**이 자동 부착됩니다. 상세 우선순위/포맷은 [`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md) §14.1.
@@ -102,6 +170,9 @@ cd /workspace/docker/llm-serving && ./sync.sh push
 # (운영계) 재다운로드 + 재시작
 cd /workspace/llm-serving && sudo ./sync.sh pull
 cd vllm && ./start.sh restart <name>  # 또는 stt; 무인자는 [y/N] 전체 재시작 프롬프트, 'all'은 확인 없이 전체
+
+# PII 코드만 고쳤다면 프록시만 재기동 (NER은 로딩 비용이 커 유지)
+cd /workspace/llm-serving/pii && bash start.sh down 5501 && bash start.sh up 5501  # 연구계는 5015
 ```
 
 > 로컬에서 파일을 삭제했다면 운영계에 잔존하므로 `./sync.sh push --delete` 처럼 옵션을 덧붙인다(sync로 그대로 패스스루). 처음에는 `--dryrun` 으로 확인 권장.
@@ -119,6 +190,9 @@ cd vllm && ./start.sh restart <name>  # 또는 stt; 무인자는 [y/N] 전체 �
 | 모델 다운로드 timeout (폐쇄망) | EC2 외부망 차단. 외부망 PC에서 사전 다운로드 → S3 → `/volume/models/` 로 이관. 절차는 [`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md) §8.2 참조 |
 | 코드 수정이 반영 안 됨 | `__pycache__` 캐시. `find /workspace/llm-serving -name __pycache__ -exec rm -rf {} +` 후 재시작 |
 | GPU OOM | `vllm/instances/<name>.yaml` 의 `gpu_memory_utilization` 낮추기, 또는 다른 인스턴스 stop (`./start.sh down <name>`) |
+| PII 프록시 502/503 | 게이트웨이(:6015/:6501) 또는 vLLM이 안 떠 있음. PII는 안쪽부터 기동([§3.2](#32-llm--pii-가드-안쪽부터)). `pii/start.sh status`로 NER·프록시 health 확인 |
+| 정상 요청이 422 차단 | PII 검사가 주민·카드로 오탐. 케이스셋 회귀 평가 `cd pii && python tests/eval_pii.py`로 재현·확인. 정책은 `pii/configs/proxy.5501.yaml`(운영)·`proxy.yaml`(연구) |
+| PII 검사가 안 걸림(원문 통과) | ① 헤더 `X-PII-Mode: bypass` 우회(기본 활성, 감사로그 `action=bypass`) ② 외부에 게이트웨이/vLLM 포트가 직접 열려 프록시 우회. 방화벽 점검([§3.1](#31-진입점-구조) 전제) |
 
 ---
 
@@ -126,7 +200,9 @@ cd vllm && ./start.sh restart <name>  # 또는 stt; 무인자는 [y/N] 전체 �
 
 - 인프라/컨테이너: [`../aws/SETUP_GUIDE.md`](../aws/SETUP_GUIDE.md)
 - vLLM API 호출 (사용자): [`VLLM_API_GUIDE.md`](VLLM_API_GUIDE.md)
-- vLLM 운영 상세 (모델 교체, 메모리 표 등): [`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md)
+- vLLM 운영 상세 (토폴로지·모델 교체·메모리 표): [`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md)
+- PII 가드 개요·기동·정책: [`pii/README.md`](pii/README.md), [`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md) §7.9
+- PII 모델 라이선스 고지 / 모델 조사: [`pii/NOTICE.md`](pii/NOTICE.md), [`pii/pii_model_research.md`](pii/pii_model_research.md)
 - STT API 호출 (사용자): [`STT_API_GUIDE.md`](STT_API_GUIDE.md)
 - STT 운영 (시스템 구조, 메모리 핏, 트러블슈팅): [`STT_OPS_GUIDE.md`](STT_OPS_GUIDE.md)
 - STT 모델 비교 / PoC: [`stt/README.md`](stt/README.md), [`stt/MODEL_STUDY.md`](stt/MODEL_STUDY.md)

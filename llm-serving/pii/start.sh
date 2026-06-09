@@ -2,18 +2,21 @@
 # PII 가드 기동 — NER 서버(GPU3) + 프록시(포트별)
 #
 # 사용법:
-#   ./start.sh up            # NER + 연구계 프록시(5015)  (기본)
-#   ./start.sh up 5015       # NER + 연구계 프록시(5015)
-#   ./start.sh up 5501       # NER + 운영계 프록시(5501)
-#   ./start.sh up all        # (단일 호스트 공존 시) NER + 5015 + 5501 둘 다 — 격리 운영은 각 서버서 자기 포트만
+#   ./start.sh up            # NER + 연구계 gemma 프록시(5015)  (기본)
+#   ./start.sh up 5015       # NER + 연구계 gemma 프록시(5015)
+#   ./start.sh up 5016       # NER + 연구계 qwen  프록시(5016)
+#   ./start.sh up 5501       # NER + 운영계 gemma 프록시(5501)
+#   ./start.sh up 5502       # NER + 운영계 qwen  프록시(5502)
+#   ./start.sh up all        # (단일 호스트 공존 시) NER + 등록된 프록시 전부 — 격리 운영은 각 서버서 자기 포트만
 #   ./start.sh down [port|all]   # 프록시 종료(all 이면 NER 포함 전부)
 #   ./start.sh status        # health 확인
 #
-# 토폴로지: PII 프록시(외부 5015/5501) → 게이트웨이(내부 6015/6501) → vLLM.
+# 토폴로지: PII 프록시(외부 5015·5016/5501·5502) → 게이트웨이(내부 6015·6016/6501·6502) → vLLM.
+#   같은 서버의 gemma·qwen 프록시는 같은 NER 풀(8911/8901)을 공유한다(NER은 한 번만 기동).
 # NER 서버는 token-classification(vLLM 비대상)이라 transformers로 GPU3에 서빙한다.
 # 연구계/운영계는 격리된 별도 서버다. 각 서버가 자기 localhost(8911/8901)에 NER을
 # 띄우고 자기 포트 프록시만 바라본다(연구↔운영 NER은 물리 분리, 공유 아님).
-# 모델은 /models/PII 에 위치. 프록시 설정은 configs/proxy.yaml(5015), proxy.5501.yaml(5501).
+# 모델은 /models/PII 에 위치. 프록시 설정은 configs/proxy.yaml(5015)·proxy.5016.yaml(5016)·proxy.5501.yaml(5501)·proxy.5502.yaml(5502).
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -26,8 +29,10 @@ mkdir -p "$LOG_DIR"
 
 # 포트 → 프록시 설정 매핑 (외부 진입 포트 기준)
 declare -A PROXY_CONFIGS=(
-    [5015]="$SCRIPT_DIR/configs/proxy.yaml"
-    [5501]="$SCRIPT_DIR/configs/proxy.5501.yaml"
+    [5015]="$SCRIPT_DIR/configs/proxy.yaml"          # 연구계 gemma
+    [5016]="$SCRIPT_DIR/configs/proxy.5016.yaml"     # 연구계 qwen
+    [5501]="$SCRIPT_DIR/configs/proxy.5501.yaml"     # 운영계 gemma
+    [5502]="$SCRIPT_DIR/configs/proxy.5502.yaml"     # 운영계 qwen
 )
 
 # 백엔드 정의: "tag|port|model_path"

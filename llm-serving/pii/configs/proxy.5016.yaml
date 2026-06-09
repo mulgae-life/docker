@@ -1,0 +1,59 @@
+# ═══════════════════════════════════════════════════════
+# PII 프록시 설정 (연구계 qwen)
+# ═══════════════════════════════════════════════════════
+# 외부에 열린 단일 포트(5016)를 이 프록시가 인수하고, 기존 qwen 게이트웨이는
+# 내부 포트(6016)로 한 칸 물러난다(enforcement). 운영계 qwen은 5016→5502, 6016→6502.
+# (gemma 프록시는 5015/6015 — 같은 연구 서버의 NER 풀 8911/8901을 공유한다.)
+
+# ── 프록시 바인딩 (외부 유일 입구) ──
+host: "0.0.0.0"
+port: 5016
+
+# ── upstream 게이트웨이 (내부 전용) ──
+# 게이트웨이는 gateways/6016.yaml(gateway.port 6016, host 127.0.0.1)로 이미 내부 이동 완료.
+upstream_url: "http://127.0.0.1:6016"
+
+# ── NER LB 풀 (GPU3, multi-replica/multi-model union) ──
+ner_backends:
+  - { host: "127.0.0.1", port: 8911, model_tag: "vmaca123" }   # 3축(이름/주소/조직), 통짜주소
+  - { host: "127.0.0.1", port: 8901, model_tag: "townboy" }    # 광범위(정형 안전망)
+  # 처리량 확장 시 같은 model_tag 로 포트만 늘려 replica 추가(least-conn 자동 분산)
+
+# ── 검사 토글 ──
+in_enabled: true
+out_enabled: true
+
+# ── 장애 모드: closed(차단, 컴플라이언스 기본) / open(통과, 명시 opt-in) ──
+# open이라도 구조화 regex(주민/카드)는 항상 적용된다.
+fail_mode: "closed"
+
+# ── 전면 우회 허용: true면 헤더 X-PII-Mode:bypass 로 PII 검사 통째 생략 가능 ──
+# true: 헤더 X-PII-Mode:bypass 하나로 PII 없이 SLM만 호출 가능(토큰 미설정). 우회는 감사 기록됨.
+allow_bypass: true
+
+# ── NER 부분 장애: true면 모델 그룹 하나라도 실패 시 fail-closed(커버리지 손실 방지) ──
+# false(기본)는 살아있는 모델 union으로 계속하되 부분 실패를 로그로 남긴다.
+ner_require_all_backends: false
+
+# ── 스트리밍 out: post(완결 후 1회 검사, 구조 보존) / off(패스스루) ──
+stream_mode: "post"
+
+# ── 정책: 차단 대상(고유식별정보). 그 외는 마스킹 ──
+block_types: ["rrn", "card"]
+
+# ── 이미지 정책: allow(이미지 허용, 텍스트만 검사) / block(이미지 포함 요청 422 차단) ──
+# 이미지 바이트 속 PII는 검사 불가 → 민감 배포는 block 고려. 연구계는 기본 allow.
+image_policy: "allow"
+
+# ── 서비스별 마스킹 토글 화이트리스트 ──
+# 요청 헤더 X-PII-Ignore-Types로 서비스가 '끌 수 있는' 타입(예: 문서생성의 조직명).
+# 핵심 PII는 절대 넣지 말 것 — 헤더로도 못 끄게 통제하는 안전장치다.
+ignorable_types: ["org"]
+
+# ── 타임아웃(초) ──
+ner_connect_timeout: 1.0
+ner_read_timeout: 3.0
+upstream_timeout: 300.0
+
+# ── 감사로그 (평문 미저장, salt는 env PII_AUDIT_SALT) ──
+audit_log_path: "logs/pii_audit.5016.log"

@@ -1,10 +1,10 @@
 # ═══════════════════════════════════════════════════════
-# vLLM Gateway — :5016
+# vLLM Gateway — :6502 (운영계 qwen PII 프록시 upstream, 내부 전용 127.0.0.1)
 # ═══════════════════════════════════════════════════════
 #
 # 백엔드 자동 디스커버리:
 #   discover_from 디렉토리(../instances)의 *.yaml 중
-#   gateway_port == 자기 포트(여기선 5016) 인 인스턴스를 자동으로
+#   gateway_port == 자기 포트(여기선 6502) 인 인스턴스를 자동으로
 #   backends에 등록한다. 매칭 결과는 게이트웨이 기동 로그에서 확인 가능.
 #
 # 게이트웨이 추가 시 본 파일을 복사하여 아래 값만 바꾼다:
@@ -16,7 +16,7 @@
 #   게이트웨이 재기동 시 자동으로 backends에 포함되어 LB된다.
 #
 # 사용법:
-#   python vllm_gateway.py -c gateways/5016.yaml
+#   python vllm_gateway.py -c gateways/6502.yaml
 # ═══════════════════════════════════════════════════════
 
 
@@ -25,8 +25,8 @@
 # port: 클라이언트가 접속하는 게이트웨이 포트. 방화벽/보안그룹 오픈 대상.
 # log_level: 게이트웨이 로그 레벨. 일반 운영은 info, 상세 진단은 debug.
 gateway:
-  host: "0.0.0.0"
-  port: 5016
+  host: "127.0.0.1"
+  port: 6502
   log_level: "info"
 
 # ── 백엔드 디스커버리 ────────────────────────────────
@@ -90,10 +90,10 @@ http_client:
 
 # ── 과부하 차단 ──────────────────────────────────────
 # enabled: chat/completions 요청에 동시 처리량과 대기열 제한을 적용할지 여부.
-# max_inflight_requests: 동시에 백엔드로 넘길 최대 요청 수. 단일 vLLM max_num_seqs 이하 권장.
-# max_queue_size: 동시 처리 한도 초과 시 게이트웨이에 대기시킬 최대 요청 수.
-# queue_timeout_seconds: 대기열에서 슬롯을 기다릴 최대 시간(초). 초과 시 429 queue_timeout.
-# retry_after_seconds: 429 응답의 Retry-After 헤더 값(초).
+# max_inflight_requests: 백엔드 vLLM으로 즉시 넘길 최대 요청 수. 5015의 gemma max_num_seqs=2에 맞춘다.
+# max_queue_size: 즉시 처리 2명 외 대기시킬 요청 수. 18이면 총 동시 사용자 20명까지 수용한다.
+# queue_timeout_seconds: 대기열에서 처리 슬롯을 기다릴 최대 시간(초). 초과 시 429 queue_timeout.
+# retry_after_seconds: 대기열 포화/시간 초과 시 클라이언트 재시도 권장 간격(초).
 overload:
   enabled: true
   max_inflight_requests: 20 # 20
