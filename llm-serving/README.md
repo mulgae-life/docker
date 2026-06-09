@@ -25,8 +25,8 @@ LLM 서빙 프레임워크 운영 구성 모음. 서버 인프라(EC2/Docker)와
 | [`vllm/start.sh`](vllm/start.sh) | 빠른 기동 스크립트 (`up [name\|all]` / `down [name\|all]` / `restart [name\|all]` / `status` — 인자 없이 호출하면 [y/N] 전체 적용 confirm 프롬프트) |
 | [`vllm/vllm_server_launcher.py`](vllm/vllm_server_launcher.py) | vLLM 서버 런처 (인스턴스 yaml `-c` 인자 수신) |
 | [`vllm/vllm_gateway.py`](vllm/vllm_gateway.py) | OpenAI 호환 게이트웨이 (자동 디스커버리 LB + 대기열 기반 과부하 차단) |
-| [`vllm/instances/`](vllm/instances/) | **인스턴스 단위 yaml** (`<name>.yaml` 1개 = vLLM 프로세스 1대). `gateway_port` 메타 + 모델/포트/GPU |
-| [`vllm/gateways/`](vllm/gateways/) | **게이트웨이 단위 yaml** (`<port>.yaml` 1개 = 게이트웨이 1대). `discover_from`으로 인스턴스 자동 매칭 |
+| [`vllm/instances/`](vllm/instances/) | **인스턴스 단위 yaml** (`<name>.yaml` 1개 = vLLM 프로세스 1대). `gateway_port` 메타 + 모델/포트/GPU. 키 제목 한 줄로 슬림, 키 상세·운영 노하우는 [`instances/_SCHEMA.txt`](vllm/instances/_SCHEMA.txt) |
+| [`vllm/gateways/`](vllm/gateways/) | **게이트웨이 단위 yaml** (`<port>.yaml` 1개 = 게이트웨이 1대). `discover_from`으로 인스턴스 자동 매칭. 키 상세는 [`gateways/_SCHEMA.txt`](vllm/gateways/_SCHEMA.txt) |
 | [`vllm/tests/`](vllm/tests/) | 테스트 코드 디렉토리 (기능/트래픽/속도 + `results/` 누적 리포트) |
 | [`vllm/tests/test_vllm_server.py`](vllm/tests/test_vllm_server.py) | 서버 헬스/추론 기능 테스트 (9개 카테고리 QA) |
 | [`vllm/tests/traffic_test_vllm.py`](vllm/tests/traffic_test_vllm.py) | smoke/overload 트래픽 테스트와 429 방어 응답 검증 |
@@ -46,7 +46,7 @@ LLM 앞단에서 개인정보를 검사하는 보안 레이어. 외부 단일 �
 | [`pii/proxy.py`](pii/proxy.py) | 외부 포트 인수 프록시 (in/out 검사 → 게이트웨이 포워딩, 스트리밍 post 검사) |
 | [`pii/ner_server.py`](pii/ner_server.py) | 비정형 PII NER 서버 (token-classification, GPU3, transformers 서빙) |
 | [`pii/detectors/`](pii/detectors/) | `structured.py`(구조화 regex+체크섬) · `ner_client.py`(NER LB union) · `normalize.py` |
-| [`pii/configs/`](pii/configs/) | gemma `proxy.yaml`(5015)·`proxy.5501.yaml`(5501) · qwen `proxy.5016.yaml`·`proxy.5502.yaml` · `proxy.e2e.yaml`(테스트) |
+| [`pii/configs/`](pii/configs/) | gemma `proxy.yaml`(5015)·`proxy.5501.yaml`(5501) · qwen `proxy.5016.yaml`·`proxy.5502.yaml` · `proxy.e2e.yaml`(테스트) · 키 상세 [`_SCHEMA.txt`](pii/configs/_SCHEMA.txt) |
 | [`pii/start.sh`](pii/start.sh) | NER + 프록시 기동 (`up [5015\|5016\|5501\|5502\|all]` / `down` / `status`) |
 | [`pii/tests/`](pii/tests/) | E2E + 한국어 합성 케이스셋 회귀 평가(`eval_pii.py`) |
 | [`pii/NOTICE.md`](pii/NOTICE.md) | NER 모델 서드파티 출처·라이선스 고지 |
@@ -63,7 +63,7 @@ vLLM의 `instances/` + `gateways/` 페어 패턴을 STT에도 동일하게 적�
 | [`STT_API_GUIDE.md`](STT_API_GUIDE.md) | **사용자용** API 가이드 (transcription · realtime · 파라미터 · 통합 예제) |
 | [`STT_OPS_GUIDE.md`](STT_OPS_GUIDE.md) | **운영자용** 가이드 (시스템 구조 · 메모리 핏 · 의존성 · 트러블슈팅 · QA) |
 | [`stt/start.sh`](stt/start.sh) | STT 클러스터 기동 (vllm/start.sh와 동일 패턴, launcher/gateway는 ../vllm/ 재사용) |
-| [`stt/instances/voxtral.yaml`](stt/instances/voxtral.yaml) | Voxtral 인스턴스 (gateway_port 5017, 내부 :7172, GPU 2) |
+| [`stt/instances/voxtral.yaml`](stt/instances/voxtral.yaml) | Voxtral 인스턴스 (gateway_port 5018, 내부 :7172, GPU 2) |
 | [`stt/gateways/5017.yaml`](stt/gateways/5017.yaml) | STT 게이트웨이 (warmup 비활성화, audio timeout 600s) |
 | [`stt/MODEL_STUDY.md`](stt/MODEL_STUDY.md) | 후보 모델 비교 / 시나리오 |
 

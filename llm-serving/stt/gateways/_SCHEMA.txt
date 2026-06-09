@@ -1,0 +1,49 @@
+====================================================================
+ STT 게이트웨이 yaml 키 레퍼런스
+====================================================================
+
+gateways/<port>.yaml 1개 = STT 게이트웨이 1대. vllm/vllm_gateway.py 본체를
+그대로 재사용한다(별도 코드 없음) — chat/completions 외에 /v1/audio/
+transcriptions, /v1/audio/translations, /v1/realtime(WS)을 한 본체가
+제공한다. 클라이언트는 요청 body의 model 필드로 백엔드 인스턴스가 선택된다.
+
+키 구조는 ../../vllm/gateways/_SCHEMA.txt와 동일하다. 아래는 STT
+게이트웨이의 차이점만 정리한다.
+
+[복붙 규칙] 게이트웨이 추가 시 복사해 gateway.host / gateway.port만 바꾼다.
+주석은 모든 파일에서 동일.
+
+
+── LLM 게이트웨이와의 차이 ──────────────────────────────────────────
+
+  키                            LLM    STT    이유
+  warmup.enabled                true   false  STT 백엔드는 chat/completions
+                                              dummy 추론으로 웜업 불가.
+                                              /health 프로브만. Voxtral은
+                                              첫 호출 시 cudagraph 자동
+                                              capture라 inference 웜업 불필요.
+  prefix_cache_warmup.enabled   true   false  STT는 chat 시스템 프롬프트
+                                              캐싱 패턴과 무관.
+  http_client.timeout_seconds   300    600    transcription은 audio 길이에
+                                              비례(_AUDIO_TIMEOUT_SECONDS=
+                                              600). realtime은 stream이라 무관.
+  http_client.max_connections   100    50     STT PoC 동시성 규모.
+
+warmup.enabled=false여도 boot_poll/inference 하위 값은 GatewayConfig 모델
+검증을 위해 유지한다(미사용 placeholder). prefix_cache_warmup도 동일.
+
+
+── 게이트웨이 / 인스턴스 매칭 ───────────────────────────────────────
+
+  - 5017 <- qwen3_asr(:7170), whisper_v3(:7171) (gateway_port: 5017)
+  - 5018 <- voxtral(:7172) (gateway_port: 5018, realtime 분리)
+
+discover_from(../instances)이 gateway_port == 자기 포트인 인스턴스를 자동
+등록. 같은 게이트웨이에 여러 인스턴스가 붙으면 요청 model 필드로 라우팅.
+
+
+── 공통 키 ──────────────────────────────────────────────────────────
+
+gateway(host/port/log_level), discover_from, health_check, warmup,
+prefix_cache_warmup, backend_api_key, http_client, overload — 의미는
+../../vllm/gateways/_SCHEMA.txt 참조.

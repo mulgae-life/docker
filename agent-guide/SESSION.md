@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-06-05 (PII NER 토폴로지 정정(공유→격리) + 한국어 PII 모델 재조사·3모델 실측평가 + townboy 라이선스 규명 + 리포트/NOTICE 작성)
+last-updated: 2026-06-09 (전 서빙 yaml 주석 슬림화·공용 _SCHEMA.txt 분리 + PII on/off 토글 구조(비PII/PII 인스턴스 분리) 검토 + PII 토폴로지 Q&A)
 ---
 
 # 세션 상태
@@ -25,6 +25,8 @@ last-updated: 2026-06-05 (PII NER 토폴로지 정정(공유→격리) + 한국�
 | 우선순위 | 작업 | 상태 |
 |---------|------|------|
 | P1 | **PII 가드 운영 적용 후속**: 연구계 `:5015` enforcement 라이브(프록시→게이트웨이 6015→vLLM). 잔존 — ① **운영계 `:5501` 실기동**(GPU0 여유 확보 후 `up prd-gemma`→`up 6501`→`pii: up 5501`. 설정·`ner_require_all_backends:true` 준비 완료) ② **보험 실데이터 recall 게이트 실측**(이름·주소·조직 ≥0.95) — `pii/tests/recall_gate.py` 하버스 구축 완료, **비식별 라벨 JSONL 입수 시 즉시 게이트화** ③ **스트리밍 progressive buffer 모드**(현 `post`=완결후 1회 마스킹, 구조 보존. 점진 방출은 미구현 — 별도 합의 필요) ④ 멀티모달(이미지) PII — `image_policy:block` 옵션만 추가, OCR 검사는 미구현 ⑤ 운영 배포 시 `PII_AUDIT_SALT`·(선택)`PII_BYPASS_TOKEN` 확인. 설계: `agent-guide/plans/pii-dlp-gateway.md`. | 부분 완료(연구계 라이브·하버스 구축), 운영전환·실측 잔존 |
+| P2 | **비PII qwen 대칭 보강 (결정 대기)**: gemma는 PII(`prd-pii-gemma`/gw `6501`)·비PII(`prd-gemma`/gw `5501`) 둘 다 있으나 qwen은 PII(`prd-pii-qwen`/gw `6502`)만 있고 `prd-qwen.yaml`은 삭제됨. 비PII qwen이 필요하면 인스턴스(`gateway_port:5502`) + `gateways/5502.yaml`(host `0.0.0.0`) 추가로 gemma와 대칭. **대표님 답변 대기.** | Todo (질문 미응답) |
+| P2 | **`prd-gemma`(비PII) vLLM host 정리**: `host: 0.0.0.0`이라 vLLM `:7070`이 외부 노출됨(`prd-pii-gemma`는 `127.0.0.1`). 게이트웨이만 외부면 되므로 방화벽에서 7070 차단 확인 또는 `127.0.0.1`로 통일. | Todo |
 | P1 | **5015 Gemma 운영 프로파일 확정**: 게이트웨이 `max_inflight_requests=20`, `max_queue_size=40`은 확정. 인스턴스는 TP=2 + `max_model_len 32768` + `gpu_memory_utilization 0.95`로 라이브(2026-05-13 7차 시도). 잔존: 장문 트래픽(평균 프롬프트/출력 길이) 기준 latency·429 비율 측정. | 부분 완료(매트릭스 운영값 확정), 장문 검증 잔존 |
 | P1 | **vLLM Qwen 본체 :7080 이전**: `instances/qwen.yaml`의 `port: 7080`이 의도된 다음 운영 포트. 게이트웨이 :5016은 메모리상 :7071 보유 중이라 즉시 영향 없으나, 다음 게이트웨이 재기동 시 yaml 기준(:7080)으로 디스커버리하므로 그 시점 전에 vLLM 본체를 :7080으로 옮겨야 정합. | Todo |
 | P1 | **Gemma 4 31B / Qwen 3.6 27B MTP 실기동 검증**: 2026-05-13 Gemma 31B TP=2 + max_len 32768 정상 기동 / Qwen 27B 단일카드 정상 기동. 잔존: ① Qwen 5016 가용성 재점검 ② acceptance/TPOT/throughput 사내 벤치 — `tests/speed_test.py`로 매트릭스 누적 측정 가능, `slm_research/mtp.md` §5 워크로드별 권장 참고. | 부분 완료(실기동 OK), 벤치 잔존 |
@@ -47,6 +49,35 @@ last-updated: 2026-06-05 (PII NER 토폴로지 정정(공유→격리) + 한국�
 ---
 
 ## 최근 세션
+
+### 2026-06-09 (전 서빙 yaml 주석 슬림화·공용 _SCHEMA.txt 분리 + PII on/off 토글 구조 검토 + PII 토폴로지 Q&A)
+
+> PII 구조 이해 Q&A에서 출발 → 사용자가 PII on/off 토글용 인스턴스/게이트웨이를 직접 추가 → 점검 → "yaml 주석이 파일마다 핏하게 박혀 cp 시 불일치(예: `5501.yaml`이 '6501 PII'로 오기)"를 근본 해소하기 위해 전 서빙 yaml을 슬림화.
+
+#### 세션 목표
+- **PII 토폴로지 Q&A**: ① PII를 게이트웨이 앞에 둔 이유 ② LB는 어디에 ③ bypass 동작/모순 여부.
+- **PII on/off 토글 구조 검토**: 사용자가 `:5501`에 PII 프록시(켜기)/게이트웨이 직접(끄기)를 택일 기동하도록 비PII·PII 인스턴스를 분리 추가 → 정합성 점검.
+- **전 서빙 yaml 주석 슬림화**: 같은 종류 yaml 주석 100% 동일화 + 키당 제목 한 줄 + 함정만 ⚠️ inline + 상세는 공용 `_SCHEMA.txt`.
+
+#### 변경 파일
+| 파일 | 변경 유형 | 요약 |
+|------|----------|------|
+| `vllm/gateways/{5501,6015,6016,6501,6502}.yaml` | 슬림화 | 103→55줄, host/port만 차이. `5501`은 비PII 직접 진입(0.0.0.0) |
+| `vllm/instances/{gemma,prd-gemma,prd-pii-gemma,qwen,prd-pii-qwen}.yaml` | 슬림화 | 433→65줄. gemma3/qwen2 모델군 내 주석 동일 |
+| `pii/configs/proxy.{yaml,5501,5016,5502,e2e}.yaml` | 슬림화 | 운영4는 port·upstream·require_all·audit만 차이. e2e는 테스트 고유 |
+| `stt/instances/{voxtral,qwen3_asr,whisper_v3}.yaml` | 슬림화 | env/task/compilation_config 모델별 활성·주석 |
+| `stt/gateways/{5017,5018}.yaml` | 슬림화 | cp 흔적(5018 헤더 '5017') 해소 |
+| `{vllm/gateways,vllm/instances,pii/configs,stt/gateways,stt/instances}/_SCHEMA.txt` | 신규 | 키 레퍼런스 5개 — 운영 노하우(MTP·encoder cache race·soft_tokens·GPU 메모리표·bypass) 손실 없이 이관. **후속: `.md`→`.txt` 평문 전환**(마크다운 미리보기 없는 터미널/에디터 raw 가독성, 표→정렬·들여쓰기). yaml/문서 참조 경로도 동기 정정 |
+
+#### 결정 사항
+- **PII를 게이트웨이 앞에 둔 이유**: ① enforcement(외부 진입점=검사 지점이라 우회 경로 0) ② 게이트웨이 본체(`vllm_gateway.py`) 불변 — STT가 같은 본체 재사용하므로 게이트웨이에 PII를 박으면 STT 분리 불가 ③ 프로세스 분리로 탈착식(포트 스왑 on/off).
+- **LB 위치**: 무거운 NER 풀에 존재(`NerPool` least-conn + 모델 union). 프록시→게이트웨이는 단일 upstream(게이트웨이가 LB라 중복 회피). SPOF는 프록시·NER·게이트웨이 단일 프로세스 — 이중화는 후속.
+- **bypass 고정 + 모델 PII유무 기동은 모순 아님**: bypass 고정 = "이 서비스는 PII 영구 면제" 선언. PII 모드/비PII 모드 어느 쪽으로 띄워도 그 서비스는 안 깨짐(상황1 프록시가 우회 인식, 상황2 게이트웨이가 헤더 무시). bypass 미사용 서비스는 모델 모드 따라 PII 적용. → 같은 `:5501` 위에서 서비스별 PII 적용 분기 가능(정상 용법).
+- **yaml 통일 원칙(확정)**: 같은 종류는 주석 100% 동일, 헤더에 포트·모델명 등 고유정보 금지(`# vLLM Gateway`만), 기동 실패 유발 함정만 ⚠️ inline, 나머지 상세는 디렉토리별 `_SCHEMA.txt`. → 복붙 후 값만 바꿔도 주석 손댈 필요 없음(cp 불일치 구조적 차단).
+
+#### 현재 상태
+- yaml 리팩토링 **완료·점검 통과**(20 yaml 파싱 0실패, discover 매칭 정합, 키 누락 0, 값 불변=동작 동일, 모델군 주석 100% 동일). **미커밋**.
+- **미결(리팩토링 범위 밖, 값 보존)**: ① 비PII qwen 부재 — `prd-qwen.yaml` 삭제 상태이고 비PII qwen 인스턴스+게이트웨이(`5502` 비PII)가 없음(gemma는 PII/비PII 둘 다 있음). ② `prd-gemma`(비PII) vLLM host `0.0.0.0`(`prd-pii-gemma`는 `127.0.0.1`) → 7070 외부 노출, 방화벽 차단 또는 127.0.0.1 통일 검토.
 
 ### 2026-06-05 (PII NER 토폴로지 정정 + 모델 재조사·실측평가·라이선스 규명)
 

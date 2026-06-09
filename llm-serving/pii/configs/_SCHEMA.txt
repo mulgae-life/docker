@@ -1,0 +1,100 @@
+====================================================================
+ PII 프록시 config 키 레퍼런스
+====================================================================
+
+configs/proxy.<port>.yaml 1개 = PII 프록시 1대. 외부 단일 포트를 인수하고
+내부 게이트웨이를 한 칸 물려(enforcement) in/out PII를 검사한다. 이 문서는
+모든 프록시 config가 공유하는 키 설명이다. 스키마 정본은 ../config.py
+PiiConfig.
+
+[복붙 규칙] 프록시를 추가할 땐 기존 config를 복사해 port · upstream_url ·
+ner_require_all_backends(연구 false/운영 true) · audit_log_path(포트 태그)
+만 바꾼다. 나머지 키와 주석은 모든 파일에서 동일.
+
+[로드] PiiConfig.from_yaml()이 yaml을 읽고 없는 키는 기본값으로 채운다.
+시크릿(audit_salt)은 env(PII_AUDIT_SALT)가 yaml보다 우선.
+
+
+── 환경별로 다른 값 ─────────────────────────────────────────────────
+
+  키                          연구 gemma      운영 gemma      연구 qwen       운영 qwen
+  port                        5015            5501            5016            5502
+  upstream_url 포트           6015            6501            6016            6502
+  ner_require_all_backends    false           true            false           true
+  audit_log_path              pii_audit.log   .5501.log       .5016.log       .5502.log
+
+운영계는 컴플라이언스 우선이라 ner_require_all_backends: true(NER 모델 그룹
+하나라도 죽으면 fail-closed). 연구계는 가용성 우선 false.
+
+
+── 키 상세: 바인딩 / upstream ───────────────────────────────────────
+
+  host           기본 0.0.0.0
+      프록시 바인딩. 외부 유일 입구라 0.0.0.0.
+  port           기본 5015
+      외부 진입 포트(방화벽 오픈 대상).
+  upstream_url   기본 http://127.0.0.1:6015
+      검사 후 포워딩할 내부 게이트웨이. 게이트웨이는 127.0.0.1로 물러나
+      있어야 우회 차단 성립.
+
+
+── NER LB 풀 ────────────────────────────────────────────────────────
+
+ner_backends: NER 추론 서버 목록(GPU3). 서로 다른 model_tag는 병렬 호출 후
+union(다층 방어), 같은 tag replica는 least-conn 분산. 처리량 확장은 같은
+model_tag로 포트만 추가.
+  - vmaca123(8911): 3축(이름/주소/조직), 통짜주소
+  - townboy(8901): 광범위(정형 안전망)
+
+
+── 검사 토글 ────────────────────────────────────────────────────────
+
+  in_enabled    기본 true     요청(프롬프트) 검사.
+  out_enabled   기본 true     응답 검사.
+
+
+── 정책 ─────────────────────────────────────────────────────────────
+
+  fail_mode      기본 closed
+      PII 엔진 불가 시: closed=차단(컴플라이언스 기본) / open=통과(가용성,
+      opt-in). open이라도 구조화 regex(주민/카드)는 항상 적용. Literal이라
+      오타 시 기동 fail-fast.
+  allow_bypass   기본 true
+      true면 헤더 X-PII-Mode: bypass로 검사 통째 생략(우회는 감사 기록).
+      토큰 미설정 시 헤더 하나로 우회 — 외부 포트는 bypass_token(env
+      PII_BYPASS_TOKEN) 권장. enforce로 묶으려면 false.
+  bypass_token   기본 env PII_BYPASS_TOKEN
+      비어있지 않으면 bypass에 헤더 X-PII-Bypass-Token 일치 필요(2차 가드).
+      시크릿이라 env 주입(yaml 하드코딩 금지).
+  ner_require_all_backends   기본 false
+      true면 NER 모델 그룹 하나라도 실패 시 fail-closed(커버리지 손실 방지).
+      false는 살아있는 모델 union으로 계속(부분 실패는 항상 로그). 운영
+      true/연구 false.
+  stream_mode    기본 post
+      스트리밍 out 검사: post=완결 후 1회 검사·재방출(구조 보존, 토큰
+      점진성 포기) / off=미검사 패스스루. 점진 마스킹은 PII 경계 누출
+      위험으로 미구현. Literal이라 오타 시 fail-fast.
+  block_types    기본 [rrn, card]
+      차단 타입(고유식별정보). 그 외 검출은 마스킹.
+  image_policy   기본 allow
+      이미지 바이트는 검사 불가(텍스트 파트만). allow=이미지 허용(텍스트만
+      검사) / block=이미지 포함 요청 422 차단. 민감 배포는 block 고려.
+  ignorable_types   기본 [org]
+      헤더 X-PII-Ignore-Types로 서비스가 끌 수 있는 타입 화이트리스트.
+      조직명은 PII 아닌 문서 메타라 서비스 재량 노출. 핵심 PII는 절대
+      넣지 말 것(헤더로도 못 끔, block_types와 겹쳐도 차단 우선).
+
+
+── 타임아웃(초) ─────────────────────────────────────────────────────
+
+  ner_connect_timeout   기본 1.0     NER 연결 수립.
+  ner_read_timeout      기본 3.0     NER 응답 읽기.
+  upstream_timeout      기본 300.0   게이트웨이 추론 전체(긴 답변 고려).
+
+
+── 감사로그 ─────────────────────────────────────────────────────────
+
+  audit_log_path   기본 logs/pii_audit.log
+      평문 미저장(salt 지문). 포트별 파일 분리로 운영/연구 로그 구분.
+  audit_salt       기본 env PII_AUDIT_SALT
+      지문 salt. env 주입(하드코딩 금지). 미설정 시 지문 NOSALT.

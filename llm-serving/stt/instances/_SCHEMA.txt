@@ -1,0 +1,90 @@
+====================================================================
+ STT 인스턴스 yaml 키 레퍼런스
+====================================================================
+
+instances/<name>.yaml 1개 = vLLM STT 프로세스 1대. vllm/vllm_server_
+launcher.py가 그대로 소비한다(LLM 인스턴스와 같은 런처). 이 문서는 모든
+STT 인스턴스 yaml이 공유하는 키 설명 + 모델별 값이다.
+
+[복붙 규칙] 같은 성격의 STT 모델을 추가할 땐 복사해 값만 바꾼다. 주석은
+모든 파일에서 동일. 모델별로 env / task / compilation_config는 활성/주석이
+갈리므로 아래 표를 따른다.
+
+[런처 처리 키] gpus / download_dir / env / gateway_port는 런처가 처리하고
+vllm serve로는 전달하지 않는다(_LAUNCHER_KEYS). 게이트웨이는 같은
+gateway_port 인스턴스가 여럿이면 요청 body의 model 필드로 라우팅한다.
+
+
+── 모델별 값 ────────────────────────────────────────────────────────
+
+  키                       voxtral            qwen3_asr      whisper_v3
+  model                    Voxtral-Mini-4B-   Qwen3-ASR-1.7B whisper-large-v3
+                           Realtime-2602
+  gateway_port             5018               5017           5017
+  port (hint)              7172               7170           7171
+  gpus                     [2]                [0]            [2]
+  gpu_memory_utilization   0.4                0.5            0.2
+  max_model_len            16384              8192           (미지정·자동감지)
+  max_num_seqs             1                  8              5
+  env                      VLLM_DISABLE_      (미사용)       (미사용)
+                           COMPILE_CACHE=1
+  task                     (미지정)           transcription  transcription
+  compilation_config       PIECEWISE          (미사용)       (미사용)
+  엔드포인트               transcriptions +   transcriptions transcriptions
+                           translations +
+                           realtime(WS)
+
+  - util / max_model_len / max_num_seqs는 단일 세션 PoC 실측 기준. 동시 N
+    세션 운영 전환 시 gpu_memory_utilization(0.40~0.50)과 max_num_seqs를
+    동기 상향.
+  - voxtral: weight 8.38 + KV ~4 + cudagraph + 외부 활성화 = util 0.35~0.4
+    안정. max_model_len은 모델카드 기본 131072(~3시간, 1 token≈80ms)이나
+    운영 보수 시작 16384~32768.
+  - qwen3_asr: weight ~4, util 0.5(비교 측정 여유). ASR은 LLM 대비 짧은
+    컨텍스트라 8192.
+  - whisper_v3: weight ~3, decoder context 448 token이라 KV 매우 작음 ->
+    util 0.2, max_model_len 미지정(max_target_positions 자동감지).
+
+
+── 키 상세 ──────────────────────────────────────────────────────────
+
+  gateway_port
+      소속 게이트웨이 포트(메타, vLLM 비전달). discover_from 매칭용.
+  model
+      HF ID. 런처가 download_dir과 조합해 로컬 경로 해석, 미존재 시
+      snapshot_download 자동. Voxtral/Qwen(Apache 2.0)·Whisper(MIT) 모두
+      HF_TOKEN 불필요.
+  download_dir
+      STT/오디오 전용 저장 루트(/models/STT, LLM과 분리).
+  env
+      런처가 vLLM 자식 프로세스 env에 머지(vllm serve 미전달). voxtral만
+      VLLM_DISABLE_COMPILE_CACHE=1(모델카드 권장, 첫 기동 안정성 —
+      compilation_config PIECEWISE와 짝).
+  task
+      transcription=/v1/audio/transcriptions 활성 / 미지정=자동감지.
+      voxtral은 미지정(realtime + transcription 동시 노출 위해 모델카드
+      권장). qwen3_asr·whisper는 transcription 명시.
+  host
+      바인딩. 게이트웨이가 이 포트로 forward.
+  port
+      내부 vLLM 포트 hint(게이트웨이<->인스턴스 hop). 사용 중이면 launcher가
+      +1 자동 회피. 7170(qwen3_asr)/7171(whisper)/7172(voxtral).
+  gpus / tensor_parallel_size
+      단일 GPU 단독(TP 없음, STT는 1). start.sh -g가 CUDA_VISIBLE_DEVICES
+      설정.
+  gpu_memory_utilization
+      가중치+KV+cudagraph+활성화 합산. 모델별 실측(위 표).
+  max_model_len
+      컨텍스트 길이(오디오 길이 비례). whisper는 미지정(자동감지).
+  max_num_seqs
+      continuous batching 상한. KV 슬롯 부족 시 preemption(swap out)으로
+      일부 순차화.
+  dtype
+      활성화 dtype. auto(BF16).
+  seed
+      재현용 시드.
+  compilation_config
+      {cudagraph_mode: PIECEWISE} — voxtral만(모델카드 권장, 첫 기동
+      cudagraph 캡처 안정성). vLLM이 CompilationConfig dataclass로 자동 변환.
+  enable_log_requests / disable_log_stats
+      로깅. 운영 false / false(통계 출력).

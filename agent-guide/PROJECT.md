@@ -71,14 +71,17 @@ docker/
     │   ├── start.sh                  # 빠른 기동 (instances/+gateways/ 자동 순회)
     │   ├── vllm_server_launcher.py   # 단일 vLLM 기동 + 포트 자동 회피 + yaml-relative runtime
     │   ├── vllm_gateway.py           # OpenAI 호환 게이트웨이 (chat + audio + realtime)
-    │   ├── instances/                # 인스턴스 yaml (모델/포트/GPU)
-    │   │   ├── gemma.yaml            #   ├ gateway_port: 6015 → 외부 :5015 (PII 프록시 경유)
-    │   │   ├── prd-gemma.yaml        #   ├ gateway_port: 6501 → 외부 :5501 운영 (PII 프록시 경유)
-    │   │   └── qwen.yaml             #   └ gateway_port: 5016 → :5016 (PII 미적용)
-    │   ├── gateways/                 # 게이트웨이 yaml (포트/디스커버리)
-    │   │   ├── 6015.yaml             #   내부 전용 (외부 입구는 pii/ 프록시 :5015)
-    │   │   ├── 6501.yaml             #   내부 전용 (운영, 외부 입구는 pii/ 프록시 :5501)
-    │   │   └── 5016.yaml
+    │   ├── instances/                # 인스턴스 yaml (키당 제목 한줄 슬림, 상세는 _SCHEMA.txt)
+    │   │   ├── _SCHEMA.txt            #   인스턴스 키 레퍼런스 + 모델별 노하우(MTP·soft_tokens·GPU표)
+    │   │   ├── gemma.yaml            #   ├ 연구 gemma  gw 6015 → 외부 :5015 (PII 경유)
+    │   │   ├── prd-gemma.yaml        #   ├ 운영 gemma  gw 5501 → :5501 직접 (PII 미경유)
+    │   │   ├── prd-pii-gemma.yaml    #   ├ 운영 gemma  gw 6501 → :5501 (PII 경유)
+    │   │   ├── qwen.yaml             #   ├ 연구 qwen   gw 6016 → :5016 (PII 경유)
+    │   │   └── prd-pii-qwen.yaml     #   └ 운영 qwen   gw 6502 → :5502 (PII 경유)
+    │   ├── gateways/                 # 게이트웨이 yaml (host/port만 차이, 상세는 _SCHEMA.txt)
+    │   │   ├── _SCHEMA.txt            #   게이트웨이 키 레퍼런스
+    │   │   ├── 5501.yaml             #   외부 직접 (0.0.0.0, 비PII 운영 gemma)
+    │   │   └── 6015/6016/6501/6502.yaml  # 내부 전용 (외부 입구는 pii/ 프록시)
     │   ├── tests/                   # 테스트 코드/픽스처/결과 디렉토리
     │   │   ├── test_vllm_server.py  # 서버 헬스/추론 9 카테고리 QA
     │   │   ├── traffic_test_vllm.py # 보수적 트래픽/과부하 테스트
@@ -88,23 +91,22 @@ docker/
     │   ├── slm_research/             # SLM 비교 (Gemma, Qwen)
     │   └── bugfix/                   # 운영 중 발견 이슈 기록
     ├── pii/                          # PII/DLP 가드 운영 중 (외부 포트 인수 → 게이트웨이 포워딩, enforcement)
-    │   ├── start.sh                  # NER(GPU3)+프록시 기동 (up/down/status [5015|5501|all])
-    │   ├── proxy.py                  # in/out PII 검사 프록시 (외부 5015/5501 인수)
+    │   ├── start.sh                  # NER(GPU3)+프록시 기동 (up/down/status [5015|5016|5501|5502|all])
+    │   ├── proxy.py                  # in/out PII 검사 프록시 (외부 5015/5016/5501/5502 인수)
     │   ├── ner_server.py             # 한국어 NER 서버 (transformers, GPU)
     │   ├── hooks.py/config.py/audit.py  # 통합 검사·설정·감사로그(평문 미저장 HMAC)
     │   ├── detectors/                # structured(regex+체크섬) + ner_client(LB) + normalize(NFKC)
-    │   ├── configs/                  # proxy.yaml(5015)/proxy.5501.yaml(5501)/audit.salt(시크릿, git·S3 제외)
+    │   ├── configs/                  # proxy.{yaml(5015)/5501/5016/5502/e2e}.yaml + _SCHEMA.txt + audit.salt(시크릿, git·S3 제외)
     │   └── tests/                    # 단위 + e2e + eval_pii(합성 정확성) + recall_gate(실데이터 recall 게이트, data/ 라벨 JSONL)
     └── stt/                          # STT 운영 중 (vllm 페어 패턴 동일, launcher/gateway 본체 재사용)
         ├── README.md
         ├── MODEL_STUDY.md            # 후보 모델 비교 / 시나리오
         ├── start.sh                  # vllm/start.sh 패턴 풀 도입 (../vllm 코드 재사용)
-        ├── instances/
-        │   ├── voxtral.yaml          # gateway_port: 5017 → :5017 페어 (GPU 2, 내부 :7172)
-        │   ├── qwen3_asr.yaml        # 비교용 PoC (gateway_port 미지정, :7170 직접)
-        │   └── whisper_v3.yaml       # 비교용 PoC (gateway_port 미지정, :7171 직접)
-        └── gateways/
-            └── 5017.yaml             # discover_from: ../instances, warmup 비활성화, audio timeout 600s
+        ├── instances/                # + _SCHEMA.txt (키 레퍼런스 + 모델별 표)
+        │   ├── voxtral.yaml          # gw 5018 (realtime 분리, GPU 2, 내부 :7172)
+        │   ├── qwen3_asr.yaml        # gw 5017 (GPU 0, 내부 :7170)
+        │   └── whisper_v3.yaml       # gw 5017 (GPU 2, 내부 :7171)
+        └── gateways/                 # 5017.yaml + 5018.yaml + _SCHEMA.txt (warmup off, audio timeout 600s)
 ```
 
 ---

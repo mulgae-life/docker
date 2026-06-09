@@ -4,7 +4,7 @@
 #   speculative_config, mm_processor_kwargs, tool_call_parser, reasoning_parser.
 
 # 게이트웨이 매칭 키 (vLLM 비전달, discover_from이 이 값으로 backends 등록)
-gateway_port: 5501
+gateway_port: 6501
 
 # 모델
 model: google/gemma-4-31B-it     # HF 모델 ID (런처가 download_dir과 조합해 경로 해석)
@@ -15,7 +15,7 @@ dtype: auto                      # 활성화 dtype (auto=config.json 따름)
 # trust_remote_code: true        # 네이티브 미지원 모델만
 
 # 서버
-host: 0.0.0.0                    # 바인딩 (외부 0.0.0.0 / 내부 127.0.0.1 — PII 뒤면 127.0.0.1)
+host: 127.0.0.1                  # 바인딩 (외부 0.0.0.0 / 내부 127.0.0.1 — PII 뒤면 127.0.0.1)
 port: 7070                       # vLLM 포트 hint (사용 중이면 launcher가 +1 자동 회피)
 uvicorn_log_level: info          # HTTP 서버 로그 레벨
 

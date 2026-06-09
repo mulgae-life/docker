@@ -1,58 +1,47 @@
-# ═══════════════════════════════════════════════════════
-# PII 프록시 설정 (연구계)
-# ═══════════════════════════════════════════════════════
-# 외부에 열린 단일 포트(5015)를 이 프록시가 인수하고, 기존 게이트웨이는
-# 내부 포트(6015)로 한 칸 물러난다(enforcement). 운영계는 5015→5501, 6015→6501.
+# PII Proxy — 프록시 1대. 외부 단일 포트를 인수하고 게이트웨이를 내부로 물린다(enforcement). 키 상세: ./_SCHEMA.txt
+# 복붙 후 값만 바꾼다: port, upstream_url, ner_require_all_backends(연구 false/운영 true), audit_log_path.
 
-# ── 프록시 바인딩 (외부 유일 입구) ──
-host: "0.0.0.0"
-port: 5015
+# 프록시 바인딩 (외부 유일 입구)
+host: "0.0.0.0"                          # 외부 노출 (유일 입구)
+port: 5015                               # 외부 진입 포트
 
-# ── upstream 게이트웨이 (내부 전용) ──
-# 게이트웨이는 gateways/6015.yaml(gateway.port 6015, host 127.0.0.1)로 이미 내부 이동 완료.
-upstream_url: "http://127.0.0.1:6015"
+# upstream 게이트웨이 (내부 전용 127.0.0.1)
+upstream_url: "http://127.0.0.1:6015"    # 검사 후 포워딩할 내부 게이트웨이
 
-# ── NER LB 풀 (GPU3, multi-replica/multi-model union) ──
+# NER LB 풀 (GPU3, multi-model union — 확장은 같은 model_tag 포트 추가)
 ner_backends:
-  - { host: "127.0.0.1", port: 8911, model_tag: "vmaca123" }   # 3축(이름/주소/조직), 통짜주소
+  - { host: "127.0.0.1", port: 8911, model_tag: "vmaca123" }   # 3축(이름/주소/조직)
   - { host: "127.0.0.1", port: 8901, model_tag: "townboy" }    # 광범위(정형 안전망)
-  # 처리량 확장 시 같은 model_tag 로 포트만 늘려 replica 추가(least-conn 자동 분산)
 
-# ── 검사 토글 ──
+# 검사 토글 (in=프롬프트, out=응답)
 in_enabled: true
 out_enabled: true
 
-# ── 장애 모드: closed(차단, 컴플라이언스 기본) / open(통과, 명시 opt-in) ──
-# open이라도 구조화 regex(주민/카드)는 항상 적용된다.
+# 장애 모드: closed(차단, 컴플라이언스) / open(통과) — open도 구조화 regex는 항상 적용
 fail_mode: "closed"
 
-# ── 전면 우회 허용: true면 헤더 X-PII-Mode:bypass 로 PII 검사 통째 생략 가능 ──
-# true: 헤더 X-PII-Mode:bypass 하나로 PII 없이 SLM만 호출 가능(토큰 미설정). 우회는 감사 기록됨.
+# 전면 우회: true면 헤더 X-PII-Mode:bypass로 검사 생략 (토큰 미설정 시 헤더만으로 우회)
 allow_bypass: true
 
-# ── NER 부분 장애: true면 모델 그룹 하나라도 실패 시 fail-closed(커버리지 손실 방지) ──
-# false(기본)는 살아있는 모델 union으로 계속하되 부분 실패를 로그로 남긴다.
+# NER 부분 장애 시 fail-closed: 연구 false / 운영 true (컴플라이언스, 커버리지 손실 방지)
 ner_require_all_backends: false
 
-# ── 스트리밍 out: post(완결 후 1회 검사, 구조 보존) / off(패스스루) ──
+# 스트리밍 out: post(완결 후 1회 검사, 구조 보존) / off(패스스루)
 stream_mode: "post"
 
-# ── 정책: 차단 대상(고유식별정보). 그 외는 마스킹 ──
+# 차단 타입 (그 외는 마스킹)
 block_types: ["rrn", "card"]
 
-# ── 이미지 정책: allow(이미지 허용, 텍스트만 검사) / block(이미지 포함 요청 422 차단) ──
-# 이미지 바이트 속 PII는 검사 불가 → 민감 배포는 block 고려. 연구계는 기본 allow.
+# 이미지 정책: allow(텍스트만 검사) / block(이미지 포함 요청 422 차단)
 image_policy: "allow"
 
-# ── 서비스별 마스킹 토글 화이트리스트 ──
-# 요청 헤더 X-PII-Ignore-Types로 서비스가 '끌 수 있는' 타입(예: 문서생성의 조직명).
-# 핵심 PII는 절대 넣지 말 것 — 헤더로도 못 끄게 통제하는 안전장치다.
+# 서비스별 마스킹 토글 화이트리스트 (헤더 X-PII-Ignore-Types — 핵심 PII는 불가)
 ignorable_types: ["org"]
 
-# ── 타임아웃(초) ──
-ner_connect_timeout: 1.0
-ner_read_timeout: 3.0
-upstream_timeout: 300.0
+# 타임아웃(초)
+ner_connect_timeout: 1.0                 # NER 연결
+ner_read_timeout: 3.0                    # NER 읽기
+upstream_timeout: 300.0                  # 게이트웨이 추론
 
-# ── 감사로그 (평문 미저장, salt는 env PII_AUDIT_SALT) ──
+# 감사로그 (평문 미저장, salt는 env PII_AUDIT_SALT). 포트별 파일 분리.
 audit_log_path: "logs/pii_audit.log"

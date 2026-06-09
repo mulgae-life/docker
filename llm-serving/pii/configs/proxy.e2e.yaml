@@ -1,21 +1,36 @@
-# PII 프록시 — Full E2E 검증용 (임시, 운영 무영향)
-# 임시 포트 15015에 검증 프록시를 띄우고 upstream은 내부 게이트웨이(:6015)를 직접 가리킨다.
-# 배포 완료 후 :5015는 운영 프록시가 점유하므로, upstream을 6015로 두어 이중 프록시
-# (15015→5015→6015)를 피한다. (배포 전 상태라면 upstream을 당시 게이트웨이 포트로 조정)
-host: "127.0.0.1"
-port: 15015
-upstream_url: "http://127.0.0.1:6015"   # 내부 게이트웨이 직접 (이중 프록시 회피)
+# PII Proxy — Full E2E 검증용 (임시 포트 15015, 운영 무영향). 키 상세: ./_SCHEMA.txt
+# upstream을 내부 게이트웨이(:6015)로 직접 가리켜 이중 프록시(15015→5015→6015)를 피한다.
+# (배포 전이면 upstream을 당시 게이트웨이 포트로 조정.) 미설정 키는 PiiConfig 기본값으로 테스트.
 
+# 프록시 바인딩 (로컬 전용 — 테스트)
+host: "127.0.0.1"                        # 로컬 전용
+port: 15015                              # 임시 검증 포트
+
+# upstream 게이트웨이 (내부 직접 — 이중 프록시 회피)
+upstream_url: "http://127.0.0.1:6015"
+
+# NER LB 풀 (GPU3, multi-model union)
 ner_backends:
-  - { host: "127.0.0.1", port: 8911, model_tag: "vmaca123" }
-  - { host: "127.0.0.1", port: 8901, model_tag: "townboy" }
+  - { host: "127.0.0.1", port: 8911, model_tag: "vmaca123" }   # 3축(이름/주소/조직)
+  - { host: "127.0.0.1", port: 8901, model_tag: "townboy" }    # 광범위(정형 안전망)
 
+# 검사 토글 (in=프롬프트, out=응답)
 in_enabled: true
 out_enabled: true
+
+# 장애 모드: closed(차단, 컴플라이언스) / open(통과)
 fail_mode: "closed"
+
+# 스트리밍 out: post(완결 후 1회 검사, 구조 보존) / off(패스스루)
 stream_mode: "post"
+
+# 차단 타입 (그 외는 마스킹)
 block_types: ["rrn", "card"]
-ner_connect_timeout: 1.0
-ner_read_timeout: 3.0
-upstream_timeout: 300.0
+
+# 타임아웃(초)
+ner_connect_timeout: 1.0                 # NER 연결
+ner_read_timeout: 3.0                    # NER 읽기
+upstream_timeout: 300.0                  # 게이트웨이 추론
+
+# 감사로그 (평문 미저장, salt는 env PII_AUDIT_SALT)
 audit_log_path: "logs/pii_audit_e2e.log"
