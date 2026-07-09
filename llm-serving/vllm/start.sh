@@ -579,14 +579,52 @@ cmd_restart() {
     cmd_up "$target"
 }
 
+cmd_help() {
+    # 등록된 인스턴스/게이트웨이 이름을 동적으로 읽어 표시 (wrapper인 STT에서도 자기 목록으로 나옴).
+    local inst gw
+    inst=$(list_instance_yamls | xargs -n1 basename 2>/dev/null | sed 's/\.yaml$//' | tr '\n' ' ')
+    gw=$(list_gateway_yamls | xargs -n1 basename 2>/dev/null | sed 's/\.yaml$//' | tr '\n' ' ')
+    local first_inst="${inst%% *}" first_gw="${gw%% *}"   # 예시용 첫 항목 (파이프 없이 첫 단어)
+
+    cat <<EOF
+$CLUSTER_LABEL 클러스터 제어 스크립트
+
+사용법: ./start.sh <명령> [name|all] [옵션]
+
+명령:
+  up [name|all]        기동 (= start). 무인자는 [y/N]로 전체 적용 확인
+  down [name|all]      정지 (= stop). 무인자는 [y/N]로 전체 적용 확인
+  restart [name|all]   재기동 (down→up)
+  status               전체 상태 (인스턴스 + 게이트웨이)
+  logs [name|all]      로그 tail -F (기본 -n 50, --lines N 으로 오버라이드)
+  help                 이 도움말
+
+[name] 자리:
+  all        전체 인스턴스 + 게이트웨이
+  <이름>     instances/<이름>.yaml 단독 (현재: ${inst:-없음})
+  <포트>     gateways/<포트>.yaml 단독 (현재: ${gw:-없음})
+
+예시:
+  ./start.sh up all                # 전체 기동
+  ./start.sh up ${first_inst:-<이름>}   # 인스턴스 단독 (게이트웨이 미터치)
+  ./start.sh up ${first_gw:-<포트>}   # 게이트웨이 단독 (인스턴스 미터치)
+  ./start.sh logs --lines 200      # 초기 200줄부터 전체 로그 추적
+  ./start.sh status                # 상태 확인
+
+안전 정책: 무인자 up/down/restart는 [y/N] 기본 No (사고 방지).
+           비대화 환경(파이프/cron)은 'all' 또는 이름 명시 필수.
+EOF
+}
+
 # source 시에는 함수만 정의되도록 main 가드. 직접 실행(./start.sh, bash start.sh)일 때만 case 분기 실행.
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    case "${1:-up}" in
-        up|start)     shift || true; cmd_up "${1:-}" ;;
-        down|stop)    shift || true; cmd_down "${1:-}" ;;
-        status)       cmd_status ;;
-        restart)      shift || true; cmd_restart "${1:-}" ;;
-        logs)         shift || true; cmd_logs "$@" ;;
-        *)            echo "사용법: $0 {up [name|all] | down|stop [name|all] | restart [name|all] | status | logs [name|all] [--lines N]}"; exit 1 ;;
+    case "${1:-help}" in
+        up|start)       shift || true; cmd_up "${1:-}" ;;
+        down|stop)      shift || true; cmd_down "${1:-}" ;;
+        status)         cmd_status ;;
+        restart)        shift || true; cmd_restart "${1:-}" ;;
+        logs)           shift || true; cmd_logs "$@" ;;
+        help|-h|--help) cmd_help ;;
+        *)              echo "ERROR: 알 수 없는 명령 '$1'" >&2; echo "" >&2; cmd_help >&2; exit 1 ;;
     esac
 fi

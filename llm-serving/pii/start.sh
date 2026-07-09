@@ -169,9 +169,39 @@ cmd_status() {
     done
 }
 
-case "${1:-}" in
-    up)     shift || true; cmd_up "${1:-}" ;;
-    down)   shift || true; cmd_down "${1:-}" ;;
-    status) cmd_status ;;
-    *)      echo "사용법: $0 {up [port|all] | down [port|all] | status}  (port: ${!PROXY_CONFIGS[*]})"; exit 1 ;;
+cmd_help() {
+    cat <<EOF
+PII/DLP 가드 제어 스크립트 — NER 서버(GPU$GPU) + 포트별 프록시
+
+사용법: ./start.sh <명령> [port|all]
+
+명령:
+  up [port|all]     NER + 프록시 기동 (무인자 up은 5015=연구계 gemma)
+  down [port|all]   프록시 정지 (단일 포트는 NER 유지, all이면 NER까지 전부)
+  status            NER·프록시 health 확인
+  help              이 도움말
+
+port:
+  5015   연구계 gemma
+  5016   연구계 qwen
+  5501   운영계 gemma
+  5502   운영계 qwen
+  all    등록된 프록시 전부 (단일 호스트 공존 시. 격리 운영은 각 서버서 자기 포트만)
+
+예시:
+  ./start.sh up          # NER + 연구계 gemma(5015)
+  ./start.sh up 5501     # NER + 운영계 gemma
+  ./start.sh down 5015   # 프록시만 정지 (NER 유지)
+  ./start.sh down all    # 프록시 + NER 전부
+
+토폴로지: 프록시(외부 5015·5016/5501·5502) → 게이트웨이(내부 6015·6016/6501·6502) → vLLM.
+EOF
+}
+
+case "${1:-help}" in
+    up)             shift || true; cmd_up "${1:-}" ;;
+    down)           shift || true; cmd_down "${1:-}" ;;
+    status)         cmd_status ;;
+    help|-h|--help) cmd_help ;;
+    *)              echo "ERROR: 알 수 없는 명령 '$1'" >&2; echo "" >&2; cmd_help >&2; exit 1 ;;
 esac
