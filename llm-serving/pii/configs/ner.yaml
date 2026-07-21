@@ -1,0 +1,11 @@
+# PII NER 풀 — start.sh가 읽어 NER 서버를 기동한다. 키 상세: ./_SCHEMA.txt
+# 프록시가 어느 NER을 참조할지는 proxy*.yaml의 ner_backends (port·tag 일치 필수).
+
+gpu: 3                        # NER 공용 GPU — CUDA_VISIBLE_DEVICES (env PII_GPU가 우선)
+models_dir: /models/PII       # 모델 루트 (env PII_MODELS_DIR가 우선)
+max_concurrency: 2            # 서버당 동시 GPU 추론 상한 (초과분 대기열, 스케일아웃은 backends 복제)
+
+# 백엔드: tag(프록시 ner_backends의 model_tag와 일치) / port / path(models_dir 상대)
+backends:
+  - { tag: vmaca123, port: 8911, path: vmaca123/korean-pii-ner-v3 }   # 3축(이름/주소/조직)
+  - { tag: townboy,  port: 8901, path: townboy/kpfbert-kdpii }        # 광범위(정형 안전망)

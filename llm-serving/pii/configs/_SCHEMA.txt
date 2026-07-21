@@ -98,3 +98,26 @@ model_tag로 포트만 추가.
       평문 미저장(salt 지문). 포트별 파일 분리로 운영/연구 로그 구분.
   audit_salt       기본 env PII_AUDIT_SALT
       지문 salt. env 주입(하드코딩 금지). 미설정 시 지문 NOSALT.
+
+
+====================================================================
+ NER 풀 config (ner.yaml) 키 레퍼런스
+====================================================================
+
+configs/ner.yaml 1개 = 이 서버의 NER 풀 정의. start.sh가 읽어 NER 서버를
+기동한다(프록시 config와 별개 — 프록시가 어느 NER을 참조할지는 각
+proxy*.yaml의 ner_backends이며, port·tag가 여기와 일치해야 한다).
+
+  gpu           기본 3            NER 공용 GPU (CUDA_VISIBLE_DEVICES).
+                                  env PII_GPU가 yaml보다 우선(일회성 오버라이드).
+  models_dir    기본 /models/PII  모델 루트. env PII_MODELS_DIR가 우선.
+  backends      리스트            NER 서버 1대 = 1항목. 같은 tag를 여러 port로
+                                  복제하면 프록시 NerPool이 least-conn 분산(LB).
+    .tag                          모델 태그. proxy*.yaml ner_backends의
+                                  model_tag와 일치 필수.
+    .port                         NER 서버 포트 (127.0.0.1 바인딩).
+    .path                         models_dir 상대 모델 경로.
+  max_concurrency  기본 2         서버당 동시 GPU 추론 상한(세마포어).
+                                  초과 요청은 대기열(비블로킹 — /health는 항상
+                                  즉시 응답). 처리량 부족 시 이 값보다 backends
+                                  replica 복제(LB 분산)가 우선 수단.

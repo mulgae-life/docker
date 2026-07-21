@@ -80,6 +80,7 @@ last-updated: 2026-06-10
 | EC2에서 코드 동기화 | `aws s3 sync s3://hgi-ai-res/hjjo/aws/ ~/aws/` |
 | EC2 호스트 셋업 | `cd ~/aws && sudo ./setup-ec2.sh` |
 | vLLM 서버 기동 | `cd llm-serving/vllm && bash start.sh` |
+| 모델 최신 동기화 (증분) | `cd llm-serving/vllm && ./start.sh download <인스턴스명>` — 폐쇄망은 네트워크 개방 시점에 |
 
 ---
 

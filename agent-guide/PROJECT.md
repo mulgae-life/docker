@@ -1,7 +1,7 @@
 ---
 name: project
 description: docker 레포 핵심 요약. 서버·운영 구성 자산 모음으로 디렉토리 분리 원칙과 기술 스택 파악용.
-last-updated: 2026-05-04
+last-updated: 2026-07-21 (gemma-26b·5015 직접 게이트웨이·download 명령·pii ner.yaml 반영)
 ---
 
 # 프로젝트 개요
@@ -68,18 +68,20 @@ docker/
     ├── STT_API_GUIDE.md              # STT 사용자용 API 가이드 (transcription·realtime·통합)
     ├── STT_OPS_GUIDE.md              # STT 운영자용 가이드 (시스템 구조·메모리 핏·의존성)
     ├── vllm/                         # LLM 운영 중 (격리 페어 + 자동 디스커버리)
-    │   ├── start.sh                  # 빠른 기동 (instances/+gateways/ 자동 순회)
-    │   ├── vllm_server_launcher.py   # 단일 vLLM 기동 + 포트 자동 회피 + yaml-relative runtime
+    │   ├── start.sh                  # 빠른 기동 (instances/+gateways/ 자동 순회) + download 모델 동기화
+    │   ├── vllm_server_launcher.py   # 단일 vLLM 기동 + 포트 자동 회피 + 모델 증분 동기화(--download-only) + ${model} 치환
     │   ├── vllm_gateway.py           # OpenAI 호환 게이트웨이 (chat + audio + realtime)
     │   ├── instances/                # 인스턴스 yaml (키당 제목 한줄 슬림, 상세는 _SCHEMA.txt)
     │   │   ├── _SCHEMA.txt            #   인스턴스 키 레퍼런스 + 모델별 노하우(MTP·soft_tokens·GPU표)
-    │   │   ├── gemma.yaml            #   ├ 연구 gemma  gw 6015 → 외부 :5015 (PII 경유)
+    │   │   ├── gemma.yaml            #   ├ 연구 gemma 31B   gw 6015 → 외부 :5015 (PII 경유)
+    │   │   ├── gemma-26b.yaml        #   ├ 연구 gemma 26B-A4B gw 5015 → :5015 직접 (비PII, 31B와 GPU0·1 택일)
     │   │   ├── prd-gemma.yaml        #   ├ 운영 gemma  gw 5501 → :5501 직접 (PII 미경유)
     │   │   ├── prd-pii-gemma.yaml    #   ├ 운영 gemma  gw 6501 → :5501 (PII 경유)
     │   │   ├── qwen.yaml             #   ├ 연구 qwen   gw 6016 → :5016 (PII 경유)
     │   │   └── prd-pii-qwen.yaml     #   └ 운영 qwen   gw 6502 → :5502 (PII 경유)
     │   ├── gateways/                 # 게이트웨이 yaml (host/port만 차이, 상세는 _SCHEMA.txt)
     │   │   ├── _SCHEMA.txt            #   게이트웨이 키 레퍼런스
+    │   │   ├── 5015.yaml             #   외부 직접 (0.0.0.0, 비PII 연구 gemma-26b)
     │   │   ├── 5501.yaml             #   외부 직접 (0.0.0.0, 비PII 운영 gemma)
     │   │   └── 6015/6016/6501/6502.yaml  # 내부 전용 (외부 입구는 pii/ 프록시)
     │   ├── tests/                   # 테스트 코드/픽스처/결과 디렉토리
@@ -96,7 +98,7 @@ docker/
     │   ├── ner_server.py             # 한국어 NER 서버 (transformers, GPU)
     │   ├── hooks.py/config.py/audit.py  # 통합 검사·설정·감사로그(평문 미저장 HMAC)
     │   ├── detectors/                # structured(regex+체크섬) + ner_client(LB) + normalize(NFKC)
-    │   ├── configs/                  # proxy.{yaml(5015)/5501/5016/5502/e2e}.yaml + _SCHEMA.txt + audit.salt(시크릿, git·S3 제외)
+    │   ├── configs/                  # ner.yaml(NER 풀: gpu/동시성/백엔드) + proxy.{yaml(5015)/5501/5016/5502/e2e}.yaml + _SCHEMA.txt + audit.salt(시크릿, git·S3 제외)
     │   └── tests/                    # 단위 + e2e + eval_pii(합성 정확성) + recall_gate(실데이터 recall 게이트, data/ 라벨 JSONL)
     └── stt/                          # STT 운영 중 (vllm 페어 패턴 동일, launcher/gateway 본체 재사용)
         ├── README.md
@@ -138,13 +140,13 @@ docker/
 | `aws/user.sh` | 사용자별 독립 컨테이너 + 포트 자동 할당(`up`/`down`/`list`/`rebuild`) |
 | `aws/Dockerfile.llm` | vLLM 베이스 + SSH. dev/prd 모드 분기 |
 | `aws/docker-compose.yml` | 메인 컨테이너 정의 (`.env`로 GPU/메모리/포트 제어) |
-| `llm-serving/vllm/vllm_server_launcher.py` | 다중 vLLM 서버 기동 (GPU 분할, yaml-relative runtime json) — LLM/STT 공용 |
+| `llm-serving/vllm/vllm_server_launcher.py` | 다중 vLLM 서버 기동 (GPU 분할, yaml-relative runtime json) — LLM/STT 공용. `--download-only`로 모델+drafter 증분 동기화(서빙 경로는 네트워크 미접근), `speculative_config.model`의 `${model}` 치환 |
 | `llm-serving/vllm/vllm_gateway.py` | OpenAI 호환 게이트웨이 (chat/completions + audio/transcriptions + realtime WebSocket) — LLM/STT 공용 |
 | `llm-serving/vllm/tests/test_vllm_server.py` | 서버 헬스/추론 9 카테고리 QA |
 | `llm-serving/vllm/tests/traffic_test_vllm.py` | 운영 서버 보호를 우선한 smoke/overload 트래픽 테스트 |
 | `llm-serving/vllm/tests/speed_test.py` | 게이트웨이 단위 속도 매트릭스 측정 (`--base-url` 단독, 모델명 자동 추출, results/speed_results.md 누적 append) |
 | `llm-serving/pii/proxy.py` | PII 가드 프록시 — 외부 5015/5501 인수, in(주민·카드 차단/이름·주소·전화 마스킹)·out 검사 후 게이트웨이 포워딩 |
-| `llm-serving/pii/start.sh` | NER(GPU3 공유)+프록시 기동, 다중 포트 (`up/down/status [5015\|5501\|all]`), salt 자동주입 |
+| `llm-serving/pii/start.sh` | NER+프록시 기동, 다중 포트 (`up/down/status [5015\|5501\|all]`), salt 자동주입. NER 풀 정의는 `configs/ner.yaml`(gpu/max_concurrency/backends, env `PII_GPU` 우선) |
 | `llm-serving/pii/tests/eval_pii.py` | PII 정확성 평가 (한국어 합성 케이스셋, 타입별 precision/recall + 과탐) |
 | `llm-serving/pii/tests/recall_gate.py` | 실데이터 recall 게이트 하버스 (라벨 JSONL span-겹침 매칭, person/address/org ≥0.95 미달 시 exit 1, 데이터 없으면 스킵) |
 | `llm-serving/VLLM_API_GUIDE.md` | vLLM 사용자용 API 가이드 (§1~§5: 호출·파라미터·`.env`) |
@@ -177,7 +179,8 @@ sudo ./user.sh up jin --password 1234 --gpus 0,1   # 추가 사용자
 
 # 3) vLLM 서빙 (LLM)
 cd llm-serving/vllm
-./start.sh up              # instances/+gateways/ 자동 순회 (포트 충돌 시 자동 회피)
+./start.sh download gemma-26b  # 모델+drafter 최신 동기화 (증분, 네트워크 개방 시점에)
+./start.sh up gemma-26b && ./start.sh up 5015   # 비PII 직접 모드 (:5015 = 26B)
 ./start.sh status          # 인스턴스/게이트웨이 상태 확인
 python tests/test_vllm_server.py # 추론/스트리밍/툴콜 QA
 python tests/speed_test.py --base-url http://localhost:5015  # 모델 간 속도 매트릭스 누적

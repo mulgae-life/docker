@@ -16,16 +16,36 @@
 # NER 서버는 token-classification(vLLM 비대상)이라 transformers로 GPU3에 서빙한다.
 # 연구계/운영계는 격리된 별도 서버다. 각 서버가 자기 localhost(8911/8901)에 NER을
 # 띄우고 자기 포트 프록시만 바라본다(연구↔운영 NER은 물리 분리, 공유 아님).
-# 모델은 /models/PII 에 위치. 프록시 설정은 configs/proxy.yaml(5015)·proxy.5016.yaml(5016)·proxy.5501.yaml(5501)·proxy.5502.yaml(5502).
+# NER 풀 설정(gpu/모델경로/백엔드)은 configs/ner.yaml — env PII_GPU/PII_MODELS_DIR로 일회성 오버라이드.
+# 프록시 설정은 configs/proxy.yaml(5015)·proxy.5016.yaml(5016)·proxy.5501.yaml(5501)·proxy.5502.yaml(5502).
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-MODELS="${PII_MODELS_DIR:-/models/PII}"
-GPU="${PII_GPU:-3}"
 LOG_DIR="$SCRIPT_DIR/logs"
 mkdir -p "$LOG_DIR"
+
+# ── NER 풀 설정 로드 (configs/ner.yaml) ───────────────
+# gpu/models_dir/backends를 yaml에서 읽는다. env PII_GPU/PII_MODELS_DIR가 yaml보다
+# 우선 (일회성 오버라이드: PII_GPU=2 ./start.sh up).
+NER_CONFIG="${PII_NER_CONFIG:-$SCRIPT_DIR/configs/ner.yaml}"
+if [ ! -f "$NER_CONFIG" ]; then
+    echo "ERROR: NER 설정 없음: $NER_CONFIG" >&2
+    exit 1
+fi
+eval "$(python3 - "$NER_CONFIG" <<'PYEOF'
+import shlex, sys, yaml
+d = yaml.safe_load(open(sys.argv[1])) or {}
+print(f"NER_YAML_GPU={shlex.quote(str(d.get('gpu', 3)))}")
+print(f"NER_YAML_MODELS={shlex.quote(str(d.get('models_dir', '/models/PII')))}")
+print(f"NER_YAML_CONC={shlex.quote(str(d.get('max_concurrency', 2)))}")
+rows = [f"{b['tag']}|{b['port']}|{b['path']}" for b in d.get('backends', [])]
+print("NER_BACKENDS_RAW=" + shlex.quote("\n".join(rows)))
+PYEOF
+)"
+GPU="${PII_GPU:-$NER_YAML_GPU}"
+MODELS="${PII_MODELS_DIR:-$NER_YAML_MODELS}"
 
 # 포트 → 프록시 설정 매핑 (외부 진입 포트 기준)
 declare -A PROXY_CONFIGS=(
@@ -35,11 +55,12 @@ declare -A PROXY_CONFIGS=(
     [5502]="$SCRIPT_DIR/configs/proxy.5502.yaml"     # 운영계 qwen
 )
 
-# 백엔드 정의: "tag|port|model_path"
-NER_BACKENDS=(
-    "vmaca123|8911|$MODELS/vmaca123/korean-pii-ner-v3"
-    "townboy|8901|$MODELS/townboy/kpfbert-kdpii"
-)
+# 백엔드 정의: "tag|port|model_path" (ner.yaml의 path는 models_dir 상대 → 절대경로 조립)
+NER_BACKENDS=()
+while IFS='|' read -r _tag _port _path; do
+    [ -z "$_tag" ] && continue
+    NER_BACKENDS+=("$_tag|$_port|$MODELS/$_path")
+done <<< "$NER_BACKENDS_RAW"
 
 # ── 감사로그 salt 주입 (평문 미저장 지문용) ───────────
 # 우선순위: env PII_AUDIT_SALT > configs/audit.salt 파일 > (없으면 자동 생성).
@@ -70,9 +91,10 @@ start_ner() {
             echo "[SKIP]  NER $tag (:$port) 이미 실행 중"
             continue
         fi
-        echo "[START] NER $tag (:$port, GPU$GPU) ← $path"
+        echo "[START] NER $tag (:$port, GPU$GPU, 동시 $NER_YAML_CONC) ← $path"
         CUDA_VISIBLE_DEVICES="$GPU" nohup python ner_server.py \
             --model-path "$path" --model-tag "$tag" --port "$port" --device cuda \
+            --max-concurrency "$NER_YAML_CONC" \
             > "$LOG_DIR/ner_${tag}.log" 2>&1 &
         echo "        PID $!, 로그: logs/ner_${tag}.log"
     done
@@ -195,6 +217,8 @@ port:
   ./start.sh down all    # 프록시 + NER 전부
 
 토폴로지: 프록시(외부 5015·5016/5501·5502) → 게이트웨이(내부 6015·6016/6501·6502) → vLLM.
+설정:     NER 풀(gpu/모델경로/백엔드) configs/ner.yaml · 프록시 configs/proxy*.yaml
+          일회성 오버라이드: PII_GPU=2 ./start.sh up 5015
 EOF
 }
 
