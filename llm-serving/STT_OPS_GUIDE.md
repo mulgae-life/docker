@@ -108,6 +108,7 @@ cd llm-serving/stt
 ./start.sh logs voxtral             # 인스턴스 단독 tail -F (logs/vllm_voxtral.log)
 ./start.sh logs 5017                # 게이트웨이 단독 tail -F (logs/gateway_5017.log)
 ./start.sh logs --lines 200         # 초기 라인 수 오버라이드 (-n N alias 가능)
+./start.sh download voxtral         # 모델 다운로드/최신 동기화 (서빙 미터치, §8 참조)
 ```
 
 `<name>`이 `instances/<name>.yaml`이면 인스턴스, `gateways/<name>.yaml`이면 게이트웨이로 자동 라우팅. `all` 명시는 확인 없이 전체 적용. 같은 이름이 양쪽에 있으면 즉시 에러.
@@ -144,6 +145,8 @@ cd llm-serving/stt
 ### 8.1 자동 다운로드
 
 `instances/<name>.yaml`의 `model: <HF ID>` + `download_dir: /models/STT` 조합으로 launcher가 첫 기동 시 `snapshot_download`로 다운로드. Voxtral은 Apache 2.0 → HF_TOKEN 불필요.
+
+이미 받은 모델을 HF 최신 리비전과 맞추려면 `./start.sh download <name>` (변경 파일만 증분 다운로드, 서빙 미터치 — vllm 본체의 `download` 명령이 wrapper로 그대로 동작). `up`은 로컬 모델이 있으면 네트워크를 보지 않는다.
 
 ```yaml
 model: mistralai/Voxtral-Mini-4B-Realtime-2602

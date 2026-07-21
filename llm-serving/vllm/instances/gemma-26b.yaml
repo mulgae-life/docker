@@ -7,7 +7,7 @@
 gateway_port: 6015
 
 # 모델
-model: google/gemma-4-31B-it     # HF 모델 ID (런처가 download_dir과 조합해 경로 해석)
+model: google/gemma-4-26B-A4B-it # HF 모델 ID (런처가 download_dir과 조합해 경로 해석)
 download_dir: /models/LLM        # 모델 로컬 저장 루트 ({download_dir}/{model})
 quantization: fp8                # 온더플라이 FP8 양자화 (사전 양자화 모델은 생략)
 dtype: auto                      # 활성화 dtype (auto=config.json 따름)
@@ -16,13 +16,13 @@ dtype: auto                      # 활성화 dtype (auto=config.json 따름)
 
 # 서버
 host: 0.0.0.0                    # 바인딩 (외부 0.0.0.0 / 내부 127.0.0.1 — PII 뒤면 127.0.0.1)
-port: 7070                       # vLLM 포트 hint (사용 중이면 launcher가 +1 자동 회피)
+port: 7071                       # vLLM 포트 hint (사용 중이면 launcher가 +1 자동 회피)
 uvicorn_log_level: info          # HTTP 서버 로그 레벨
 
 # GPU / 메모리
 gpus: [0, 1]                     # 사용 GPU 번호 목록
 tensor_parallel_size: 2          # 텐서 병렬 크기 (gpus 개수와 일치)
-gpu_memory_utilization: 0.95     # GPU 메모리 비율 (0.85 멀티모달~0.92 가중치 큼)
+gpu_memory_utilization: 0.9      # GPU 메모리 비율 (0.85 멀티모달~0.92 가중치 큼)
 
 # 추론
 max_model_len: 32768             # 컨텍스트 길이 (프롬프트+출력 합산)
@@ -41,8 +41,8 @@ language_model_only: false       # true면 멀티모달 비활성 (메모리 절
 
 # Speculative Decoding — 모델별 설정, 상세 ./_SCHEMA.txt
 speculative_config:
-  model: google/gemma-4-31B-it-assistant  # ⚠️ method 키 명시 금지 (drafter 자동감지, 명시 시 NotImplementedError)
-  num_speculative_tokens: 4               # 31B 권장 4–8
+  model: ${model}-assistant               # 본체 model 자동 추종 (런처 치환). ⚠️ method 키 명시 금지 (자동감지, 명시 시 NotImplementedError)
+  num_speculative_tokens: 4               # 26B-A4B 권장 4 (⚠️ MoE — 동시성 4 미만은 이득 제한)
 
 # 멀티모달
 mm_encoder_tp_mode: data         # vision encoder DP 처리 (Qwen3.5/3.6 레시피)

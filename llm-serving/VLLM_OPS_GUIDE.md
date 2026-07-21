@@ -140,6 +140,7 @@ cd /workspace/llm-serving/vllm
 ./start.sh logs              # 전체 인스턴스+게이트웨이 로그 tail -F (기본 -n 50)
 ./start.sh logs <name>       # 단일 대상 tail -F (인스턴스/게이트웨이 자동 라우팅)
 ./start.sh logs --lines 200  # 초기 라인 수 오버라이드 (-n N alias 가능)
+./start.sh download <name>   # 모델 다운로드/최신 동기화 (서빙 미터치, §8 참조)
 ```
 
 > ⚠️ **안전 정책**: 무인자 호출은 [y/N] 기본 No로 묻는다 (다른 모델/게이트웨이를 실수로 stop시키는 사고 방지). 자동화 스크립트/cron 등 비대화 환경에서는 prompt 띄울 곳이 없으므로 무인자 호출이 거부되며 `'all'` 또는 이름을 명시해야 한다.
@@ -312,18 +313,31 @@ bash start.sh down all                   # 프록시 전부 + NER
 
 ### 8.1 자동 다운로드 (기본)
 
-처음 기동할 때 로컬에 모델이 없으면 `vllm_server_launcher.py`가 `huggingface_hub.snapshot_download` API로 자동 다운로드합니다. 별도 명령이 필요 없습니다.
+처음 기동할 때 로컬에 모델이 없으면 `vllm_server_launcher.py`가 `huggingface_hub.snapshot_download` API로 자동 다운로드합니다. 별도 명령이 필요 없습니다. **로컬에 모델이 이미 있으면 `up`은 네트워크를 전혀 보지 않습니다** (폐쇄망 보장) — 최신 동기화는 §8.2의 `download` 명령으로만 일어납니다.
 
 > Qwen3.6 / Gemma 4 모두 Apache 2.0(또는 Gemma 라이선스)이라 **HF 토큰이 필요 없습니다**. Llama처럼 gated 모델은 `HF_TOKEN=hf_xxx`를 환경변수로 넘기세요.
 
-### 8.2 오프라인 이관용 사전 다운로드 (폐쇄망 운영)
+### 8.2 다운로드/최신 동기화 — `./start.sh download`
 
 ```bash
 cd /workspace/llm-serving/vllm
 
-# 1) 인스턴스 yaml의 model / download_dir 사용
+./start.sh download <name>   # 인스턴스 1개 (본체 + drafter 함께)
+./start.sh download all      # 전체 인스턴스
+```
+
+- 로컬에 모델이 **없으면** 전체 다운로드, **있으면** HF 최신 리비전과 **증분 동기화** — 변경 파일만 받습니다(가중치 무변경 시 chat_template 등 소형 파일만, 수 초).
+- `speculative_config`의 drafter(`${model}-assistant` 치환 포함)도 같은 호출에서 함께 처리됩니다.
+- 서빙 프로세스는 건드리지 않습니다. 실행 중인 서버에 반영하려면 `./start.sh restart <name>`.
+
+**폐쇄망 운영 절차**: 네트워크 일시 개방 → `./start.sh download <name>` → 네트워크 차단 → `./start.sh up <name>`. `up`은 네트워크 미접근이므로 차단 후에도 정상 기동합니다. 네트워크 개방이 불가한 환경은 외부망 PC에서 받아 S3 경유로 모델 디렉토리를 이관합니다.
+
+<details>
+<summary>launcher 직접 호출 (start.sh 없이)</summary>
+
+```bash
+# 1) 인스턴스 yaml의 model / download_dir 사용 (download 명령과 동일 경로)
 python vllm_server_launcher.py -c instances/gemma.yaml --download-only
-python vllm_server_launcher.py -c instances/qwen.yaml  --download-only
 
 # 2) Gated 모델
 HF_TOKEN=hf_xxx python vllm_server_launcher.py -c instances/<name>.yaml --download-only
@@ -332,16 +346,18 @@ HF_TOKEN=hf_xxx python vllm_server_launcher.py -c instances/<name>.yaml --downlo
 python vllm_server_launcher.py -c instances/qwen.yaml --download-only -m Qwen/Qwen3.6-27B-FP8
 ```
 
-> `--download-only`는 내부적으로 `download_model()`을 호출하므로 **실제 서빙과 동일한 경로 규칙**을 씁니다. 안전한 표준 방식입니다.
+> `--download-only`는 내부적으로 `download_model()`을 호출하므로 **실제 서빙과 동일한 경로 규칙**을 씁니다. `./start.sh download`는 이 호출의 wrapper입니다.
+
+</details>
 
 ### 8.3 운영 규칙
 
-- 네트워크가 되는 환경에서 `--download-only`로 먼저 받는다.
-- 폐쇄망으로 모델 디렉토리를 이관한다.
+- 네트워크가 되는 환경(또는 일시 개방 시점)에서 `./start.sh download`로 먼저 받는다.
 - 실제 서빙은 항상 `HF_HUB_OFFLINE=1` + `TRANSFORMERS_OFFLINE=1` (런처·start.sh는 자동 적용).
 - 다운로드 경로는 반드시 `{download_dir}/{HF repo_id}` 레이아웃을 지킬 것. 예:
   - config: `model: Qwen/Qwen3.6-27B-FP8`, `download_dir: /models/LLM`
   - 실제 경로: `/models/LLM/Qwen/Qwen3.6-27B-FP8`
+- 모델(특히 chat template) 갱신 후에는 `tests/test_vllm_server.py`로 툴콜·reasoning 카테고리 회귀 확인.
 
 ### 8.4 다운로드 확인
 

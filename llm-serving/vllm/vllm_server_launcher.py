@@ -14,6 +14,7 @@ start.sh에서 호출되며, 직접 실행도 가능.
     ./start.sh up all                   # 전체 인스턴스 + 게이트웨이 기동 (확인 없이)
     ./start.sh up                       # [y/N] 전체 적용 confirm 프롬프트
     ./start.sh up gemma                 # 단일 인스턴스 (instances/gemma.yaml)
+    ./start.sh download gemma           # 모델 다운로드/최신 동기화 (--download-only wrapper)
 
     # 직접 실행
     python vllm_server_launcher.py -c instances/gemma.yaml
@@ -448,9 +449,9 @@ def main():
     # ── 모델 경로 해석 ──
     # --download-only일 때만 sync=True: 로컬이 있어도 HF 최신과 증분 동기화.
     # 서빙 경로(up)는 sync=False — 로컬 파일만 사용, 네트워크 미접근 (폐쇄망 보장).
-    model = args.model or config.get("model", "")
+    raw_model = args.model or config.get("model", "")  # 치환용 원본 ID (경로 해석 전)
     download_dir = config.get("download_dir", "")
-    model = _resolve_model_path(model, download_dir, kind="모델", sync=args.download_only)
+    model = _resolve_model_path(raw_model, download_dir, kind="모델", sync=args.download_only)
 
     # ── speculative_config.model 경로 해석 (drafter 자동 다운로드) ──
     # external drafter 기반 MTP(예: Gemma 4 *-it-assistant) 사용 시, dict 안의
@@ -458,10 +459,14 @@ def main():
     # 절대경로로 변환되어 vLLM에 전달되므로 자식 프로세스의 HF_HUB_OFFLINE=1과
     # 무관하게 로컬에서 로드된다.
     # native MTP(method 키만 있는 Qwen 3.6 등)는 model 키가 없어 이 블록을 건너뛴다.
+    # ${model} 치환: drafter ID를 본체 모델명에서 유도 (예: "${model}-assistant").
+    # 본체 model만 바꾸면 drafter가 자동 추종 — cp 후 짝 어긋남(31B 본체 + 26B drafter 등) 차단.
+    # 유도 규칙은 yaml에 명시적으로 보이게 하고, 런처는 문자열 치환만 담당 (벤더 규칙 비내장).
     spec_cfg = config.get("speculative_config")
     if isinstance(spec_cfg, dict) and spec_cfg.get("model"):
         spec_cfg["model"] = _resolve_model_path(
-            spec_cfg["model"], download_dir, kind="drafter", sync=args.download_only
+            spec_cfg["model"].replace("${model}", raw_model),
+            download_dir, kind="drafter", sync=args.download_only
         )
 
     if args.download_only:

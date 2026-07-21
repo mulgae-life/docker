@@ -41,7 +41,7 @@ language_model_only: false       # true면 멀티모달 비활성 (메모리 절
 
 # Speculative Decoding — 모델별 설정, 상세 ./_SCHEMA.txt
 speculative_config:
-  model: google/gemma-4-31B-it-assistant  # ⚠️ method 키 명시 금지 (drafter 자동감지, 명시 시 NotImplementedError)
+  model: ${model}-assistant               # 본체 model 자동 추종 (런처 치환). ⚠️ method 키 명시 금지 (자동감지, 명시 시 NotImplementedError)
   num_speculative_tokens: 4               # 31B 권장 4–8
 
 # 멀티모달
