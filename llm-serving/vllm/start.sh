@@ -24,6 +24,8 @@
 #   ./start.sh logs              # 전체 인스턴스+게이트웨이 로그 tail -F (기본 -n 50)
 #   ./start.sh logs <name>       # 단일 대상 tail -F (instances/<name>.yaml 또는 gateways/<name>.yaml)
 #   ./start.sh logs --lines N    # 초기 라인 수 오버라이드 (예: --lines 200)
+#   ./start.sh download <name>   # 모델 다운로드/최신 동기화 (서빙 미터치, 변경 파일만 증분)
+#   ./start.sh download all      # 전체 인스턴스 모델 동기화 — 폐쇄망: 네트워크 개방 시점에 실행
 #
 # 안전 정책: 무인자 호출은 [y/N] 기본 No로 묻는다 (사고 방지).
 # 비대화 환경(파이프/cron)에서는 'all' 또는 이름 명시 필수 (prompt 띄울 곳이 없으므로 거부).
@@ -568,6 +570,63 @@ cmd_logs() {
     esac
 }
 
+cmd_download() {
+    # 모델 다운로드/최신 동기화 — 서빙 프로세스 미터치. 대상은 인스턴스만(게이트웨이는 모델 없음).
+    # 로컬 모델이 이미 있으면 launcher(--download-only)가 HF 최신 리비전과 증분 동기화
+    # (변경 파일만 다운로드 — 가중치 무변경 시 chat_template 등 소형 파일만 받음).
+    # 폐쇄망 절차: 네트워크 개방 → download → 차단 → up (up은 네트워크 미접근).
+    local target="${1:-}"
+    if [ -z "$target" ]; then
+        if [ ! -t 0 ]; then
+            echo "ERROR: 대상 미지정. 비대화 환경에서는 './start.sh download all' 또는 이름 명시 필요." >&2
+            exit 1
+        fi
+        local ans=""
+        read -r -p "전체 인스턴스 모델을 다운로드/동기화 하시겠습니까? [y/N]: " ans
+        if [[ ! "$ans" =~ ^[Yy]$ ]]; then
+            echo "취소됨." >&2
+            exit 0
+        fi
+        target="all"
+    fi
+
+    local kind
+    kind=$(detect_target_kind "$target") || exit 1
+    if [ "$kind" = "gateway" ]; then
+        echo "ERROR: '$target'은 게이트웨이 — 모델이 없어 download 대상이 아닙니다. 인스턴스 이름을 지정하세요." >&2
+        exit 1
+    fi
+
+    local yamls=()
+    if [ "$kind" = "instance" ]; then
+        yamls=("$INSTANCES_DIR/${target}.yaml")
+    else
+        while IFS= read -r p; do
+            [ -n "$p" ] && yamls+=("$p")
+        done < <(list_instance_yamls)
+    fi
+    [ ${#yamls[@]} -eq 0 ] && { echo "ERROR: 대상 없음 (instances/에 yaml 없음)" >&2; exit 1; }
+
+    echo "═══ $CLUSTER_LABEL 모델 다운로드/동기화 (${#yamls[@]}개 인스턴스, 서빙 미터치) ═══"
+    local fail=0 yaml_path name
+    for yaml_path in "${yamls[@]}"; do
+        name=$(basename "$yaml_path" .yaml)
+        echo ""
+        echo "── $name ──"
+        # foreground 실행 — 다운로드 진행/네트워크 에러를 터미널에서 그대로 확인.
+        if ! python "$SCRIPT_DIR/vllm_server_launcher.py" -c "$yaml_path" --download-only; then
+            echo "[FAIL]  $name — 다운로드 실패 (네트워크 개방 여부/HF_TOKEN 확인)" >&2
+            fail=1
+        fi
+    done
+    echo ""
+    if [ "$fail" -ne 0 ]; then
+        echo "일부 대상 실패 — 위 로그 확인 후 재시도: ./start.sh download <name>" >&2
+        exit 1
+    fi
+    echo "완료. 실행 중인 서빙에 반영하려면 재기동 필요: ./start.sh restart <name>"
+}
+
 cmd_restart() {
     # 여기서 prompt를 한 번만 띄우고, 결정된 target('all' 또는 이름)을 cmd_down/cmd_up에 명시 전달.
     # 그러면 두 함수의 resolve_target_or_confirm은 인자 명시 분기로 빠져 prompt를 다시 띄우지 않는다.
@@ -597,6 +656,7 @@ $CLUSTER_LABEL 클러스터 제어 스크립트
   restart [name|all]   재기동 (down→up)
   status               전체 상태 (인스턴스 + 게이트웨이)
   logs [name|all]      로그 tail -F (기본 -n 50, --lines N 으로 오버라이드)
+  download [name|all]  모델 다운로드/최신 동기화 (서빙 미터치, 네트워크 필요)
   help                 이 도움말
 
 [name] 자리:
@@ -610,9 +670,11 @@ $CLUSTER_LABEL 클러스터 제어 스크립트
   ./start.sh up ${first_gw:-<포트>}   # 게이트웨이 단독 (인스턴스 미터치)
   ./start.sh logs --lines 200      # 초기 200줄부터 전체 로그 추적
   ./start.sh status                # 상태 확인
+  ./start.sh download ${first_inst:-<이름>}   # 모델 최신 동기화 (변경 파일만 증분)
 
-안전 정책: 무인자 up/down/restart는 [y/N] 기본 No (사고 방지).
+안전 정책: 무인자 up/down/restart/download는 [y/N] 기본 No (사고 방지).
            비대화 환경(파이프/cron)은 'all' 또는 이름 명시 필수.
+폐쇄망 절차: 네트워크 개방 → download → 차단 → up (up은 네트워크 미접근).
 EOF
 }
 
@@ -624,6 +686,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         status)         cmd_status ;;
         restart)        shift || true; cmd_restart "${1:-}" ;;
         logs)           shift || true; cmd_logs "$@" ;;
+        download)       shift || true; cmd_download "${1:-}" ;;
         help|-h|--help) cmd_help ;;
         *)              echo "ERROR: 알 수 없는 명령 '$1'" >&2; echo "" >&2; cmd_help >&2; exit 1 ;;
     esac

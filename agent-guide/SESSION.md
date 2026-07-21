@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-06-09 (전 서빙 yaml 주석 슬림화·공용 _SCHEMA.txt 분리 + PII on/off 토글 구조(비PII/PII 인스턴스 분리) 검토 + PII 토폴로지 Q&A)
+last-updated: 2026-07-21 (미기록 커밋 2건 반영 + 호스트 재기동으로 전 서빙 프로세스 다운 상태 확인)
 ---
 
 # 세션 상태
@@ -24,6 +24,7 @@ last-updated: 2026-06-09 (전 서빙 yaml 주석 슬림화·공용 _SCHEMA.txt �
 
 | 우선순위 | 작업 | 상태 |
 |---------|------|------|
+| P0 | **연구계 LLM 재기동**: 호스트 재기동으로 vLLM·게이트웨이·PII 전부 다운(2026-07-21 실측). `vllm/start.sh up gemma` → `up 6015` → `pii/start.sh up 5015` 순서로 복구. 기동 전 확인 필요 — ① GPU0 잔여 점유 1.5 GiB의 주체 ② qwen을 함께 올릴지(gemma TP=2가 GPU0·1을 쓰므로 qwen TP=2와 카드 충돌) ③ `qwen.yaml` `port: 7080` 이전 건이 재기동으로 자연 해소됨. | 진행 중 |
 | P1 | **PII 가드 운영 적용 후속**: 연구계 `:5015` enforcement 라이브(프록시→게이트웨이 6015→vLLM). 잔존 — ① **운영계 `:5501` 실기동**(GPU0 여유 확보 후 `up prd-gemma`→`up 6501`→`pii: up 5501`. 설정·`ner_require_all_backends:true` 준비 완료) ② **보험 실데이터 recall 게이트 실측**(이름·주소·조직 ≥0.95) — `pii/tests/recall_gate.py` 하버스 구축 완료, **비식별 라벨 JSONL 입수 시 즉시 게이트화** ③ **스트리밍 progressive buffer 모드**(현 `post`=완결후 1회 마스킹, 구조 보존. 점진 방출은 미구현 — 별도 합의 필요) ④ 멀티모달(이미지) PII — `image_policy:block` 옵션만 추가, OCR 검사는 미구현 ⑤ 운영 배포 시 `PII_AUDIT_SALT`·(선택)`PII_BYPASS_TOKEN` 확인. 설계: `agent-guide/plans/pii-dlp-gateway.md`. | 부분 완료(연구계 라이브·하버스 구축), 운영전환·실측 잔존 |
 | P2 | **비PII qwen 대칭 보강 (결정 대기)**: gemma는 PII(`prd-pii-gemma`/gw `6501`)·비PII(`prd-gemma`/gw `5501`) 둘 다 있으나 qwen은 PII(`prd-pii-qwen`/gw `6502`)만 있고 `prd-qwen.yaml`은 삭제됨. 비PII qwen이 필요하면 인스턴스(`gateway_port:5502`) + `gateways/5502.yaml`(host `0.0.0.0`) 추가로 gemma와 대칭. **대표님 답변 대기.** | Todo (질문 미응답) |
 | P2 | **`prd-gemma`(비PII) vLLM host 정리**: `host: 0.0.0.0`이라 vLLM `:7070`이 외부 노출됨(`prd-pii-gemma`는 `127.0.0.1`). 게이트웨이만 외부면 되므로 방화벽에서 7070 차단 확인 또는 `127.0.0.1`로 통일. | Todo |
@@ -49,6 +50,25 @@ last-updated: 2026-06-09 (전 서빙 yaml 주석 슬림화·공용 _SCHEMA.txt �
 ---
 
 ## 최근 세션
+
+### 2026-07-21 (세션 문서 정합 + LLM 재기동 준비)
+
+> 6/09 이후 약 6주 공백. 문서에 미기록이던 커밋 2건을 반영하고, 호스트 재기동 후 서빙 상태를 실측했다.
+
+#### 라이브 상태 실측 (2026-07-21 15:01)
+- **전 서빙 프로세스 다운**. `5015/5016/5017/5501/6015/6016`(게이트웨이·PII 프록시) + `8901/8911`(NER) 모두 무응답.
+- GPU 점유: GPU0 1,525 MiB / GPU3 4,630 MiB / GPU1·2 유휴. vLLM 모델은 미적재(46 GiB 중 1.5 GiB 수준) — 잔여 점유의 주체는 컨테이너 PID 네임스페이스 밖이라 여기서 식별 불가.
+- 즉 호스트 재기동으로 전부 내려간 상태이며, 재기동은 `vllm/start.sh up` → `pii/start.sh up` 순서로 새로 올려야 한다.
+
+#### 미기록이던 커밋 2건
+| 커밋 | 날짜 | 내용 |
+|------|------|------|
+| `d242cc4` | 06-10 | `agent-guide/GUIDE.md`에 **"작업 환경 토폴로지"** 섹션 신설 — 연구계(현 위치, `hjjo` 컨테이너) ↔ 운영계(별도 EC2) 구분, 서빙 프로세스가 컨테이너 네임스페이스 밖이라 `ps`/`ss`로 안 보인다는 점, **운영계 실기동을 이 환경에서 시도 금지** 명문화 |
+| `c18bcbf` | 07-09 | `vllm/start.sh`·`pii/start.sh`에 `cmd_help` 추가. 무인자·`help`·`-h`·`--help`로 도움말 진입, 알 수 없는 명령은 stderr 안내 후 `exit 1`. vllm 도움말은 등록된 인스턴스/게이트웨이 목록을 **동적 표시**(STT wrapper에도 자동 반영). 기존 `up/down/status/restart/logs` 동작 무변경 |
+
+#### 6/09 세션 "미커밋" 항목 정정
+- yaml 슬림화·`_SCHEMA.txt` 5종 신설은 `de734ce`(06-09)로, `NOTICE.md`·`pii_model_research.md`는 `86a4839`(06-05)로 **커밋 완료**. 워킹 트리 클린.
+- 같은 커밋에서 `prd-qwen.yaml`이 삭제되고 `prd-pii-gemma.yaml`·`prd-pii-qwen.yaml`이 신설됐다 — 아래 "비PII qwen 대칭 보강" 미결 항목의 배경.
 
 ### 2026-06-09 (전 서빙 yaml 주석 슬림화·공용 _SCHEMA.txt 분리 + PII on/off 토글 구조 검토 + PII 토폴로지 Q&A)
 
@@ -76,7 +96,7 @@ last-updated: 2026-06-09 (전 서빙 yaml 주석 슬림화·공용 _SCHEMA.txt �
 - **yaml 통일 원칙(확정)**: 같은 종류는 주석 100% 동일, 헤더에 포트·모델명 등 고유정보 금지(`# vLLM Gateway`만), 기동 실패 유발 함정만 ⚠️ inline, 나머지 상세는 디렉토리별 `_SCHEMA.txt`. → 복붙 후 값만 바꿔도 주석 손댈 필요 없음(cp 불일치 구조적 차단).
 
 #### 현재 상태
-- yaml 리팩토링 **완료·점검 통과**(20 yaml 파싱 0실패, discover 매칭 정합, 키 누락 0, 값 불변=동작 동일, 모델군 주석 100% 동일). **미커밋**.
+- yaml 리팩토링 **완료·점검 통과**(20 yaml 파싱 0실패, discover 매칭 정합, 키 누락 0, 값 불변=동작 동일, 모델군 주석 100% 동일). **커밋 완료**(`de734ce`).
 - **미결(리팩토링 범위 밖, 값 보존)**: ① 비PII qwen 부재 — `prd-qwen.yaml` 삭제 상태이고 비PII qwen 인스턴스+게이트웨이(`5502` 비PII)가 없음(gemma는 PII/비PII 둘 다 있음). ② `prd-gemma`(비PII) vLLM host `0.0.0.0`(`prd-pii-gemma`는 `127.0.0.1`) → 7070 외부 노출, 방화벽 차단 또는 127.0.0.1 통일 검토.
 
 ### 2026-06-05 (PII NER 토폴로지 정정 + 모델 재조사·실측평가·라이선스 규명)
@@ -103,7 +123,7 @@ last-updated: 2026-06-09 (전 서빙 yaml 주석 슬림화·공용 _SCHEMA.txt �
 - **townboy 라이선스 해소**: base KPF-BERT(MIT) + 데이터 KDPII(CC-BY-4.0, 연세대 김한샘 연구실) → 상업 사용 가능. 출처표기는 `NOTICE.md`로 이행.
 
 #### 현재 상태
-- 토폴로지 정정: 커밋 완료(`3c23160`). `NOTICE.md`·`pii_model_research.md`: 미커밋(승인 대기).
+- 토폴로지 정정: 커밋 완료(`3c23160`). `NOTICE.md`·`pii_model_research.md`: 커밋 완료(`86a4839`).
 - frameby 가중치 2.7GB(`/models/PII/framebyframe/`)·평가 스크립트 보존(후속 재평가용).
 
 #### 후속 과제 (리포트 §7)

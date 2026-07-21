@@ -1,0 +1,65 @@
+# vLLM Instance — 인스턴스 1대(vLLM 프로세스 1대). 키 상세: ./_SCHEMA.txt
+# 복붙 후 값만 바꾼다: gateway_port, model, host, port, gpus, tensor_parallel_size,
+#   gpu_memory_utilization, max_model_len, max_num_batched_tokens, quantization,
+#   speculative_config, mm_processor_kwargs, tool_call_parser, reasoning_parser.
+
+# 게이트웨이 매칭 키 (vLLM 비전달, discover_from이 이 값으로 backends 등록)
+gateway_port: 6015
+
+# 모델
+model: google/gemma-4-31B-it     # HF 모델 ID (런처가 download_dir과 조합해 경로 해석)
+download_dir: /models/LLM        # 모델 로컬 저장 루트 ({download_dir}/{model})
+quantization: fp8                # 온더플라이 FP8 양자화 (사전 양자화 모델은 생략)
+dtype: auto                      # 활성화 dtype (auto=config.json 따름)
+# served_model_name: [<별칭>]    # API 모델 별칭 (미설정 시 model에서 자동 추출)
+# trust_remote_code: true        # 네이티브 미지원 모델만
+
+# 서버
+host: 0.0.0.0                    # 바인딩 (외부 0.0.0.0 / 내부 127.0.0.1 — PII 뒤면 127.0.0.1)
+port: 7070                       # vLLM 포트 hint (사용 중이면 launcher가 +1 자동 회피)
+uvicorn_log_level: info          # HTTP 서버 로그 레벨
+
+# GPU / 메모리
+gpus: [0, 1]                     # 사용 GPU 번호 목록
+tensor_parallel_size: 2          # 텐서 병렬 크기 (gpus 개수와 일치)
+gpu_memory_utilization: 0.95     # GPU 메모리 비율 (0.85 멀티모달~0.92 가중치 큼)
+
+# 추론
+max_model_len: 32768             # 컨텍스트 길이 (프롬프트+출력 합산)
+max_num_seqs: 20                 # 동시 처리 시퀀스 수
+max_num_batched_tokens: 32768    # 배치 최대 토큰 수 (멀티모달은 encoder_cache로 복제)
+seed: 42                         # 재현용 전역 시드
+
+# Thinking 모드 (reasoning 토큰 생성 제어)
+default_chat_template_kwargs:
+  enable_thinking: false         # 챗봇 기본: thinking 비활성 (지연 감소)
+
+# 성능 최적화
+enable_prefix_caching: true      # 시스템 프롬프트 KV 재사용 (TTFT 감소)
+kv_cache_dtype: auto             # KV 캐시 dtype (auto / fp8_e4m3로 2배 용량)
+language_model_only: false       # true면 멀티모달 비활성 (메모리 절약)
+
+# Speculative Decoding — 모델별 설정, 상세 ./_SCHEMA.txt
+speculative_config:
+  model: google/gemma-4-31B-it-assistant  # ⚠️ method 키 명시 금지 (drafter 자동감지, 명시 시 NotImplementedError)
+  num_speculative_tokens: 4               # 31B 권장 4–8
+
+# 멀티모달
+mm_encoder_tp_mode: data         # vision encoder DP 처리 (Qwen3.5/3.6 레시피)
+mm_processor_cache_type: shm     # 멀티모달 입력 shared memory 공유 (IPC 절감)
+mm_processor_kwargs: { max_soft_tokens: 1120 }  # ⚠️ Gemma4: 70/140/280/560/1120 외 값은 기동 실패(sys.exit)
+limit_mm_per_prompt:
+  image: 5                       # 프롬프트당 이미지 상한
+
+# 멀티모달 안정성
+async_scheduling: false          # ⚠️ true 금지 — 멀티모달 encoder cache eviction race 크래시
+
+# 로깅
+enable_log_requests: false       # 요청별 로그 (운영 false)
+disable_log_stats: false         # 처리량/지연 통계 (false=출력)
+
+# Tool Calling
+enable_auto_tool_choice: true    # tool-calling 자동 파싱 활성
+tool_call_parser: gemma4         # tool call 파서 (gemma4 / qwen3_xml)
+reasoning_parser: gemma4         # reasoning 분리 파서 (gemma4 / qwen3)
+# hf_token: ""                   # Gated repo만 (Gemma/Qwen 불필요)

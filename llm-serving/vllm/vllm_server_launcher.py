@@ -19,7 +19,7 @@ start.sh에서 호출되며, 직접 실행도 가능.
     python vllm_server_launcher.py -c instances/gemma.yaml
     python vllm_server_launcher.py -c instances/qwen.yaml
 
-    # 모델 다운로드만
+    # 모델 다운로드/최신 동기화만 (로컬이 있으면 변경 파일만 증분 다운로드)
     python vllm_server_launcher.py -c instances/qwen.yaml --download-only
 
     # Gated 모델
@@ -83,7 +83,7 @@ def parse_args():
     p.add_argument("-g", "--gpu", type=str, help="CUDA_VISIBLE_DEVICES (예: 0 또는 0,1)")
     p.add_argument("-m", "--model", type=str, help="HF 모델 ID (config override)")
     p.add_argument("--online", action="store_true", help="HF 온라인 모드 허용")
-    p.add_argument("--download-only", action="store_true", help="모델 다운로드만 수행")
+    p.add_argument("--download-only", action="store_true", help="모델 다운로드/최신 동기화만 수행 (서버 미기동)")
     args, extra = p.parse_known_args()
     return args, extra
 
@@ -110,7 +110,9 @@ def download_model(model_id: str, local_dir: str) -> None:
     logger.info("모델 다운로드 완료: %s", local_dir)
 
 
-def _resolve_model_path(model_id: str, download_dir: str, *, kind: str = "모델") -> str:
+def _resolve_model_path(
+    model_id: str, download_dir: str, *, kind: str = "모델", sync: bool = False
+) -> str:
     """HF ID를 download_dir 하위 로컬 절대경로로 해석한다 (없으면 자동 다운로드).
 
     - 빈 값/None: 그대로 반환
@@ -118,6 +120,11 @@ def _resolve_model_path(model_id: str, download_dir: str, *, kind: str = "모델
     - HF ID + download_dir 있음: {download_dir}/{model_id} 경로 사용, 없으면 받음
     - HF ID + download_dir 없음: 변환 없이 그대로 반환 (vLLM이 HF Hub에서 해석)
     kind는 로그/에러 라벨 ("모델", "drafter" 등).
+
+    sync=True(--download-only 경로)면 로컬 디렉토리가 있어도 snapshot_download를
+    실행해 HF 최신 리비전과 증분 동기화한다 (변경 파일만 다운로드 — 가중치 무변경 시
+    chat_template 등 소형 파일만 받음). 서빙 경로(up)는 sync=False로 기존 파일을
+    그대로 쓰므로 네트워크를 보지 않는다 (폐쇄망 운영 보장).
     """
     if not model_id:
         return model_id
@@ -134,7 +141,11 @@ def _resolve_model_path(model_id: str, download_dir: str, *, kind: str = "모델
         return model_id
     local_path = os.path.join(download_dir, model_id)
     if os.path.isdir(local_path):
-        logger.info("%s 경로 해석: %s → %s", kind, model_id, local_path)
+        if sync:
+            logger.info("로컬 %s 최신 동기화 (증분): %s", kind, local_path)
+            download_model(model_id, local_path)
+        else:
+            logger.info("%s 경로 해석: %s → %s", kind, model_id, local_path)
     else:
         logger.info("로컬 %s 없음, 자동 다운로드: %s", kind, local_path)
         download_model(model_id, local_path)
@@ -435,9 +446,11 @@ def main():
         logger.info("env(yaml): %s=%s", k, v)
 
     # ── 모델 경로 해석 ──
+    # --download-only일 때만 sync=True: 로컬이 있어도 HF 최신과 증분 동기화.
+    # 서빙 경로(up)는 sync=False — 로컬 파일만 사용, 네트워크 미접근 (폐쇄망 보장).
     model = args.model or config.get("model", "")
     download_dir = config.get("download_dir", "")
-    model = _resolve_model_path(model, download_dir, kind="모델")
+    model = _resolve_model_path(model, download_dir, kind="모델", sync=args.download_only)
 
     # ── speculative_config.model 경로 해석 (drafter 자동 다운로드) ──
     # external drafter 기반 MTP(예: Gemma 4 *-it-assistant) 사용 시, dict 안의
@@ -448,7 +461,7 @@ def main():
     spec_cfg = config.get("speculative_config")
     if isinstance(spec_cfg, dict) and spec_cfg.get("model"):
         spec_cfg["model"] = _resolve_model_path(
-            spec_cfg["model"], download_dir, kind="drafter"
+            spec_cfg["model"], download_dir, kind="drafter", sync=args.download_only
         )
 
     if args.download_only:
