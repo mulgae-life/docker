@@ -518,8 +518,8 @@ CLI 인자  >  instances/<name>.yaml  >  vLLM 기본값
 ```env
 PROVIDER=huggingface
 # 페어 게이트웨이 중 선택:
-HF_BASE_URL=http://3.38.195.121:5015/v1     # Gemma 페어
-# HF_BASE_URL=http://3.38.195.121:5016/v1   # Qwen 페어
+HF_BASE_URL=http://43.203.176.149:5015/v1     # Gemma 페어
+# HF_BASE_URL=http://43.203.176.149:5016/v1   # Qwen 페어
 CHAT_MODEL=gemma-4-26B-A4B-it               # 프로파일 따라 gemma-4-31B-it 또는 Qwen3.6-27B-FP8
 RERANKER_MODEL=gemma-4-26B-A4B-it
 ```
@@ -621,7 +621,7 @@ cat > /tmp/qwen_req.json <<'EOF'
 }
 EOF
 
-curl http://3.38.195.121:5016/v1/chat/completions \
+curl http://43.203.176.149:5016/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d @/tmp/qwen_req.json
 ```
@@ -629,7 +629,7 @@ curl http://3.38.195.121:5016/v1/chat/completions \
 **한 줄 명령**:
 
 ```bash
-curl -sS http://3.38.195.121:5016/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"Qwen3.6-27B-FP8","messages":[{"role":"system","content":"자세하게 답변해줘."},{"role":"user","content":"미국인과 한국인의 차이점 비교 설명해줘"}],"max_tokens":10000,"temperature":1.0,"presence_penalty":1.0,"chat_template_kwargs":{"enable_thinking":true}}'
+curl -sS http://43.203.176.149:5016/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"Qwen3.6-27B-FP8","messages":[{"role":"system","content":"자세하게 답변해줘."},{"role":"user","content":"미국인과 한국인의 차이점 비교 설명해줘"}],"max_tokens":10000,"temperature":1.0,"presence_penalty":1.0,"chat_template_kwargs":{"enable_thinking":true}}'
 ```
 
 **Thinking OFF — 빠른 응답**:
@@ -649,7 +649,7 @@ cat > /tmp/qwen_req_nothink.json <<'EOF'
 }
 EOF
 
-curl http://3.38.195.121:5016/v1/chat/completions \
+curl http://43.203.176.149:5016/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d @/tmp/qwen_req_nothink.json
 ```
@@ -658,12 +658,12 @@ curl http://3.38.195.121:5016/v1/chat/completions \
 
 ```bash
 # 사고 과정 + 최종 답변 모두
-curl -sS http://3.38.195.121:5016/v1/chat/completions \
+curl -sS http://43.203.176.149:5016/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d @/tmp/qwen_req.json | jq '.choices[0].message | {reasoning, content}'
 
 # 최종 답변만
-curl -sS http://3.38.195.121:5016/v1/chat/completions \
+curl -sS http://43.203.176.149:5016/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d @/tmp/qwen_req.json | jq -r '.choices[0].message.content'
 ```
@@ -1189,13 +1189,13 @@ grep -B1 -A20 "FAIL " tests/logs/test_20260430_144909.log
 cd llm-serving/vllm
 
 # 저강도 생존/성공률 확인
-python tests/traffic_test_vllm.py --base-url http://3.38.195.121:5015 --mode smoke
+python tests/traffic_test_vllm.py --base-url http://43.203.176.149:5015 --mode smoke
 
 # 대기열/429 방어 확인
-python tests/traffic_test_vllm.py --base-url http://3.38.195.121:5015 --mode overload
+python tests/traffic_test_vllm.py --base-url http://43.203.176.149:5015 --mode overload
 
 # 동시 사용자 20명 기준 짧은 응답 테스트
-python tests/traffic_test_vllm.py --base-url http://3.38.195.121:5015 --mode smoke --requests 20 --concurrency 20 --max-tokens 32
+python tests/traffic_test_vllm.py --base-url http://43.203.176.149:5015 --mode smoke --requests 20 --concurrency 20 --max-tokens 32
 ```
 
 운영 전에는 `max_tokens >= 512` 또는 실제 서비스 평균 프롬프트/출력 길이로 한 번 더 확인합니다. 테스트 후 `/health`가 200이어야 통과입니다(`/server-status` 조회 포트는 모드에 따라 다름 — [§10.1](#101-게이트웨이-전용-엔드포인트)). PII 모드에서는 위 `--base-url :5015`가 프록시를 경유하므로 마스킹 오버헤드가 포함된 실경로 성능입니다(순수 게이트웨이 성능은 내부 `:6015`로 측정). 비PII 모드는 `:5015`가 곧 게이트웨이라 그대로 순수 성능입니다.

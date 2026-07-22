@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-07-22 (가이드 문서 정합 일괄 갱신 — 26B 전면 표기 + 2-모드 재서술)
+last-updated: 2026-07-22 (연구계 IP 변경 43.203.176.149 문서 반영 + 가이드 문서 정합 일괄 갱신)
 ---
 
 # 세션 상태
@@ -57,6 +57,7 @@ last-updated: 2026-07-22 (가이드 문서 정합 일괄 갱신 — 26B 전면 �
 - **상태**: 완료. 검증 — API 가이드 31B 잔존 2곳(의도된 안내문), `prd-qwen` 옛 명칭 잔존 0, "모든 LLM PII 경유" 옛 전제 문구 0.
 - **(후속) STT 포트 정정 — P1 "STT 문서 정정" 해소**: 실물 yaml 기준(voxtral=gw **5018** realtime 분리 / qwen3_asr·whisper_v3=gw **5017** model 라우팅, whisper GPU **2**)으로 `STT_OPS_GUIDE`(§6 구성도·§9.1 gmu 0.4/max_len 16384·§9.3 overload 20/40/180·§11 QA 포트) · `STT_API_GUIDE`(:5018 분리, 상시 기동 안내) · `stt/README`(구성 표·GPU 충돌: whisper↔voxtral) · `PROJECT`·`llm-serving/README`·`DEPLOY`·`OPS`·루트 README·`MODEL_STUDY` 현재 상태부 일괄 정정.
 - **(후속) 문체 점검**: aws·llm-serving·agent-guide 전 문서 상투어/번역체/압축체 패턴 일괄 검색 — 실질 지적 3건(수동태 직역 1, 수다 사족 1, "(소중함)" 라벨 1) 수정. 조사·계획 기록물(slm_research 상세, pii_model_research, plans/)은 이력 보존 위해 문체 미수정.
+- **(후속) 연구계 IP 변경 반영**: 연구계 외부 IP `3.38.195.121` → `43.203.176.149`. `VLLM_API_GUIDE`(21곳)·`VLLM_OPS_GUIDE`(10곳)·`STT_API_GUIDE`(12곳) 총 43곳 일괄 치환, 구 IP 잔존 0. 운영계(:5501 등) 실주소는 문서에 하드코딩 없음(운영자 확인 방침 유지)이라 대상 아님.
 
 ### 2026-07-21 (재기동 복구 + Gemma 26B-A4B 전환 + download 명령 신설 + PII NER 개선)
 

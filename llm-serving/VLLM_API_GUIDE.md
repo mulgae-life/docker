@@ -2,7 +2,7 @@
 
 > **대상**: API 사용자 (개발자, 챗봇/RAG 통합)
 > **메인 모델**: `gemma-4-26B-A4B-it` (Google Gemma 4 MoE, 멀티모달, MTP 가속)
-> **Base URL**: `http://3.38.195.121:5015/v1` (외부, 연구계). 운영계는 동일 인터페이스의 **`:5501`**(외부 주소는 운영자에게 확인 — 연구계와 격리된 별도 서버).
+> **Base URL**: `http://43.203.176.149:5015/v1` (외부, 연구계). 운영계는 동일 인터페이스의 **`:5501`**(외부 주소는 운영자에게 확인 — 연구계와 격리된 별도 서버).
 > **API 호환**: OpenAI Chat Completions 100% — 기존 OpenAI SDK · LangChain `ChatOpenAI` · `curl` 그대로
 > **인증**: 불필요 (`Authorization` 헤더 생략 가능)
 
@@ -31,7 +31,7 @@
 
 | 항목 | **Gemma (메인)** | Qwen3.6 (옵션) |
 |------|------------------|----------------|
-| Base URL | `http://3.38.195.121:5015/v1` | `http://3.38.195.121:5016/v1` |
+| Base URL | `http://43.203.176.149:5015/v1` | `http://43.203.176.149:5016/v1` |
 | 모델명 (`model` 필드) | **`gemma-4-26B-A4B-it`** | `Qwen3.6-27B-FP8` |
 | 추론 가속 | MTP(speculative decoding) | MTP(speculative decoding) |
 | API 키 | 불필요 | 불필요 |
@@ -69,12 +69,12 @@
 
 ## 2. 첫 호출
 
-> 호출 전 살아있는지 확인: `curl http://3.38.195.121:5015/health` → `200 OK`.
+> 호출 전 살아있는지 확인: `curl http://43.203.176.149:5015/health` → `200 OK`.
 
 ### 2.1 curl
 
 ```bash
-curl http://3.38.195.121:5015/v1/chat/completions \
+curl http://43.203.176.149:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gemma-4-26B-A4B-it",
@@ -108,7 +108,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="http://3.38.195.121:5015/v1",
+    base_url="http://43.203.176.149:5015/v1",
     api_key="not-needed",   # vLLM 기본 인증 없음. 빈 문자열은 SDK가 거부하므로 더미값.
 )
 
@@ -130,7 +130,7 @@ print(resp.choices[0].message.content)
 from langchain_openai import ChatOpenAI
 
 llm = ChatOpenAI(
-    base_url="http://3.38.195.121:5015/v1",
+    base_url="http://43.203.176.149:5015/v1",
     model="gemma-4-26B-A4B-it",
     api_key="not-needed",
     temperature=0.7,
@@ -146,7 +146,7 @@ print(llm.invoke("대한민국의 수도는?").content)
 import OpenAI from "openai";
 
 const client = new OpenAI({
-  baseURL: "http://3.38.195.121:5015/v1",
+  baseURL: "http://43.203.176.149:5015/v1",
   apiKey: "not-needed",
 });
 
@@ -162,7 +162,7 @@ console.log(resp.choices[0].message.content);
 ### 2.5 모델 목록 확인
 
 ```bash
-curl http://3.38.195.121:5015/v1/models
+curl http://43.203.176.149:5015/v1/models
 ```
 
 응답에 `served_model_name` (예: `gemma-4-26B-A4B-it`)과 `max_model_len`(현재 컨텍스트 한도)이 들어 있어, 클라이언트에서 모델명·컨텍스트 한도를 자동 감지하는 데 쓸 수 있습니다.
@@ -180,7 +180,7 @@ curl http://3.38.195.121:5015/v1/models
 **curl**:
 
 ```bash
-curl http://3.38.195.121:5015/v1/chat/completions \
+curl http://43.203.176.149:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gemma-4-26B-A4B-it",
@@ -246,7 +246,7 @@ for chunk in stream:
 **curl 예시**:
 
 ```bash
-curl http://3.38.195.121:5015/v1/chat/completions \
+curl http://43.203.176.149:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gemma-4-26B-A4B-it",
@@ -318,7 +318,7 @@ print(resp.choices[0].message.content)
 **curl — URL 입력**:
 
 ```bash
-curl http://3.38.195.121:5015/v1/chat/completions \
+curl http://43.203.176.149:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gemma-4-26B-A4B-it",
@@ -341,7 +341,7 @@ B64=$(base64 -w0 ./screenshot.png)
 # macOS (BSD base64 — `-w0` 미지원, 기본이 한 줄 출력)
 # B64=$(base64 -i ./screenshot.png | tr -d '\n')
 
-curl http://3.38.195.121:5015/v1/chat/completions \
+curl http://43.203.176.149:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d "{
     \"model\": \"gemma-4-26B-A4B-it\",
@@ -362,7 +362,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 import base64
 from openai import OpenAI
 
-client = OpenAI(base_url="http://3.38.195.121:5015/v1", api_key="not-needed")
+client = OpenAI(base_url="http://43.203.176.149:5015/v1", api_key="not-needed")
 
 with open("./document.png", "rb") as f:
     b64 = base64.b64encode(f.read()).decode()
@@ -421,7 +421,7 @@ print("답변:", resp.choices[0].message.content)
 **1단계 — Tool 정의 + 사용자 질문**:
 
 ```bash
-curl http://3.38.195.121:5015/v1/chat/completions \
+curl http://43.203.176.149:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gemma-4-26B-A4B-it",
@@ -469,7 +469,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 **2단계 — 함수 실행 결과를 다시 전달**:
 
 ```bash
-curl http://3.38.195.121:5015/v1/chat/completions \
+curl http://43.203.176.149:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gemma-4-26B-A4B-it",
@@ -520,7 +520,7 @@ def get_weather(city: str) -> str:
     return f"{city}: 22°C, 맑음"
 
 llm = ChatOpenAI(
-    base_url="http://3.38.195.121:5015/v1",
+    base_url="http://43.203.176.149:5015/v1",
     model="gemma-4-26B-A4B-it",
     api_key="not-needed",
 )
@@ -584,7 +584,7 @@ PII 모드의 `:5015`는 이름·전화·주소·**조직(ORG)** 등 비식별 P
 **curl — 조직명 보존**:
 
 ```bash
-curl http://3.38.195.121:5015/v1/chat/completions \
+curl http://43.203.176.149:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "X-PII-Ignore-Types: org" \
   -d '{
@@ -602,7 +602,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 from openai import OpenAI
 
 # 문서 생성 서비스: 클라이언트 단에서 한 번만 설정하면 모든 호출에 적용
-client = OpenAI(base_url="http://3.38.195.121:5015/v1", api_key="not-needed",
+client = OpenAI(base_url="http://43.203.176.149:5015/v1", api_key="not-needed",
                 default_headers={"X-PII-Ignore-Types": "org"})
 ```
 
@@ -623,7 +623,7 @@ PII가 전혀 필요 없는 호출(예: 비식별 사내 문서 가공, PII가 �
 
 ```bash
 # 현재 5015·5501은 기본 활성(allow_bypass=true) — 헤더만으로 우회됨
-curl http://3.38.195.121:5015/v1/chat/completions \
+curl http://43.203.176.149:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "X-PII-Mode: bypass" \
   -d '{"model": "gemma-4-26B-A4B-it",
@@ -733,8 +733,8 @@ LangChain `ChatOpenAI` 기반 chatbot-poc는 `.env`만 바꾸면 즉시 vLLM SLM
 
 ```env
 PROVIDER=huggingface
-HF_BASE_URL=http://3.38.195.121:5015/v1   # Gemma 게이트웨이
-# HF_BASE_URL=http://3.38.195.121:5016/v1 # Qwen (:5016 — 현재 PII 모드 구성만 존재)
+HF_BASE_URL=http://43.203.176.149:5015/v1   # Gemma 게이트웨이
+# HF_BASE_URL=http://43.203.176.149:5016/v1 # Qwen (:5016 — 현재 PII 모드 구성만 존재)
 CHAT_MODEL=gemma-4-26B-A4B-it             # 또는 Qwen3.6-27B-FP8
 RERANKER_MODEL=gemma-4-26B-A4B-it
 ```
