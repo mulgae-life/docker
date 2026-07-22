@@ -1,7 +1,7 @@
 # vLLM SLM API 가이드 (사용자용)
 
 > **대상**: API 사용자 (개발자, 챗봇/RAG 통합)
-> **메인 모델**: `gemma-4-31B-it` (Google Gemma 4, 멀티모달, MTP 가속)
+> **메인 모델**: `gemma-4-26B-A4B-it` (Google Gemma 4 MoE, 멀티모달, MTP 가속)
 > **Base URL**: `http://3.38.195.121:5015/v1` (외부, 연구계). 운영계는 동일 인터페이스의 **`:5501`**(외부 주소는 운영자에게 확인 — 연구계와 격리된 별도 서버).
 > **API 호환**: OpenAI Chat Completions 100% — 기존 OpenAI SDK · LangChain `ChatOpenAI` · `curl` 그대로
 > **인증**: 불필요 (`Authorization` 헤더 생략 가능)
@@ -32,7 +32,7 @@
 | 항목 | **Gemma (메인)** | Qwen3.6 (옵션) |
 |------|------------------|----------------|
 | Base URL | `http://3.38.195.121:5015/v1` | `http://3.38.195.121:5016/v1` |
-| 모델명 (`model` 필드) | **`gemma-4-31B-it`** | `Qwen3.6-27B-FP8` |
+| 모델명 (`model` 필드) | **`gemma-4-26B-A4B-it`** | `Qwen3.6-27B-FP8` |
 | 추론 가속 | MTP(speculative decoding) | MTP(speculative decoding) |
 | API 키 | 불필요 | 불필요 |
 | 멀티모달 (이미지) | ✅ | ✅ |
@@ -43,6 +43,7 @@
 | Thinking 토큰 형식 | `<\|channel>...<channel\|>` (스페셜 토큰) | `<think>...</think>` (일반 토큰) |
 
 > 컨텍스트 길이·동시 이미지 한도 등은 운영 튜닝값에 따라 달라집니다. 현재 값은 `GET /v1/models` 응답의 `max_model_len` 또는 운영자에게 확인.
+> 서버가 이전 메인 모델 `gemma-4-31B-it` 프로파일로 떠 있는 기간에는 모델명이 다를 수 있습니다 — `GET /v1/models`([§2.5](#25-모델-목록-확인))로 실제 모델명을 확인하고 그 값을 `model` 필드에 쓰세요.
 
 **API 호환성**: vLLM은 OpenAI Chat Completions API와 **100% 호환**. `OpenAI` SDK · `langchain_openai.ChatOpenAI` · `fetch` · `curl` 어떤 클라이언트도 `base_url`만 바꾸면 그대로 동작합니다.
 
@@ -54,11 +55,11 @@
 | GET | `/v1/models` | 로드된 모델 목록 |
 | GET | `/health` | 서버 헬스체크 |
 
-> 🔒 **PII/DLP 가드 (필독)** — 모든 LLM 진입점(gemma `:5015`/`:5501`, qwen `:5016`/`:5502`)은 사내 정책에 따라 **개인정보 가드**를 거칩니다. 호출 주소·방식은 그대로지만, 요청(in)과 응답(out)의 텍스트가 모두 검사됩니다.
+> 🔒 **PII/DLP 가드 (운영 모드에 따라 적용)** — LLM 진입점(gemma `:5015`/`:5501`, qwen `:5016`/`:5502`)은 두 모드 중 하나로 운영됩니다. **① 비PII 모드(현재 기본)**: 게이트웨이가 직접 응답하며 아래 검사가 적용되지 않습니다. **② PII 모드**: 프록시가 같은 포트를 인수해 요청(in)과 응답(out)의 텍스트를 모두 검사합니다. 어느 모드든 **호출 주소·방식은 동일**하며, 현재 모드는 운영자에게 확인하세요. PII 모드에서는 아래가 적용됩니다:
 > - **차단 (HTTP 422)**: 주민등록번호·신용카드번호가 포함되면 추론 전에 거부됩니다 (`type: pii_blocked`). 이런 정보는 보내지 마세요.
 > - **자동 마스킹**: 이름·전화·주소·조직·계좌·사업자등록번호·이메일은 `[이름]`·`[전화번호]` 등으로 치환되어 모델에 전달되고, **응답에서도** 동일하게 마스킹됩니다.
 > - **조직명 마스킹 끄기 (서비스 선택)**: 문서 생성처럼 부서명·회사명을 보존해야 하는 서비스는 요청 헤더 `X-PII-Ignore-Types: org` 로 **조직(ORG) 마스킹만** 끌 수 있습니다. 핵심 PII(주민·카드·이름·전화·주소 등)는 헤더와 무관하게 **항상 마스킹**됩니다 (서버 화이트리스트로 끌 수 있는 타입을 통제). 상세는 [§3.6](#36-pii-마스킹-토글-헤더).
-> - **PII 없이 SLM 직행**: 요청 헤더 `X-PII-Mode: bypass` 로 **PII 검사를 통째 건너뛰고** 모델에 원문을 보낼 수 있습니다 (현재 5015·5501 기본 활성, 헤더 없으면 강제 검사). 상세는 [§3.7](#37-pii-우회-bypass-헤더).
+> - **PII 없이 SLM 직행**: 요청 헤더 `X-PII-Mode: bypass` 로 **PII 검사를 통째 건너뛰고** 모델에 원문을 보낼 수 있습니다 (5015·5501 프록시 설정 기본 활성, 헤더 없으면 강제 검사). 상세는 [§3.7](#37-pii-우회-bypass-헤더).
 > - **스트리밍**: 응답 PII 검사를 위해 `stream:true`라도 완결 후 한 번에 전달됩니다(토큰 점진 출력만 일시 비활성). `usage`·`finish_reason`·`reasoning` 분리 등 응답 구조는 보존됩니다 — [§3.1](#31-스트리밍-sse).
 > - **이미지 입력**: 멀티모달 요청의 **텍스트 파트는 검사·마스킹**됩니다. 단, **이미지 바이트 자체**는 검사 대상이 아닙니다(설계상 한계 — [§3.3](#33-이미지-멀티모달-vision)).
 > - **도구 호출**: `tool_calls`의 함수 인자(JSON) 안 PII도 요청·응답 양방향으로 마스킹됩니다.
@@ -76,7 +77,7 @@
 curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-31B-it",
+    "model": "gemma-4-26B-A4B-it",
     "messages": [
       {"role": "system", "content": "간결하게 답변해."},
       {"role": "user",   "content": "대한민국의 수도는?"}
@@ -91,7 +92,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 {
   "id": "chatcmpl-abc123",
   "object": "chat.completion",
-  "model": "gemma-4-31B-it",
+  "model": "gemma-4-26B-A4B-it",
   "choices": [{
     "index": 0,
     "message": {"role": "assistant", "content": "서울입니다."},
@@ -112,7 +113,7 @@ client = OpenAI(
 )
 
 resp = client.chat.completions.create(
-    model="gemma-4-31B-it",
+    model="gemma-4-26B-A4B-it",
     messages=[
         {"role": "system", "content": "간결하게 답변해."},
         {"role": "user",   "content": "파이썬이란?"},
@@ -130,7 +131,7 @@ from langchain_openai import ChatOpenAI
 
 llm = ChatOpenAI(
     base_url="http://3.38.195.121:5015/v1",
-    model="gemma-4-31B-it",
+    model="gemma-4-26B-A4B-it",
     api_key="not-needed",
     temperature=0.7,
     max_tokens=200,
@@ -150,7 +151,7 @@ const client = new OpenAI({
 });
 
 const resp = await client.chat.completions.create({
-  model: "gemma-4-31B-it",
+  model: "gemma-4-26B-A4B-it",
   messages: [{ role: "user", content: "안녕" }],
   max_tokens: 100,
 });
@@ -164,7 +165,7 @@ console.log(resp.choices[0].message.content);
 curl http://3.38.195.121:5015/v1/models
 ```
 
-응답에 `served_model_name` (예: `gemma-4-31B-it`)과 `max_model_len`(현재 컨텍스트 한도)이 들어 있어, 클라이언트에서 모델명·컨텍스트 한도를 자동 감지하는 데 쓸 수 있습니다.
+응답에 `served_model_name` (예: `gemma-4-26B-A4B-it`)과 `max_model_len`(현재 컨텍스트 한도)이 들어 있어, 클라이언트에서 모델명·컨텍스트 한도를 자동 감지하는 데 쓸 수 있습니다.
 
 ---
 
@@ -174,7 +175,7 @@ curl http://3.38.195.121:5015/v1/models
 
 `stream: true`를 주면 토큰이 생성되는 즉시 Server-Sent Events로 흘러나옵니다.
 
-> 🔒 **PII 가드 영향 (현재 제약)**: `:5015`는 응답 PII 마스킹을 보장하기 위해 스트리밍을 **완결 후 1회 방출**합니다. 즉 `stream:true`를 줘도 토큰이 점진적으로 오지 않고, 마스킹이 끝난 전체 응답이 도착합니다. 단, **응답 구조는 보존**됩니다 — `id`/`created`/`model`, `usage`(`include_usage` 시), `finish_reason`, `reasoning`↔`content` 분리, `tool_calls` 인자가 그대로 유지되어 OpenAI 클라이언트 파싱이 정상 동작합니다. 토큰 점진(progressive) 출력은 **현재 미지원**입니다(PII 경계 누출 위험으로 별도 설계 후 도입 예정). PII가 불필요한 호출이면 [§3.7](#37-pii-우회-bypass-헤더) 우회로 원문 스트리밍을 받을 수 있습니다.
+> 🔒 **PII 모드 한정 제약**: 비PII 모드(현재 기본)에서는 토큰이 생성 즉시 점진적으로 흘러나옵니다. **PII 모드**의 `:5015`는 응답 PII 마스킹을 보장하기 위해 스트리밍을 **완결 후 1회 방출**합니다. 즉 `stream:true`를 줘도 토큰이 점진적으로 오지 않고, 마스킹이 끝난 전체 응답이 도착합니다. 단, **응답 구조는 보존**됩니다 — `id`/`created`/`model`, `usage`(`include_usage` 시), `finish_reason`, `reasoning`↔`content` 분리, `tool_calls` 인자가 그대로 유지되어 OpenAI 클라이언트 파싱이 정상 동작합니다. 토큰 점진(progressive) 출력은 **현재 미지원**입니다(PII 경계 누출 위험으로 별도 설계 후 도입 예정). PII가 불필요한 호출이면 [§3.7](#37-pii-우회-bypass-헤더) 우회로 원문 스트리밍을 받을 수 있습니다.
 
 **curl**:
 
@@ -182,7 +183,7 @@ curl http://3.38.195.121:5015/v1/models
 curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-31B-it",
+    "model": "gemma-4-26B-A4B-it",
     "messages": [{"role": "user", "content": "긴 시 한 편 써줘"}],
     "max_tokens": 500,
     "stream": true,
@@ -210,7 +211,7 @@ data: [DONE]
 
 ```python
 stream = client.chat.completions.create(
-    model="gemma-4-31B-it",
+    model="gemma-4-26B-A4B-it",
     messages=[{"role": "user", "content": "긴 시 한 편"}],
     max_tokens=500,
     stream=True,
@@ -248,7 +249,7 @@ for chunk in stream:
 curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-31B-it",
+    "model": "gemma-4-26B-A4B-it",
     "messages": [
       {"role": "user", "content": "한 자리 소수를 모두 나열해줘. 이유도 설명해."}
     ],
@@ -277,7 +278,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 
 ```python
 resp = client.chat.completions.create(
-    model="gemma-4-31B-it",
+    model="gemma-4-26B-A4B-it",
     messages=[{"role": "user", "content": "12를 소인수분해해줘"}],
     max_tokens=1500,
     extra_body={
@@ -303,7 +304,7 @@ print(resp.choices[0].message.content)
 
 이미지 + 텍스트를 함께 보내 비전 추론을 받습니다. Gemma 4는 OCR·차트·문서 QA를 지원하는 vision 모델입니다.
 
-> 🔒 **PII 가드**: 멀티모달 요청의 **텍스트 파트(`{"type":"text"}`)는 정상적으로 in/out 검사·마스킹**됩니다. 단, **이미지 바이트 자체**(픽셀 내 글자 등)는 검사 대상이 아닙니다. 개인정보가 담긴 문서 **이미지**를 보낼 때는 이미지 안의 PII가 가려지지 않는다는 점에 유의하세요.
+> 🔒 **PII 가드 (PII 모드 한정)**: 멀티모달 요청의 **텍스트 파트(`{"type":"text"}`)는 정상적으로 in/out 검사·마스킹**됩니다. 단, **이미지 바이트 자체**(픽셀 내 글자 등)는 검사 대상이 아닙니다. 개인정보가 담긴 문서 **이미지**를 보낼 때는 이미지 안의 PII가 가려지지 않는다는 점에 유의하세요.
 
 **입력 형식 2가지**:
 
@@ -320,7 +321,7 @@ print(resp.choices[0].message.content)
 curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-31B-it",
+    "model": "gemma-4-26B-A4B-it",
     "messages": [{
       "role": "user",
       "content": [
@@ -343,7 +344,7 @@ B64=$(base64 -w0 ./screenshot.png)
 curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d "{
-    \"model\": \"gemma-4-31B-it\",
+    \"model\": \"gemma-4-26B-A4B-it\",
     \"messages\": [{
       \"role\": \"user\",
       \"content\": [
@@ -367,7 +368,7 @@ with open("./document.png", "rb") as f:
     b64 = base64.b64encode(f.read()).decode()
 
 resp = client.chat.completions.create(
-    model="gemma-4-31B-it",
+    model="gemma-4-26B-A4B-it",
     messages=[{
         "role": "user",
         "content": [
@@ -386,7 +387,7 @@ print(resp.choices[0].message.content)
 
 ```python
 resp = client.chat.completions.create(
-    model="gemma-4-31B-it",
+    model="gemma-4-26B-A4B-it",
     messages=[{
         "role": "user",
         "content": [
@@ -423,7 +424,7 @@ print("답변:", resp.choices[0].message.content)
 curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-31B-it",
+    "model": "gemma-4-26B-A4B-it",
     "messages": [{"role": "user", "content": "서울 날씨 알려줘"}],
     "tools": [{
       "type": "function",
@@ -471,7 +472,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-31B-it",
+    "model": "gemma-4-26B-A4B-it",
     "messages": [
       {"role": "user", "content": "서울 날씨 알려줘"},
       {
@@ -520,7 +521,7 @@ def get_weather(city: str) -> str:
 
 llm = ChatOpenAI(
     base_url="http://3.38.195.121:5015/v1",
-    model="gemma-4-31B-it",
+    model="gemma-4-26B-A4B-it",
     api_key="not-needed",
 )
 llm_with_tools = llm.bind_tools([get_weather])
@@ -544,13 +545,13 @@ messages = [
 ]
 
 resp1 = client.chat.completions.create(
-    model="gemma-4-31B-it", messages=messages, max_tokens=100,
+    model="gemma-4-26B-A4B-it", messages=messages, max_tokens=100,
 )
 messages.append({"role": "assistant", "content": resp1.choices[0].message.content})
 
 messages.append({"role": "user", "content": "내 이름이 뭐였지?"})
 resp2 = client.chat.completions.create(
-    model="gemma-4-31B-it", messages=messages, max_tokens=100,
+    model="gemma-4-26B-A4B-it", messages=messages, max_tokens=100,
 )
 print(resp2.choices[0].message.content)   # → "홍길동님이라고 하셨습니다."
 ```
@@ -570,7 +571,9 @@ print(resp2.choices[0].message.content)   # → "홍길동님이라고 하셨습
 
 ### 3.6 PII 마스킹 토글 (헤더)
 
-기본적으로 `:5015`는 이름·전화·주소·**조직(ORG)** 등 비식별 PII를 자동 마스킹합니다. 하지만 **문서 생성**처럼 작성부서명·회사명을 보존해야 하는 서비스는 조직명이 `[조직]`으로 가려지면 문서 헤더가 손상됩니다. 이를 위해 **요청 단위로 ORG 마스킹만 끄는** 헤더를 제공합니다.
+> 📌 **PII 모드 전용** — 비PII 모드(현재 기본)에서는 검사 자체가 없어 이 헤더가 의미 없습니다. §3.6~§3.7은 PII 모드 환경에서만 해당합니다.
+
+PII 모드의 `:5015`는 이름·전화·주소·**조직(ORG)** 등 비식별 PII를 자동 마스킹합니다. 하지만 **문서 생성**처럼 작성부서명·회사명을 보존해야 하는 서비스는 조직명이 `[조직]`으로 가려지면 문서 헤더가 손상됩니다. 이를 위해 **요청 단위로 ORG 마스킹만 끄는** 헤더를 제공합니다.
 
 | 헤더 | 값 | 효과 |
 |------|----|----|
@@ -585,7 +588,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "X-PII-Ignore-Types: org" \
   -d '{
-    "model": "gemma-4-31B-it",
+    "model": "gemma-4-26B-A4B-it",
     "messages": [{"role": "user",
       "content": "작성부서 디지털AI센터, 담당자 홍길동 010-1234-5678 기준으로 보고서 헤더를 만들어줘."}]
   }'
@@ -623,7 +626,7 @@ PII가 전혀 필요 없는 호출(예: 비식별 사내 문서 가공, PII가 �
 curl http://3.38.195.121:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "X-PII-Mode: bypass" \
-  -d '{"model": "gemma-4-31B-it",
+  -d '{"model": "gemma-4-26B-A4B-it",
        "messages": [{"role": "user", "content": "비식별 공지문 초안을 다듬어줘 ..."}]}'
 ```
 
@@ -637,7 +640,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 
 | 파라미터 | 필수 | 기본값 | 설명 |
 |----------|:----:|--------|------|
-| `model` | O | — | `gemma-4-31B-it` 또는 `Qwen3.6-27B-FP8` |
+| `model` | O | — | `gemma-4-26B-A4B-it` 또는 `Qwen3.6-27B-FP8` |
 | `messages` | O | — | 대화 메시지 배열 |
 | `max_tokens` | — | 모델 한계 | 최대 생성 토큰 수. Thinking ON이면 1,000+ 권장 |
 | `temperature` | — | 모델별 | 0=결정적, 1.0=기본. Gemma 4 권장 1.0, Qwen3.6 코딩 0.6 |
@@ -660,7 +663,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
   "id": "chatcmpl-xxx",
   "object": "chat.completion",
   "created": 1738200000,
-  "model": "gemma-4-31B-it",
+  "model": "gemma-4-26B-A4B-it",
   "choices": [{
     "index": 0,
     "message": {
@@ -689,8 +692,8 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 |------|------|----------|
 | **400** | Bad Request | 파라미터 값 범위 위반 (예: `temperature: -1`) |
 | **404** | Not Found | 잘못된 모델명 또는 엔드포인트 경로 |
-| **422** | Unprocessable / **PII 차단** | 요청 바디 파싱 실패, 멀티모달 한도 초과, **또는 주민/카드번호 포함으로 차단** (`type: pii_blocked`) |
-| **503** | PII 검사 불가 | PII 엔진(NER) 일시 장애 시 fail-closed로 요청 차단 (`type: pii_unavailable`) — 잠시 후 재시도 |
+| **422** | Unprocessable / **PII 차단** | 요청 바디 파싱 실패, 멀티모달 한도 초과, **또는 (PII 모드) 주민/카드번호 포함으로 차단** (`type: pii_blocked`) |
+| **503** | PII 검사 불가 (PII 모드) | PII 엔진(NER) 일시 장애 시 fail-closed로 요청 차단 (`type: pii_unavailable`) — 잠시 후 재시도 |
 | **500** | Internal Error | 서버 측 문제 — 잠시 후 재시도, 지속 시 운영자 문의 |
 
 > 🔒 **PII 차단 응답 형식** (HTTP 422):
@@ -715,7 +718,7 @@ curl http://3.38.195.121:5015/v1/chat/completions \
 
 | 모델 | 모드 | temperature | top_p | top_k | presence_penalty | 출처 |
 |------|------|:-----------:|:-----:|:-----:|:----------------:|------|
-| Gemma 4 31B | 일반 | 1.0 | 0.95 | 64 | 0 | 모델 `generation_config.json` 기본값 |
+| Gemma 4 (26B-A4B·31B) | 일반 | 1.0 | 0.95 | 64 | 0 | 모델 `generation_config.json` 기본값 (두 모델 동일 확인) |
 | Qwen3.6-27B | Thinking·일반 | 1.0 | 0.95 | 20 | **1.5** | Qwen3.6 모델 카드 |
 | Qwen3.6-27B | Thinking·코딩 | 0.6 | 0.95 | 20 | 0 | Qwen3.6 모델 카드 |
 | Qwen3.6-27B | Instruct·일반 | 0.7 | 0.8 | 20 | **1.5** | Qwen3.6 모델 카드 |
@@ -731,9 +734,9 @@ LangChain `ChatOpenAI` 기반 chatbot-poc는 `.env`만 바꾸면 즉시 vLLM SLM
 ```env
 PROVIDER=huggingface
 HF_BASE_URL=http://3.38.195.121:5015/v1   # Gemma 게이트웨이
-# HF_BASE_URL=http://3.38.195.121:5016/v1 # Qwen (PII 프록시 경유)
-CHAT_MODEL=gemma-4-31B-it             # 또는 Qwen3.6-27B-FP8
-RERANKER_MODEL=gemma-4-31B-it
+# HF_BASE_URL=http://3.38.195.121:5016/v1 # Qwen (:5016 — 현재 PII 모드 구성만 존재)
+CHAT_MODEL=gemma-4-26B-A4B-it             # 또는 Qwen3.6-27B-FP8
+RERANKER_MODEL=gemma-4-26B-A4B-it
 ```
 
 > ⚠️ **`PROVIDER`는 단일 스택** — Chat과 Embedding이 함께 전환됩니다. 임베딩은 OpenAI 유지하면서 Chat만 vLLM으로 쓰려면 provider 분리가 필요합니다.

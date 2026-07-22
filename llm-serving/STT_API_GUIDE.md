@@ -27,7 +27,9 @@
 
 ## 1. 한눈에 보기
 
-**Base URL**: `http://3.38.195.121:5017/v1` — 3 모델 모두 동일 게이트웨이로 호출하고, `model` 필드로 라우팅됩니다.
+**Base URL**: `http://3.38.195.121:5017/v1` — whisper·Qwen3-ASR용 게이트웨이 (`model` 필드로 라우팅). **Voxtral(Realtime 포함)은 전용 게이트웨이 `:5018`** 로 호출합니다.
+
+> 현재 상시 기동은 Voxtral(`:5018`)이고, whisper·Qwen3-ASR(`:5017`)은 비교 PoC로 필요 시에만 기동됩니다. 호출 전 해당 포트의 `/health`·`/v1/models`로 가용 여부를 확인하세요.
 
 | 항목 | **Whisper (메인)** | Voxtral (실시간 옵션) | Qwen3-ASR (옵션) |
 |------|---------------------|------------------------|-------------------|
@@ -52,7 +54,7 @@
 |--------|------|------|
 | POST | `/v1/audio/transcriptions` | **음성 → 원어 텍스트** (multipart 업로드) |
 | POST | `/v1/audio/translations` | 음성 → 영어 텍스트 |
-| WS   | `/v1/realtime` | 실시간 스트리밍 (`model=Voxtral-Mini-4B-Realtime-2602` 한정) |
+| WS   | `/v1/realtime` | 실시간 스트리밍 (`model=Voxtral-Mini-4B-Realtime-2602` 한정, `:5018`) |
 | GET  | `/v1/models` | 로드된 모델 목록 |
 | GET  | `/health` | 서버 헬스체크 |
 
@@ -237,7 +239,7 @@ curl http://3.38.195.121:5017/v1/audio/transcriptions \
 ```python
 import asyncio, json, websockets
 
-URL = "ws://3.38.195.121:5017/v1/realtime?model=Voxtral-Mini-4B-Realtime-2602"
+URL = "ws://3.38.195.121:5018/v1/realtime?model=Voxtral-Mini-4B-Realtime-2602"
 
 async def main():
     async with websockets.connect(URL) as ws:
@@ -333,7 +335,7 @@ asyncio.run(main())
 | **422** | Unprocessable | 요청 바디 파싱 실패 |
 | **429** | Too Many Requests | 과부하 차단 — `Retry-After` 후 재시도 |
 | **500** | Internal Error | 서버 측 문제 — 잠시 후 재시도, 지속 시 운영자 문의 |
-| **502** | Bad Gateway | 게이트웨이 → 백엔드 연결 실패 (5017 게이트웨이만) |
+| **502** | Bad Gateway | 게이트웨이 → 백엔드 연결 실패 (게이트웨이 경유 시) |
 | **503** | Service Unavailable | 백엔드 미준비 (재기동/웜업 중) |
 | **504** | Gateway Timeout | 백엔드 타임아웃 — 오디오를 더 짧게 분할 |
 
@@ -354,16 +356,16 @@ asyncio.run(main())
 ## 5. 클라이언트 통합 (.env)
 
 ```bash
-# 외부 호출 (단일 STT 게이트웨이 — 3 모델 모두 model 필드로 라우팅)
+# 외부 호출 — whisper·Qwen3-ASR은 :5017 (model 필드 라우팅), Voxtral은 :5018
 STT_BASE_URL=http://3.38.195.121:5017/v1
-STT_MODEL=whisper-large-v3            # 메인. 필요 시 Qwen3-ASR-1.7B / Voxtral-Mini-4B-Realtime-2602
+STT_MODEL=whisper-large-v3            # 필요 시 Qwen3-ASR-1.7B. Voxtral은 :5018로
 STT_LANGUAGE=ko
 
 # 동일 EC2 안에서 호출 (같은 호스트)
 # STT_BASE_URL=http://localhost:5017/v1
 
-# Realtime WS는 동일 호스트 + ws:// 스킴
-# STT_REALTIME_URL=ws://3.38.195.121:5017/v1/realtime
+# Realtime WS는 Voxtral 전용 게이트웨이(:5018) + ws:// 스킴
+# STT_REALTIME_URL=ws://3.38.195.121:5018/v1/realtime
 # STT_REALTIME_MODEL=Voxtral-Mini-4B-Realtime-2602
 ```
 

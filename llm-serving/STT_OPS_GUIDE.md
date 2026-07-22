@@ -2,7 +2,7 @@
 
 > **대상**: STT 서버 운영자 (서버 기동·튜닝·트러블슈팅 담당)
 > **메인 모델**: `mistralai/Voxtral-Mini-4B-Realtime-2602` (BF16, 4B params)
-> **게이트웨이**: `:5017` → 인스턴스 `:7172` (GPU 2)
+> **게이트웨이**: `:5018` → voxtral `:7172`(GPU 2, 메인) · `:5017` → 비교 PoC qwen3_asr `:7170`(GPU 0) / whisper_v3 `:7171`(GPU 2)
 >
 > 사용자(API 호출)용 가이드: [`STT_API_GUIDE.md`](STT_API_GUIDE.md)
 
@@ -33,23 +33,25 @@ vLLM 클러스터(LLM)와 동일한 패턴을 STT에도 도입했습니다. 모�
 클라이언트
   │
   ▼
-Gateway :5017            stt/gateways/5017.yaml
+Gateway :5018            stt/gateways/5018.yaml  (메인 — voxtral realtime 분리)
   │  (transcription / realtime / chat 라우팅)
   │  HealthChecker · Admission · LB
-  │
   ▼
-vLLM voxtral :7172       stt/instances/voxtral.yaml
-  GPU 2, Voxtral-Mini-4B-Realtime-2602
+vLLM voxtral :7172       stt/instances/voxtral.yaml (GPU 2)
+
+Gateway :5017            stt/gateways/5017.yaml  (비교 PoC — model 필드로 라우팅)
+  ├─ vLLM qwen3_asr  :7170   stt/instances/qwen3_asr.yaml  (GPU 0)
+  └─ vLLM whisper_v3 :7171   stt/instances/whisper_v3.yaml (GPU 2)
 ```
 
-자동 디스커버리: `gateways/5017.yaml`의 `discover_from: ../instances` → 그 디렉토리의 `*.yaml` 중 `gateway_port: 5017` 메타키를 가진 인스턴스만 backends에 등록.
+자동 디스커버리: 각 게이트웨이 yaml의 `discover_from: ../instances` → 그 디렉토리의 `*.yaml` 중 `gateway_port == 자기 포트`인 인스턴스만 backends에 등록.
 
 ### 6.2 LLM과의 책임 분리
 
 | 레이어 | 디렉토리 | 책임 |
 |--------|---------|------|
 | LLM 서빙 | `llm-serving/vllm/` | Gemma/Qwen 등 chat 모델 (게이트웨이 :5015 / :5016) |
-| STT 서빙 | `llm-serving/stt/` | Voxtral 등 음성 모델 (게이트웨이 :5017) |
+| STT 서빙 | `llm-serving/stt/` | Voxtral 등 음성 모델 (게이트웨이 :5018 메인 / :5017 비교 PoC) |
 | 공용 코드 | `llm-serving/vllm/{start.sh, logging.sh, vllm_server_launcher.py, vllm_gateway.py}` | STT는 `start.sh` / `logging.sh`도 vllm 본체를 호출하는 thin wrapper (옵션 A, 2026-05-12). launcher/gateway는 같은 파이썬 모듈 재사용. |
 
 > 게이트웨이 코드는 `vllm/vllm_gateway.py` 단일 출처. STT 게이트웨이는 chat/completions 외에도 `/v1/audio/transcriptions`, `/v1/realtime` 라우트를 자동 제공합니다.
@@ -74,11 +76,12 @@ llm-serving/stt/
 ├── start.sh                   # thin wrapper → ../vllm/start.sh (env-driven 본체 호출, 옵션 A)
 ├── logging.sh                 # thin wrapper → ../vllm/logging.sh (S3 호출 카운트 5분 sync)
 ├── instances/
-│   ├── voxtral.yaml           # gateway_port: 5017, 내부 :7172 (메인 운영)
-│   ├── whisper_v3.yaml        # 비교 PoC, :7171 직접 노출 (gateway_port 미지정)
-│   └── qwen3_asr.yaml         # 비교 PoC, :7170 직접 노출 (gateway_port 미지정)
+│   ├── voxtral.yaml           # gateway_port: 5018, 내부 :7172 (메인 운영)
+│   ├── whisper_v3.yaml        # 비교 PoC, gateway_port: 5017, 내부 :7171
+│   └── qwen3_asr.yaml         # 비교 PoC, gateway_port: 5017, 내부 :7170
 ├── gateways/
-│   └── 5017.yaml              # discover_from: ../instances
+│   ├── 5017.yaml              # 비교 PoC 게이트웨이 (discover_from: ../instances)
+│   └── 5018.yaml              # 메인 게이트웨이 (voxtral 전용 — realtime 분리)
 └── logs/                      # 인스턴스/게이트웨이 stdout/stderr (자동 생성)
 ```
 
@@ -118,13 +121,13 @@ cd llm-serving/stt
 ### 7.2 상태 의미
 
 ```
-[UP]      vLLM voxtral (GPU 2, :7172, → gw :5017, PID ...)
+[UP]      vLLM voxtral (GPU 2, :7172, → gw :5018, PID ...)
 [STARTING] ... (PID 살아있음 / health 응답 없음 — 모델 로딩 중)
 [STALE]   ... (runtime PID launcher 아님/죽음 — './start.sh down <name>'으로 정리)
 [DOWN]    ...
 
-[UP]      Gateway 5017 (:5017, ready 1/1)
-[STARTING] Gateway 5017 (:5017, ready 0/1 — 백엔드 대기/웜업 중)
+[UP]      Gateway 5018 (:5018, ready 1/1)
+[STARTING] Gateway 5018 (:5018, ready 0/1 — 백엔드 대기/웜업 중)
 ```
 
 ### 7.3 첫 기동 소요 시간
@@ -169,7 +172,7 @@ aws s3 sync ./Voxtral-Mini-4B-Realtime-2602 \
 sudo aws s3 sync s3://hgi-ai-res/models/STT/ /models/STT/
 ```
 
-### 8.3 의존성 (소중함)
+### 8.3 의존성 (필수)
 
 Voxtral은 **`soundfile`, `soxr`, `librosa`** 가 vLLM serving 시 필수 (없으면 `EngineCore failed to start`):
 
@@ -189,19 +192,19 @@ pip install --user soundfile soxr librosa
 
 | 인스턴스 | 노출 경로 | gpu_memory_utilization | max_num_seqs | max_model_len | 예약(L40S 46GB) | 비고 |
 |---|---|---|---|---|---|---|
-| **voxtral** | gw `:5017` → `:7172` (GPU 2) | 0.35 | 1 | 32768 | 16.1 GiB | 메인 운영 (실시간 + transcription) |
-| **qwen3_asr** | `:7170` 직접 (GPU 0) | 0.50 | 8 | 8192 | ~23 GiB | 비교 PoC |
-| **whisper_v3** | `:7171` 직접 (GPU 2) | 0.20 | 5 | 모델 config 자동(448) | ~9 GiB | 비교 PoC, 시나리오 E 1순위 |
+| **voxtral** | gw `:5018` → `:7172` (GPU 2) | 0.4 | 1 | 16384 | 18.4 GiB | 메인 운영 (실시간 + transcription) |
+| **qwen3_asr** | gw `:5017` → `:7170` (GPU 0) | 0.50 | 8 | 8192 | ~23 GiB | 비교 PoC |
+| **whisper_v3** | gw `:5017` → `:7171` (GPU 2) | 0.20 | 5 | 모델 config 자동(448) | ~9 GiB | 비교 PoC, 시나리오 E 1순위 |
 
 L40S 46GB × util별 동작 (voxtral 실측):
 
 | util | 예약 | weight | KV 가용 | KV token | 권장 max_num_seqs |
 |------|------|--------|---------|---------|---------|
-| 0.35 (현재) | 16.1 GiB | 8.38 | 4.24 GiB | 2,160 | 1 (단일 세션 PoC) |
-| 0.40 | 18.4 GiB | 8.38 | ~6.5 GiB | ~3,300 | 2~3 |
+| 0.35 | 16.1 GiB | 8.38 | 4.24 GiB | 2,160 | 1 (단일 세션 PoC) |
+| 0.40 (현재) | 18.4 GiB | 8.38 | ~6.5 GiB | ~3,300 | 2~3 |
 | 0.50 | 23.0 GiB | 8.38 | 10.9 GiB | 5,568 | 4 (max_concurrency 2.71x) |
 
-> vLLM은 continuous batching이라 `max_num_seqs`는 동시 in-flight 상한일 뿐, 실제 동시 N 세션 처리 가능 여부는 KV cache 슬롯에 의해 제한됩니다. 부족하면 일부 시퀀스가 swap out(preemption) → 사실상 일부 순차화. 그래서 `gpu_memory_utilization`과 `max_num_seqs`는 **목표 동시 stream 수에 맞춰 함께** 조정합니다.
+> vLLM은 continuous batching이라 `max_num_seqs`는 동시 in-flight 상한일 뿐, 실제 동시 N 세션 처리는 KV cache 슬롯이 제한합니다. 부족하면 일부 시퀀스가 swap out(preemption) → 사실상 일부 순차화. 그래서 `gpu_memory_utilization`과 `max_num_seqs`는 **목표 동시 stream 수에 맞춰 함께** 조정합니다.
 
 ### 9.2 vLLM 컴파일 모드 (모델카드 권장)
 
@@ -214,27 +217,26 @@ compilation_config:
 
 > `_LAUNCHER_KEYS`에 `env`가 포함되므로 vllm serve로 전달되지 않고 launcher가 환경변수로만 export.
 
-### 9.3 게이트웨이 과부하 차단 (gateways/5017.yaml)
+### 9.3 게이트웨이 과부하 차단 (gateways/5017.yaml·5018.yaml 공통)
 
 ```yaml
 overload:
   enabled: true
-  max_inflight_requests: 1   # 인스턴스 max_num_seqs 와 일치
-  max_queue_size: 4
-  queue_timeout_seconds: 120
+  max_inflight_requests: 20   # 즉시 백엔드로 넘길 최대 요청
+  max_queue_size: 40
+  queue_timeout_seconds: 180
   retry_after_seconds: 10
 ```
 
-429 + `Retry-After` 헤더로 클라이언트 재시도 유도. 동시 N 세션으로 확장 시 인스턴스/게이트웨이 둘 다 같이 N으로 상향.
+429 + `Retry-After` 헤더로 클라이언트 재시도 유도. 실제 동시 처리는 인스턴스 `max_num_seqs`(voxtral 현재 1)와 KV 슬롯이 제한하므로, 동시 N 세션으로 확장 시 인스턴스 쪽(util·max_num_seqs)과 함께 검토.
 
 ### 9.4 STT 전용 게이트웨이 차이점 (vs LLM 게이트웨이)
 
-| 키 | LLM(:5015) | STT(:5017) | 사유 |
+| 키 | LLM(:5015) | STT(:5017/:5018) | 사유 |
 |----|------------|------------|------|
 | `warmup.enabled` | true | **false** | STT는 chat dummy 추론으로 웜업 불가 → /health 프로브만 |
 | `prefix_cache_warmup.enabled` | true | **false** | STT는 시스템 프롬프트 캐싱 패턴과 무관 |
 | `http_client.timeout_seconds` | 300 | **600** | audio 길이에 비례 (chat보다 길게) |
-| `max_inflight_requests` | 2 | **1** | 단일 세션 PoC |
 
 ---
 
@@ -245,10 +247,10 @@ overload:
 | `EngineCore failed to start` + `ImportError: soundfile` | Voxtral 의존성 미설치. `pip install --user soundfile soxr librosa` |
 | `vllm: error: unrecognized arguments: --task transcription` | vLLM 0.20.x에서 `--task` CLI 인자가 제거되고 model config 기반 자동 감지로 통합됨. launcher `_LAUNCHER_KEYS`(`vllm_server_launcher.py:66`)가 yaml의 `task` 키를 필터하여 vllm serve에 전달하지 않도록 보장(`{"gpus", "download_dir", "gateway_port", "port", "env", "task"}`). yaml의 `task` 키는 PoC 비교 운영 메타로만 보존. 자동 감지가 부정확한 모델이 나오면 launcher에 `--runner` 매핑 분기 추가. |
 | 게이트웨이 `/health`가 503 + `ready: 0/1` | 백엔드 voxtral가 미기동 또는 로딩 중. `./start.sh status` → `[STARTING]`이면 1~2분 대기 |
-| 게이트웨이 로그 `realtime 백엔드 연결 실패` | `gateways/5017.yaml`의 `discover_from`이 voxtral.yaml의 `gateway_port`와 일치하는지 확인. 디스커버리 결과는 게이트웨이 기동 로그(`logs/gateway_5017.log`)에 표시 |
+| 게이트웨이 로그 `realtime 백엔드 연결 실패` | voxtral.yaml의 `gateway_port`(5018)와 게이트웨이 포트 일치 확인. 디스커버리 결과는 게이트웨이 기동 로그(`logs/gateway_<port>.log`)에 표시 |
 | `[STALE]` 표시 | launcher가 SIGKILL/crash로 죽음. `./start.sh down voxtral`로 runtime 파일 정리 |
 | GPU OOM | `gpu_memory_utilization` 낮춤(0.30~0.35). 또는 LLM 인스턴스가 같은 GPU 점유 중인지 `nvidia-smi`로 확인 |
-| Transcription HTTP 504 | 600s 초과. 오디오를 더 짧게 분할하거나 `gateways/5017.yaml`의 `http_client.timeout_seconds`를 상향 |
+| Transcription HTTP 504 | 600s 초과. 오디오를 더 짧게 분할하거나 해당 게이트웨이 yaml의 `http_client.timeout_seconds`를 상향 |
 | WebSocket close 4429 | 과부하 차단. `max_inflight_requests`/`max_queue_size` 또는 클라이언트 동시성 조정 |
 | WebSocket close 4500 | 게이트웨이 → 백엔드 WS 연결 실패. 백엔드 vllm 로그(`logs/vllm_voxtral.log`) 확인 |
 | 코드 수정 반영 안 됨 | `__pycache__` 캐시. `find /workspace -name __pycache__ -exec rm -rf {} +` 후 재기동 |
@@ -260,12 +262,12 @@ overload:
 게이트웨이 + 인스턴스 정상 기동 후:
 
 ```bash
-# 1) 게이트웨이 health
-curl -s -w "\n[%{http_code}]\n" http://localhost:5017/health
+# 1) 게이트웨이 health (voxtral 메인 = 5018)
+curl -s -w "\n[%{http_code}]\n" http://localhost:5018/health
 # {"status":"ok","ready":1,"total":1}  [200]
 
 # 2) 모델 등록 확인
-curl -s http://localhost:5017/v1/models | python3 -m json.tool
+curl -s http://localhost:5018/v1/models | python3 -m json.tool
 
 # 3) Smoke transcription (1초 사인파)
 python3 -c "
@@ -274,7 +276,7 @@ sr=16000; t=np.linspace(0,1,sr,endpoint=False)
 sf.write('/tmp/sine_1s.wav', (0.1*np.sin(2*np.pi*440*t)).astype('float32'), sr)
 "
 curl -s -w "\n[%{http_code} (%{time_total}s)]\n" \
-  http://localhost:5017/v1/audio/transcriptions \
+  http://localhost:5018/v1/audio/transcriptions \
   -F "file=@/tmp/sine_1s.wav" \
   -F "model=Voxtral-Mini-4B-Realtime-2602" \
   -F "language=ko" \
@@ -285,24 +287,24 @@ curl -s -w "\n[%{http_code} (%{time_total}s)]\n" \
 python3 - <<'PY'
 import asyncio, json, websockets
 async def main():
-    async with websockets.connect("ws://localhost:5017/v1/realtime?model=Voxtral-Mini-4B-Realtime-2602") as ws:
+    async with websockets.connect("ws://localhost:5018/v1/realtime?model=Voxtral-Mini-4B-Realtime-2602") as ws:
         msg = await ws.recv()
         print("session.created OK:", json.loads(msg)["type"])
 asyncio.run(main())
 PY
 # session.created OK: session.created
 
-# 5) Smoke transcription — whisper_v3 단독 (비교 PoC, 게이트웨이 미경유)
+# 5) Smoke transcription — 비교 PoC 게이트웨이(:5017, model 필드로 백엔드 라우팅)
 curl -s -w "\n[%{http_code} (%{time_total}s)]\n" \
-  http://localhost:7171/v1/audio/transcriptions \
+  http://localhost:5017/v1/audio/transcriptions \
   -F "file=@/tmp/sine_1s.wav" \
   -F "model=whisper-large-v3" \
   -F "language=ko" \
   -F "temperature=0"
-# {"text":"","usage":{"type":"duration","seconds":1}}  [200]
+# {"text":"","usage":{"type":"duration","seconds":1}}  [200]  (디버그용 직접 호출은 :7171)
 ```
 
-위 1~4번이 모두 통과하면 5017 게이트웨이 + voxtral 백엔드는 운영 가능 상태입니다. 비교 PoC(`whisper_v3` / `qwen3_asr`)는 5번 절차로 단독 확인.
+위 1~4번이 모두 통과하면 5018 게이트웨이 + voxtral 백엔드는 운영 가능 상태입니다. 비교 PoC(`whisper_v3` / `qwen3_asr`)는 5번 절차로 확인.
 
 ---
 

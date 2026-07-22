@@ -1,7 +1,7 @@
 # 🎙️ STT 서빙 (vLLM 기반, 페어 구조)
 
 `llm-serving/vllm/` 의 `instances/` + `gateways/` 패턴을 STT에 그대로 적용.
-**Voxtral-Mini-4B-Realtime-2602** 를 게이트웨이 `:5017` 로 외부 노출하고,
+**Voxtral-Mini-4B-Realtime-2602** 를 게이트웨이 `:5018` 로 외부 노출하고(비교 PoC 2종은 `:5017`),
 `vllm_gateway.py` 본체가 `/v1/audio/transcriptions` (HTTP) + `/v1/realtime` (WebSocket) 라우트를 제공한다.
 
 > 사용자(API 호출)용: [`../STT_API_GUIDE.md`](../STT_API_GUIDE.md)
@@ -14,11 +14,11 @@
 
 | 인스턴스 | 모델 | GPU | 내부 포트 | 외부 게이트웨이 | 상태 |
 |---------|------|:---:|:----:|:----:|:----:|
-| `voxtral` | `mistralai/Voxtral-Mini-4B-Realtime-2602` | 2 | 7172 | **5017** | ✅ 운영 |
-| `qwen3_asr` | `Qwen/Qwen3-ASR-1.7B` | 0 | 7170 | (직접 노출) | 🧪 비교 PoC |
-| `whisper_v3` | `openai/whisper-large-v3` | 1 | 7171 | (직접 노출) | 🧪 비교 PoC |
+| `voxtral` | `mistralai/Voxtral-Mini-4B-Realtime-2602` | 2 | 7172 | **5018** | ✅ 운영 |
+| `qwen3_asr` | `Qwen/Qwen3-ASR-1.7B` | 0 | 7170 | 5017 | 🧪 비교 PoC |
+| `whisper_v3` | `openai/whisper-large-v3` | 2 | 7171 | 5017 | 🧪 비교 PoC |
 
-`qwen3_asr` / `whisper_v3` 는 `gateway_port` 메타가 없으므로 게이트웨이 디스커버리에 포함되지 않고 자기 포트(7170/7171)로 직접 노출됩니다 (한국어 정성 비교 PoC 용도).
+`qwen3_asr` / `whisper_v3` 는 비교 PoC 게이트웨이 `:5017` 소속(`model` 필드로 백엔드 라우팅)이고, 내부 포트(7170/7171) 직접 호출은 디버그용입니다. voxtral은 실시간(realtime) 트래픽 분리를 위해 전용 게이트웨이 `:5018`을 씁니다.
 
 ```
 llm-serving/stt/
@@ -26,11 +26,12 @@ llm-serving/stt/
 ├── MODEL_STUDY.md           # 후보 모델 비교 / 시나리오
 ├── start.sh                 # vllm/start.sh 패턴 풀 도입 (instances/+gateways/ 페어 자동 순회)
 ├── instances/
-│   ├── voxtral.yaml         # gateway_port: 5017 → :5017 페어, 내부 :7172
-│   ├── qwen3_asr.yaml       # 비교용 (gateway_port 없음, :7170 직접)
-│   └── whisper_v3.yaml      # 비교용 (gateway_port 없음, :7171 직접)
+│   ├── voxtral.yaml         # gateway_port: 5018 → :5018 페어, 내부 :7172
+│   ├── qwen3_asr.yaml       # 비교용 (gateway_port: 5017, 내부 :7170)
+│   └── whisper_v3.yaml      # 비교용 (gateway_port: 5017, 내부 :7171)
 ├── gateways/
-│   └── 5017.yaml            # discover_from: ../instances, warmup 비활성화, timeout 600s
+│   ├── 5017.yaml            # 비교 PoC 게이트웨이 (discover_from: ../instances)
+│   └── 5018.yaml            # 메인 게이트웨이 (voxtral 전용, warmup 비활성화, timeout 600s)
 └── logs/                    # 인스턴스/게이트웨이 stdout/stderr (자동 생성)
 ```
 
@@ -46,12 +47,12 @@ cd llm-serving/stt
 ./start.sh up                       # 인자 없음 → 전체 적용 confirm 프롬프트 [y/N]
 ./start.sh up all                   # 전체 인스턴스 + 게이트웨이 기동 (확인 없이)
 ./start.sh up voxtral               # voxtral 단독 (게이트웨이 미터치)
-./start.sh up 5017                  # 5017 게이트웨이 단독 (인스턴스 미터치)
+./start.sh up 5018                  # 5018 게이트웨이 단독 (인스턴스 미터치)
 ./start.sh status                   # UP/DOWN/STARTING/STALE 표시
 ./start.sh down                     # 인자 없음 → 전체 중지 confirm 프롬프트 [y/N]
 ./start.sh down all                 # 모든 인스턴스 + 게이트웨이 중지 (확인 없이)
 ./start.sh down voxtral             # voxtral 단독 중지
-./start.sh down 5017                # 5017 게이트웨이 단독 중지
+./start.sh down 5018                # 5018 게이트웨이 단독 중지
 ./start.sh restart                  # 인자 없음 → 전체 재시작 confirm 프롬프트 [y/N]
 ./start.sh restart <name>           # 단일 대상 재시작
 ```
@@ -61,8 +62,8 @@ cd llm-serving/stt
 상태 확인:
 
 ```bash
-curl http://localhost:5017/health             # 게이트웨이 health
-curl http://localhost:5017/v1/models          # 모델 목록
+curl http://localhost:5018/health             # 메인 게이트웨이 health (비교 PoC는 :5017)
+curl http://localhost:5018/v1/models          # 모델 목록
 curl http://localhost:7172/health             # 내부 인스턴스 직접 (디버그용)
 ```
 
@@ -79,7 +80,7 @@ sf.write('/tmp/sine_1s.wav', (0.1*np.sin(2*np.pi*440*t)).astype('float32'), sr)
 "
 
 # Transcription HTTP
-curl http://localhost:5017/v1/audio/transcriptions \
+curl http://localhost:5018/v1/audio/transcriptions \
   -F "file=@/tmp/sine_1s.wav" \
   -F "model=Voxtral-Mini-4B-Realtime-2602" \
   -F "language=ko" \
@@ -90,7 +91,7 @@ curl http://localhost:5017/v1/audio/transcriptions \
 python3 - <<'PY'
 import asyncio, json, websockets
 async def main():
-    async with websockets.connect("ws://localhost:5017/v1/realtime?model=Voxtral-Mini-4B-Realtime-2602") as ws:
+    async with websockets.connect("ws://localhost:5018/v1/realtime?model=Voxtral-Mini-4B-Realtime-2602") as ws:
         print(json.loads(await ws.recv())["type"])
 asyncio.run(main())
 PY
@@ -113,11 +114,12 @@ pip install --user soundfile soxr librosa
 
 ### GPU 점유 충돌 (LLM 인스턴스와 동시 운영)
 
-- **voxtral** 은 GPU 2 단독 → LLM 인스턴스(`vllm/instances/{gemma,qwen}.yaml` GPU 0/1) 와 충돌 없음.
-- **qwen3_asr / whisper_v3** 는 GPU 0/1 사용 → LLM 운영 중에는 띄울 수 없음. 한국어 비교 PoC 시 LLM 먼저 stop:
+- **voxtral** 은 GPU 2 단독 → LLM 인스턴스(GPU 0·1)와 충돌 없음.
+- **qwen3_asr**(GPU 0)는 LLM과, **whisper_v3**(GPU 2)는 voxtral과 GPU가 겹침 → 비교 PoC 시 충돌 대상 먼저 stop:
 
 ```bash
-cd ../vllm && ./start.sh down <인스턴스명>   # 운영 중인 LLM 인스턴스를 하나씩 명시 (예: gemma, qwen)
+cd ../vllm && ./start.sh down <인스턴스명>   # qwen3_asr 띄울 때: 운영 중 LLM (예: gemma-26b)
+cd ../stt  && ./start.sh down voxtral        # whisper_v3 띄울 때: voxtral
 cd ../stt  && ./start.sh up qwen3_asr        # 또는 whisper_v3
 ```
 
@@ -144,8 +146,8 @@ cd ../stt  && ./start.sh up qwen3_asr        # 또는 whisper_v3
 | `ImportError: soundfile` 로 EngineCore 실패 | `pip install --user soundfile soxr librosa` |
 | `[STARTING]` 만 1분 이상 지속 | `tail -f logs/vllm_voxtral.log` 로 cudagraph capture 단계 확인 |
 | 게이트웨이 ready 0/1 | 백엔드 voxtral 의 `/health` 가 200인지 확인. 미응답이면 `[STALE]` 정리 후 재기동 |
-| GPU OOM | `instances/voxtral.yaml` 의 `gpu_memory_utilization` 0.30~0.35 |
-| 5017 → 백엔드 라우팅 안 됨 | `gateways/5017.yaml` 의 `discover_from` 과 인스턴스의 `gateway_port` 일치 확인 |
+| GPU OOM | `instances/voxtral.yaml` 의 `gpu_memory_utilization` 하향 (0.30~0.40) |
+| 게이트웨이 → 백엔드 라우팅 안 됨 | 게이트웨이 포트와 인스턴스의 `gateway_port` 일치 확인 (voxtral=5018, PoC 2종=5017) |
 
 ---
 

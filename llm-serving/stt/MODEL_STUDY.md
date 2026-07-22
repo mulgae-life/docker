@@ -318,12 +318,12 @@
 1. **모델 다운로드** — `vllm/vllm_server_launcher.py` 가 첫 기동 시 자동 다운로드 (`/models/STT/<HF_ID>/`)
 2. **vLLM 기동 설정** — `instances/{voxtral,qwen3_asr,whisper_v3}.yaml` (모델별 분리) ✅ 완료
 3. **인스턴스 동시 기동** — `start.sh` 가 `instances/*.yaml` + `gateways/*.yaml` 페어 자동 순회 ✅ 완료
-4. **메인 운영 모델** — Voxtral-Mini-4B-Realtime-2602 (게이트웨이 :5017, 한국어 ✅, transcription/realtime 동시 지원) ✅ 완료
+4. **메인 운영 모델** — Voxtral-Mini-4B-Realtime-2602 (게이트웨이 :5018, 한국어 ✅, transcription/realtime 동시 지원) ✅ 완료
 5. **벤치 스크립트** — `test_stt.py` (예정):
    - 한국어 샘플 (다양한 길이/화자/잡음)에 대해 WER, RTF, latency 측정
    - 정성 평가 (고유명사·숫자·전문용어)
 6. **결과 비교** — Voxtral-Mini-4B-Realtime + Qwen3-ASR-1.7B + Whisper-large-v3 한국어 정량 비교
-7. **게이트웨이 통합** ✅ 완료 — `vllm/vllm_gateway.py` 본체에 `/v1/audio/transcriptions` (POST) + `/v1/realtime` (WS) 라우트 추가, STT 게이트웨이 :5017이 본체 재사용
+7. **게이트웨이 통합** ✅ 완료 — `vllm/vllm_gateway.py` 본체에 `/v1/audio/transcriptions` (POST) + `/v1/realtime` (WS) 라우트 추가, STT 게이트웨이(:5017/:5018)가 본체 재사용
 
 ### 6.3 디렉토리 구조 (구현 완료, 2026-05-04 페어 구조 도입)
 
@@ -333,11 +333,12 @@ llm-serving/stt/
 ├── README.md                 # 운영 가이드 (사용법 / 트러블슈팅)
 ├── start.sh                  # vllm/start.sh 패턴 풀 도입 (instances/+gateways/ 페어 자동 순회)
 ├── instances/
-│   ├── voxtral.yaml          # Voxtral-Mini-4B-Realtime (GPU 2, gateway_port: 5017, 내부 :7172)  ✅ 운영
-│   ├── qwen3_asr.yaml        # Qwen3-ASR-1.7B (GPU 0, :7170, 비교 PoC)
-│   └── whisper_v3.yaml       # Whisper-large-v3 (GPU 1, :7171, 비교 PoC)
+│   ├── voxtral.yaml          # Voxtral-Mini-4B-Realtime (GPU 2, gateway_port: 5018, 내부 :7172)  ✅ 운영
+│   ├── qwen3_asr.yaml        # Qwen3-ASR-1.7B (GPU 0, gateway_port: 5017, :7170, 비교 PoC)
+│   └── whisper_v3.yaml       # Whisper-large-v3 (GPU 2, gateway_port: 5017, :7171, 비교 PoC)
 ├── gateways/
-│   └── 5017.yaml             # discover_from: ../instances, warmup 비활성화, audio timeout 600s
+│   ├── 5017.yaml             # 비교 PoC 게이트웨이 (discover_from: ../instances)
+│   └── 5018.yaml             # voxtral 메인 게이트웨이 (warmup 비활성화, audio timeout 600s)
 ├── logs/                     # 인스턴스/게이트웨이 stdout/stderr (gitignore)
 ├── samples/                  # 테스트 오디오 (gitignore, 예정)
 └── test_stt.py               # 한국어 벤치 (예정)

@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-07-21 (재기동 복구 → Gemma 26B-A4B 전환 라이브 + start.sh download 신설 + PII NER 개선. 과거 세션 로그 초압축)
+last-updated: 2026-07-22 (가이드 문서 정합 일괄 갱신 — 26B 전면 표기 + 2-모드 재서술)
 ---
 
 # 세션 상태
@@ -29,7 +29,6 @@ last-updated: 2026-07-21 (재기동 복구 → Gemma 26B-A4B 전환 라이브 + 
 | P1 | **모델 간 속도 매트릭스**: `tests/speed_test.py --base-url`. 26B-A4B 6행 확보(c=1 TPS 168.5 / c=10 TPS 81 — 31B quick 64.8 대비 단발 약 2.6배). 잔존: 31B·Qwen 풀 매트릭스로 3모델 비교 완성. | 부분 완료(26B 측정) |
 | P1 | `llm-serving/sglang/` 디렉토리 골격 (운영 가이드 + 런처 + 설정 + 테스트) | Todo |
 | P1 | **STT 한국어 정성 비교 (PoC 잔여)**: 시나리오 E(정확도+offline) 채택 완료 — 1순위 Whisper-large-v3(+한국어 fine-tune 트랙). `test_stt.py`(WER/RTF/정성) 작성으로 실측 확정. | 의사결정 ✅, 실측 대기 |
-| P1 | **STT 단일 게이트웨이 전환 후속 문서 정정**: `STT_OPS_GUIDE.md`(L5·L36-41·L78-79·L116-122·L185-187·L290) · `llm-serving/README.md`(L14·L47) · `PROJECT.md` STT 트리 주석에 옛 "포트 직접 호출" 표기 잔존. | Todo |
 | P2 | **26B-A4B MTP 튜닝**: acceptance 32~47%(31B 70~85% 대비 낮음 — MoE 저동시성 특성). 동시성 4+ 실측 후 낮으면 `num_speculative_tokens 4→2` 또는 MTP off A/B. | 신규 (2026-07-21) |
 | P2 | **PII NER 후속 고도화 (대표님 지시로 보류)**: 현재 연구·운영 모두 PII 미사용(비PII vllm만 운영). 재사용 전 필수 — ① **🚨 512 토큰 초과 청킹**(현재 긴 텍스트 500 에러 → fail-open 무검사 통과/fail-closed 차단. overlap 청킹 + 회귀 테스트) ② 마이크로 배칭 ③ replica 스케일아웃(`configs/ner.yaml` backends 복제, LB 기지원). 동시성 1차(스레드풀+세마포어)는 7/21 완료. | 신규 (후속 대기) |
 | P2 | **PII 가드 운영 적용 후속 (보류)**: 잔존 — 운영계 :5501 실기동(설정 준비 완료) · 보험 실데이터 recall 게이트 실측(`recall_gate.py` 하버스 준비, 라벨 JSONL 대기) · 스트리밍 progressive buffer(별도 합의) · 이미지 OCR PII · 배포 시 `PII_AUDIT_SALT` 확인. 설계: `agent-guide/plans/pii-dlp-gateway.md`. | 보류(PII 미사용 중) |
@@ -50,6 +49,14 @@ last-updated: 2026-07-21 (재기동 복구 → Gemma 26B-A4B 전환 라이브 + 
 ---
 
 ## 최근 세션
+
+### 2026-07-22 (가이드 문서 정합 일괄 갱신 + STT 포트 정정 + 문체 점검)
+
+- **목표**: 7/21 변경(26B 전환·비PII/PII 2-모드·download·ner.yaml)이 미반영된 가이드 문서 전수 정합. 방향은 대표님 확정 — ① API 가이드 모델 표기 26B 전면 교체 ② PII 서술은 2-모드 구조로 재서술.
+- **변경**: `VLLM_API_GUIDE.md`(모델명 약 30곳 26B-A4B 교체 — generation_config 샘플링 동일 확인, PII 박스·§3.6~3.7·에러표를 "PII 모드 한정"으로 조건부화) · `VLLM_OPS_GUIDE.md`(헤더·§6.1 구성도·§7.5/7.8/7.9·§9 파일트리·§10.1·§14를 2-모드로 재서술, `prd-pii-*` 파일명 정합, §7.4 LB 예시 소속 불일치 정정) · `DEPLOY_GUIDE.md`(진입점 맵·§3 기동 모드별 분리, download 절차 반영) · `llm-serving/README.md`·`pii/README.md`(PII "선택 모드(현재 미운용)" 강등, `ner.yaml` 등재, NER 512 토큰 한계 알려진 이슈 명기) · `slm_research/mtp.md` §5.4 본 환경 실측 추가(acceptance 31B 70~85% vs 26B 32~47%, c=1 TPS 약 2.4배).
+- **상태**: 완료. 검증 — API 가이드 31B 잔존 2곳(의도된 안내문), `prd-qwen` 옛 명칭 잔존 0, "모든 LLM PII 경유" 옛 전제 문구 0.
+- **(후속) STT 포트 정정 — P1 "STT 문서 정정" 해소**: 실물 yaml 기준(voxtral=gw **5018** realtime 분리 / qwen3_asr·whisper_v3=gw **5017** model 라우팅, whisper GPU **2**)으로 `STT_OPS_GUIDE`(§6 구성도·§9.1 gmu 0.4/max_len 16384·§9.3 overload 20/40/180·§11 QA 포트) · `STT_API_GUIDE`(:5018 분리, 상시 기동 안내) · `stt/README`(구성 표·GPU 충돌: whisper↔voxtral) · `PROJECT`·`llm-serving/README`·`DEPLOY`·`OPS`·루트 README·`MODEL_STUDY` 현재 상태부 일괄 정정.
+- **(후속) 문체 점검**: aws·llm-serving·agent-guide 전 문서 상투어/번역체/압축체 패턴 일괄 검색 — 실질 지적 3건(수동태 직역 1, 수다 사족 1, "(소중함)" 라벨 1) 수정. 조사·계획 기록물(slm_research 상세, pii_model_research, plans/)은 이력 보존 위해 문체 미수정.
 
 ### 2026-07-21 (재기동 복구 + Gemma 26B-A4B 전환 + download 명령 신설 + PII NER 개선)
 

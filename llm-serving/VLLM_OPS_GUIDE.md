@@ -3,11 +3,12 @@
 > **대상**: 서버 운영자 (기동/중지, 설정 튜닝, 모델 교체, 트러블슈팅, QA)
 > **API 호출 사용법**: [`VLLM_API_GUIDE.md`](VLLM_API_GUIDE.md) 참고.
 
-> **서비스 구성** (운영계 prd 기준): 두 모델 격리 페어 (PII 프록시 → 게이트웨이 → 단일 vLLM). 외부는 PII 프록시만 노출.
->   - 운영계: `:5501` ← `prd-gemma.yaml` (Gemma 4 31B, GPU 0, gw `:6501` → vLLM `:7070`) · `:5502` ← `prd-qwen.yaml` (Qwen3.6 27B FP8, GPU 0, gw `:6502` → vLLM `:7080`)
->   - 연구계: `:5015` ← `gemma.yaml` (gw `:6015` → vLLM `:7070`) · `:5016` ← `qwen.yaml` (gw `:6016` → vLLM `:7080`)
->   - ※ 현재 실가동은 연구계, 운영계는 설정 완료·실기동 대기(GPU0 여유 확보 후).
->   - 📌 **아래 기동·테스트 명령 예시는 현재 가동 중인 연구계(`:5015`/`gemma.yaml`) 기준**입니다. 운영계는 `:5501`·`:5502` / `prd-gemma`·`prd-qwen` / 게이트웨이 `:6501`·`:6502`로 치환하세요(외부 진입점은 PII 프록시).
+> **서비스 구성 — 2-모드 운용**: 각 진입 포트는 **① 비PII 모드**(게이트웨이가 곧 외부 입구 — **현재 기본**)와 **② PII 모드**(프록시가 같은 포트를 인수, 게이트웨이는 내부로) 중 하나로 운영합니다. 외부 호출 주소는 모드와 무관하게 불변(gemma 연구 `:5015`/운영 `:5501`, qwen 연구 `:5016`/운영 `:5502`).
+>   - **연구계 비PII (현재 프로파일)**: `:5015`(`gateways/5015.yaml`) ← `gemma-26b.yaml` (Gemma 4 26B-A4B fp8, GPU 0·1 TP2, vLLM `:7071`, MTP)
+>   - 연구계 PII: `:5015`(프록시) → gw `:6015` ← `gemma.yaml` (Gemma 4 31B, vLLM `:7070`) · `:5016`(프록시) → gw `:6016` ← `qwen.yaml` (Qwen3.6 27B FP8, vLLM `:7080`)
+>   - **운영계 비PII (현재 운용)**: `:5501`(`gateways/5501.yaml`) ← `prd-gemma.yaml` (Gemma 4 31B, GPU 0, vLLM `:7070`)
+>   - 운영계 PII: `:5501`(프록시) → gw `:6501` ← `prd-pii-gemma.yaml` · `:5502`(프록시) → gw `:6502` ← `prd-pii-qwen.yaml`
+>   - 📌 **아래 기동·테스트 명령 예시는 연구계 비PII(`:5015`/`gemma-26b.yaml`) 기준**입니다. 운영계는 `:5501` / `prd-gemma` 등으로 치환하세요.
 > **인프라**: AWS L40S 46GB × 4장.
 > **vLLM 버전**: 0.19.0+.
 
@@ -16,6 +17,8 @@
 > 🆕 **포트 자동 회피**: 인스턴스 yaml의 `port`는 **hint**. launcher가 사용 중인 포트면 +1, +2 … 비어있는 첫 포트로 자동 회피하고, 실제 포트를 `instances/.runtime/<name>.json`에 기록한다. 게이트웨이는 이 파일을 우선 참조하여 backends를 등록하므로 **복붙 LB 시나리오에서 port를 깜빡해도 자동으로 다른 포트에 띄우고 게이트웨이가 LB**된다.
 >
 > 🆕 **2026-06-04 PII/DLP 가드 (enforcement)**: 사내 정책으로 LLM 앞단에 PII 가드가 의무화됨. 외부에 열린 단일 포트를 **PII 프록시가 인수**하고 게이트웨이는 내부 포트로 한 칸 물러난다 — 연구계 `:5015`→게이트웨이 `:6015`, 운영계 `:5501`→게이트웨이 `:6501`. **외부 호출 주소(`:5015`/`:5501`)는 불변**. PII 프록시·NER 서버 코드는 [`pii/`](pii/), 설계는 [`agent-guide/plans/pii-dlp-gateway.md`](../agent-guide/plans/pii-dlp-gateway.md), 기동 절차는 아래 [§7.9](#79-pii-가드-포함-기동)를 참고. ⚠️ 게이트웨이 yaml 파일명·`gateway.port`가 6015/6501로 바뀌었으므로 `./start.sh up 6015`처럼 **새 포트로 호출**한다.
+>
+> 🆕 **2026-07-21 2-모드 운용 전환**: PII 가드는 **선택 모드**가 됨 — 현재 연구·운영 모두 **비PII 모드**(게이트웨이가 외부 포트에 직접, PII 스택 미기동)로 운용하고, PII 모드는 필요 시 프록시+NER을 올려 전환한다. 연구계 비PII 프로파일은 `gemma-26b.yaml`(26B-A4B, MTP drafter `${model}-assistant` 자동 추종) ↔ `gateways/5015.yaml` 페어, 운영계는 `prd-gemma.yaml` ↔ `gateways/5501.yaml`. 모델 증분 동기화는 `./start.sh download`([§8.2](#82-다운로드최신-동기화--startsh-download)).
 
 ---
 
@@ -40,12 +43,30 @@
 
 ### 6.1 전체 구성도
 
+**모드 ① 비PII (현재 기본)** — 게이트웨이가 곧 외부 입구:
+
 ```
 chatbot-poc (.env)
   PROVIDER=huggingface
-  HF_BASE_URL=http://...:5501/v1   (또는 :5502)   ※ 연구계는 :5015/:5016
+  HF_BASE_URL=http://...:5015/v1   ※ 운영계는 :5501
                 │
                 ▼
+┌──────────────────────────────┐
+│ Gateway :5015 (0.0.0.0)      │  gateways/5015.yaml  ※ 운영계 5501.yaml
+│   discover_from: ../instances│  • LB  • 헬스체크  • 웜업
+└──────────────────────────────┘
+                │
+                ▼
+┌──────────────────────────────┐
+│ vLLM :7071 (GPU 0·1, TP2)    │  instances/gemma-26b.yaml
+│   gateway_port: 5015 ────────┘  ※ 운영계 prd-gemma.yaml (:7070, GPU 0)
+│   model: gemma-4-26B-A4B-it  │
+└──────────────────────────────┘
+```
+
+**모드 ② PII** — 프록시가 같은 외부 포트를 인수하고 게이트웨이는 내부로 물러난다 (운영계 prd-pii 페어 기준):
+
+```
 ┌──────────────────────────────┐    ┌──────────────────────────────┐
 │ PII :5501 → Gateway :6501    │    │ PII :5502 → Gateway :6502    │
 │ gateways/6501.yaml (내부전용) │    │ gateways/6502.yaml (내부전용) │
@@ -56,26 +77,26 @@ chatbot-poc (.env)
                 ▼                                ▼
 ┌──────────────────────────────┐    ┌──────────────────────────────┐
 │ vLLM :7070 (GPU 0)           │    │ vLLM :7080 (GPU 0)           │
-│ instances/prd-gemma.yaml     │    │ instances/prd-qwen.yaml      │
+│ instances/prd-pii-gemma.yaml │    │ instances/prd-pii-qwen.yaml  │
 │   gateway_port: 6501 ────────┘    │   gateway_port: 6502 ────────┘
 │   model: gemma-4-31B-it      │    │   model: Qwen3.6-27B-FP8     │
 └──────────────────────────────┘    └──────────────────────────────┘
 ```
-> ⚠️ gemma·qwen 모두 외부 입구가 **PII 프록시**, 게이트웨이는 **내부 전용**이다(아래 🔒 박스). 연구계는 gemma `:5015`→`:6015` / qwen `:5016`→`:6016`, 운영계는 gemma `:5501`→`:6501` / qwen `:5502`→`:6502`. **PII 비경유는 STT(:5017)뿐**이다([§6.4](#64-qwen-pii-적용)).
+> ⚠️ PII 모드에서는 gemma·qwen 모두 외부 입구가 **PII 프록시**, 게이트웨이는 **내부 전용**이다(아래 🔒 박스). 연구계는 gemma `:5015`→`:6015` / qwen `:5016`→`:6016`, 운영계는 gemma `:5501`→`:6501` / qwen `:5502`→`:6502`. 같은 외부 포트에 두 모드를 동시에 쓸 수 없으므로 **모드는 포트당 택일**이다(예: 연구계 `:5015`는 비PII면 게이트웨이, PII면 프록시).
 
 - 각 게이트웨이 yaml은 자기 포트만 알고, `discover_from`(`../instances`)에서 `gateway_port == 자기 포트`인 인스턴스 yaml을 자동 매칭해 backends로 등록한다.
 - **LB 시나리오**: 같은 `gateway_port`를 갖는 인스턴스 yaml을 추가하면 같은 게이트웨이 아래 vLLM 여러 대가 LB된다(단, vLLM `port`가 겹치면 게이트웨이 기동 시 ValueError로 거부).
 - **격리**: 다른 `gateway_port`를 가진 인스턴스끼리는 서로 영향 없음.
-- **외부 노출**: PII 가드 적용 후 외부에 여는 포트는 **PII 프록시(gemma :5015/:5501, qwen :5016/:5502)**다. 게이트웨이(:6015/:6016/:6501/:6502)와 vLLM 포트는 내부 전용. (PII 미적용은 STT `:5017` 게이트웨이뿐.)
+- **외부 노출**: **비PII 모드(현재 기본)**는 게이트웨이 포트(연구 :5015 / 운영 :5501)가 외부에 열린다(vLLM 포트는 내부 전용). **PII 모드**에서는 프록시(gemma :5015/:5501, qwen :5016/:5502)만 열고 게이트웨이(:6015/:6016/:6501/:6502)·vLLM 포트는 내부 전용이어야 enforcement가 성립한다.
 
-> 🔒 **PII 가드 적용 토폴로지** (위 구성도의 `:5501` prd-gemma 페어 기준):
+> 🔒 **PII 가드 적용 토폴로지** (위 모드 ② 구성도의 `:5501` prd-pii-gemma 페어 기준):
 > ```
 > AI서비스 → :5501 (PII 프록시, 외부 유일 입구)
 >              │  in 검사(주민/카드 차단·이름/주소/전화 마스킹)
 >              ▼
 >           :6501 (게이트웨이, 127.0.0.1)  ── LB·웜업·헬스체크
 >              ▼
->           :7070 (vLLM prd-gemma, GPU 0)
+>           :7070 (vLLM prd-pii-gemma, GPU 0)
 >              ▲
 >      + NER 서버 2종 (GPU3, :8911 vmaca123 / :8901 townboy) ← 프록시가 비정형 PII 검사 시 호출
 >              │  out 검사(응답 마스킹) 후 클라이언트로 반환
@@ -104,18 +125,20 @@ chatbot-poc (.env)
 
 ### 6.4 Qwen PII 적용
 
-Qwen도 gemma와 **동일하게 PII 프록시 뒤로 편입**되어 있습니다(2026-06-08). 연구계 `:5016`, 운영계 `:5502`가 외부 입구이고, 게이트웨이는 내부(`:6016`/`:6502`)로 물러나 있습니다. 이로써 **모든 LLM(gemma·qwen) 앞단 PII 의무**가 충족됩니다.
+Qwen도 gemma와 **동일하게 PII 프록시 구성이 준비**되어 있습니다(2026-06-08). PII 모드에서는 연구계 `:5016`, 운영계 `:5502`가 외부 입구이고, 게이트웨이는 내부(`:6016`/`:6502`)로 물러납니다.
 
-| 항목 | gemma (:5015/:5501) | Qwen (:5016/:5502) |
+> 📌 2026-07-21부터 PII는 **선택 모드**입니다(현재 비PII 운용). 아래 표는 **PII 모드 기준** 서술이며, qwen은 비PII 게이트웨이(`gateways/5016.yaml`)가 아직 없어 **PII 모드 구성만 존재**합니다 — 비PII로 qwen을 열려면 게이트웨이 yaml 신설이 필요합니다(백로그).
+
+| 항목 (PII 모드) | gemma (:5015/:5501) | Qwen (:5016/:5502) |
 |------|--------------------|--------------------|
 | 외부 입구 | PII 프록시 | PII 프록시 |
 | 게이트웨이 | 내부 :6015/:6501 | 내부 :6016/:6502 |
 | PII 검사 | ✅ in/out | ✅ in/out |
 | NER 풀 | GPU3 :8911/:8901 | 같은 서버 풀 공유 |
 
-구성: `gateways/6016.yaml`·`6502.yaml`(내부 전용) + `instances/qwen.yaml`(gateway_port 6016)·`prd-qwen.yaml`(6502) + `pii/configs/proxy.5016.yaml`·`proxy.5502.yaml`. 같은 서버의 gemma·qwen 프록시는 NER 풀(8911/8901)을 공유하므로 NER은 한 번만 기동된다. 기동은 [§7.9](#79-pii-가드-포함-기동) 또는 gemma와 동일 패턴(안쪽부터: vLLM → 게이트웨이 → 프록시).
+구성: `gateways/6016.yaml`·`6502.yaml`(내부 전용) + `instances/qwen.yaml`(gateway_port 6016)·`prd-pii-qwen.yaml`(6502) + `pii/configs/proxy.5016.yaml`·`proxy.5502.yaml`. 같은 서버의 gemma·qwen 프록시는 NER 풀(8911/8901)을 공유하므로 NER은 한 번만 기동된다. 기동은 [§7.9](#79-pii-가드-포함-기동) 또는 gemma와 동일 패턴(안쪽부터: vLLM → 게이트웨이 → 프록시).
 
-> PII 비경유는 **STT(:5017)뿐**이다 — 음성 전용이라 텍스트 PII 정책 대상이 아니다.
+> STT(:5017/:5018)는 음성 전용이라 텍스트 PII 정책 대상이 아니며 모드 구분 없이 항상 게이트웨이가 외부 입구다.
 
 ---
 
@@ -188,11 +211,12 @@ DP(Data Parallel) 시나리오는 인스턴스 yaml을 복사해서 `gpus`만 �
 **복붙 LB 시나리오 (강력 추천 흐름)**:
 ```bash
 # 1. 기존 인스턴스 yaml을 복사 (port를 깜빡 안 바꿔도 OK)
-cp instances/gemma.yaml instances/gemma_replica.yaml
-# (필요한 키만 수정: gpus 등. port는 그대로 둬도 launcher가 자동 회피)
+cp instances/gemma-26b.yaml instances/gemma-26b_replica.yaml
+# (필요한 키만 수정: gpus 등. port는 그대로 둬도 launcher가 자동 회피.
+#  gateway_port가 같아야 같은 게이트웨이 아래 LB로 묶인다)
 
 # 2. 새 인스턴스 기동 (launcher가 yaml의 port를 hint로, 사용 중이면 +1)
-./start.sh up gemma_replica
+./start.sh up gemma-26b_replica
 
 # 3. 게이트웨이 재기동 → instances/.runtime/*.json 발견 → 자동 LB 등록
 #    (게이트웨이 yaml 이름이 5015이면 down/up도 5015 명시)
@@ -216,21 +240,18 @@ cp instances/gemma.yaml instances/gemma_replica.yaml
 ```bash
 cd /workspace/llm-serving/vllm
 
-# 1. vLLM 인스턴스 기동 (yaml `-c` + GPU 인자) — 연구계 예시; 운영은 prd-gemma/prd-qwen으로 치환
-python vllm_server_launcher.py -c instances/gemma.yaml -g 0
-python vllm_server_launcher.py -c instances/qwen.yaml  -g 1
+# 1. vLLM 인스턴스 기동 (yaml `-c` + GPU 인자) — 연구계 비PII 예시; 운영은 prd-gemma로 치환
+python vllm_server_launcher.py -c instances/gemma-26b.yaml -g 0,1
 
-# 2. 게이트웨이 기동 (gemma·qwen 게이트웨이는 PII 적용 후 6015/6016 내부 포트)
-python vllm_gateway.py -c gateways/6015.yaml
-python vllm_gateway.py -c gateways/6016.yaml
+# 2. 게이트웨이 기동 (비PII 모드는 게이트웨이가 곧 외부 입구)
+python vllm_gateway.py -c gateways/5015.yaml
 
 # 백그라운드 실행
 mkdir -p logs
-nohup python vllm_gateway.py -c gateways/6015.yaml > logs/gateway_6015.log 2>&1 &
-nohup python vllm_gateway.py -c gateways/6016.yaml > logs/gateway_6016.log 2>&1 &
+nohup python vllm_gateway.py -c gateways/5015.yaml > logs/gateway_5015.log 2>&1 &
 ```
 
-> 🔒 gemma·qwen 외부 입구(:5015/:5016)는 위 게이트웨이만으로는 열리지 않습니다 — **PII 프록시까지 기동**해야 합니다. PII 포함 전체 기동은 [§7.9](#79-pii-가드-포함-기동) 참고. (STT :5017만 게이트웨이가 곧 외부 입구입니다.)
+> 🔒 **PII 모드**에서는 게이트웨이가 내부 포트(6015/6016)로 물러나고 외부 입구(:5015/:5016)는 **PII 프록시까지 기동**해야 열립니다 — [§7.9](#79-pii-가드-포함-기동) 참고.
 
 ### 7.6 더 로우레벨한 방법 — vllm serve 네이티브
 
@@ -262,10 +283,10 @@ CUDA_VISIBLE_DEVICES=0 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
 
 게이트웨이 자체에는 **인증 기능이 없습니다**. 공개망에 직접 노출하지 말고 AWS Security Group, 방화벽, nginx 등으로 접근을 제한하세요.
 
-> 🔒 **PII enforcement 방화벽 체크리스트 (필수)**: PII 가드는 "외부엔 PII 프록시만 열려 있다"는 전제 위에서만 우회 불가능합니다. 다음을 보안그룹/방화벽에 **고정**하세요.
+> 🔒 **PII enforcement 방화벽 체크리스트 (PII 모드 시 필수)**: PII 가드는 "외부엔 PII 프록시만 열려 있다"는 전제 위에서만 우회 불가능합니다. PII 모드로 운용하는 서버는 다음을 보안그룹/방화벽에 **고정**하세요. (비PII 모드는 게이트웨이 포트만 열고 vLLM 포트를 내부 전용으로 두면 됩니다.)
 > - ✅ 외부 오픈: **PII 프록시만** — gemma `:5015`(연구)/`:5501`(운영), qwen `:5016`(연구)/`:5502`(운영).
 > - ❌ 외부 차단: **게이트웨이 `:6015`/`:6016`/`:6501`/`:6502`**, **vLLM `:7070`/`:7080`**, **NER `:8911`/`:8901`**. 하나라도 외부에서 닿으면 PII 검사를 건너뛰는 직행 경로가 생깁니다(인스턴스 yaml `host: 0.0.0.0`이면 특히 주의 — 가능하면 게이트웨이/vLLM 동일 호스트에서 `127.0.0.1` 바인딩 권장).
-> - ✅ **STT `:5017`만 PII 비경유**(음성 전용). 그 외 모든 LLM 외부 진입점은 PII 프록시 경유([§6.4](#64-qwen-pii-적용)).
+> - ✅ **STT `:5017`/`:5018`은 PII 비경유**(음성 전용, 모드 무관).
 > - 📋 **bypass 헤더 주의**: 현재 5015·5501은 기본 활성(`allow_bypass: true`, 토큰 미설정)이라 **헤더 `X-PII-Mode: bypass` 하나로 검사가 우회**됩니다. PII 강제가 필요한 배포는 해당 프록시에서 `allow_bypass: false`로 끄거나 `PII_BYPASS_TOKEN`을 설정하세요. 우회 요청은 감사로그 `action=bypass`로 기록되니 비율을 주기적으로 모니터링하세요.
 
 vLLM에 `--api-key`를 설정한 경우:
@@ -279,6 +300,12 @@ backend_api_key: "your-secret-key"   # vLLM --api-key 값과 일치
 ```
 
 ### 7.9 PII 가드 포함 기동
+
+> 📌 이 절은 **모드 ② PII** 전용이다. 현재 기본인 **비PII 모드**는 PII 스택 없이 두 단계로 끝난다:
+> ```bash
+> ./start.sh up gemma-26b      # ① vLLM 인스턴스 (운영계: prd-gemma)
+> ./start.sh up 5015           # ② 게이트웨이 = 외부 입구 (운영계: 5501)
+> ```
 
 PII 적용 게이트웨이는 **3계층(PII 프록시 → 게이트웨이 → vLLM)**을 안쪽부터 기동한다. 연구계/운영계는 격리된 별도 서버이며, 각 서버가 자기 NER 서버(GPU3, :8911/:8901)를 띄운다(아래 두 블록은 각각 다른 서버에서 실행).
 
@@ -390,13 +417,19 @@ find "$MODEL_DIR" -maxdepth 1 \( -name '*.safetensors' -o -name '*.bin' \)  # �
 설정은 **인스턴스 단위**(`instances/<name>.yaml`)와 **게이트웨이 단위**(`gateways/<port>.yaml`)로 분리됩니다.
 
 ```
-llm-serving/vllm/   (운영계 prd 기준 — 연구계는 gemma.yaml/qwen.yaml, gw 6015/6016, 외부 :5015/:5016)
+llm-serving/vllm/   (비PII/PII 페어가 파일명으로 구분된다 — prd-* = 운영, 무접두 = 연구)
 ├── instances/
-│   ├── prd-gemma.yaml      (gateway_port: 6501, port: 7070, gpus: [0])  # 외부는 PII 프록시 :5501
-│   └── prd-qwen.yaml       (gateway_port: 6502, port: 7080, gpus: [0])  # 외부는 PII 프록시 :5502
+│   ├── gemma-26b.yaml      (gateway_port: 5015, port: 7071, gpus: [0,1])  # 연구 비PII (현재 기본)
+│   ├── gemma.yaml          (gateway_port: 6015, port: 7070)               # 연구 PII (외부는 프록시 :5015)
+│   ├── qwen.yaml           (gateway_port: 6016, port: 7080)               # 연구 PII (외부는 프록시 :5016)
+│   ├── prd-gemma.yaml      (gateway_port: 5501, port: 7070, gpus: [0])    # 운영 비PII (현재 운용)
+│   ├── prd-pii-gemma.yaml  (gateway_port: 6501, port: 7070, gpus: [0])    # 운영 PII (외부는 프록시 :5501)
+│   └── prd-pii-qwen.yaml   (gateway_port: 6502, port: 7080, gpus: [0])    # 운영 PII (외부는 프록시 :5502)
 └── gateways/
-    ├── 6501.yaml           (gateway.port: 6501 내부전용, discover_from: ../instances)
-    └── 6502.yaml           (gateway.port: 6502 내부전용, discover_from: ../instances)  # 외부는 PII 프록시 :5502
+    ├── 5015.yaml           (외부 직접 노출 0.0.0.0 — 연구 비PII)
+    ├── 5501.yaml           (외부 직접 노출 0.0.0.0 — 운영 비PII)
+    ├── 6015.yaml · 6016.yaml   (내부전용 127.0.0.1 — 연구 PII)
+    └── 6501.yaml · 6502.yaml   (내부전용 127.0.0.1 — 운영 PII)
 ```
 
 ### 9.1 설정 우선순위
@@ -460,12 +493,12 @@ CLI 인자  >  instances/<name>.yaml  >  vLLM 기본값
 
 ### 9.3 게이트웨이 yaml (`gateways/<port>.yaml`) 주요 설정
 
-게이트웨이 yaml(PII 적용분 `6015.yaml`·`6016.yaml`·`6501.yaml`·`6502.yaml`은 내부 전용 `127.0.0.1`, STT `5017.yaml`은 외부)도 주석/구조 100% 동일, 포트·바인딩 host만 다릅니다.
+게이트웨이 yaml(비PII 직접 노출분 `5015.yaml`·`5501.yaml`과 STT `5017.yaml`·`5018.yaml`은 외부 `0.0.0.0`, PII 내부분 `6015.yaml`·`6016.yaml`·`6501.yaml`·`6502.yaml`은 내부 전용 `127.0.0.1`)도 주석/구조 100% 동일, 포트·바인딩 host만 다릅니다.
 
 | 키 | 분류 | 설명 |
 |----|------|------|
 | `gateway.host` | 서버 | `0.0.0.0` |
-| `gateway.port` | 서버 | 게이트웨이 포트. PII 적용분(6015/6016/6501/6502)은 내부 전용, STT(5017)는 외부. `discover_from`의 매칭 키. |
+| `gateway.port` | 서버 | 게이트웨이 포트. 비PII분(5015/5501)·STT(5017/5018)는 외부, PII분(6015/6016/6501/6502)은 내부 전용. `discover_from`의 매칭 키. |
 | `gateway.log_level` | 서버 | `info` |
 | **`discover_from`** | 디스커버리 | 인스턴스 yaml 디렉토리(상대 경로). `../instances` |
 | `backends` | 디스커버리 | (선택) 수동 명시 시 `discover_from`보다 우선 — escape hatch |
@@ -487,15 +520,15 @@ PROVIDER=huggingface
 # 페어 게이트웨이 중 선택:
 HF_BASE_URL=http://3.38.195.121:5015/v1     # Gemma 페어
 # HF_BASE_URL=http://3.38.195.121:5016/v1   # Qwen 페어
-CHAT_MODEL=gemma-4-31B-it                   # 또는 Qwen3.6-27B-FP8
-RERANKER_MODEL=gemma-4-31B-it
+CHAT_MODEL=gemma-4-26B-A4B-it               # 프로파일 따라 gemma-4-31B-it 또는 Qwen3.6-27B-FP8
+RERANKER_MODEL=gemma-4-26B-A4B-it
 ```
 
 > **`CHAT_MODEL`은 반드시 `served_model_name`(미설정 시 `model`에서 자동 추출)과 일치**해야 vLLM이 요청을 받습니다.
 
 ### 9.5 📝 참고: YAML `bool false` 전달 제약 (런처 내부)
 
-> 이건 런처 사용자가 직접 신경 쓸 일은 없지만, 런처 동작 원리가 궁금한 분을 위해 남겨둡니다.
+> 런처가 자동 처리하므로 운영 시 직접 신경 쓸 일은 없음 — 내부 동작 참고용.
 
 vLLM의 YAML 파서(`vllm/utils/argparse_utils.py:501-504`)는 `key: true`만 `--key` 플래그로 변환하고 `key: false`는 아무것도 하지 않습니다. 기본값이 `None`인 필드(예: `async_scheduling`)는 YAML에 `false`로 적어도 CLI로 전달되지 않아 auto-enable 로직에 의해 `True`로 뒤집힙니다.
 
@@ -516,12 +549,13 @@ vLLM 표준 OpenAI API 외에 게이트웨이가 추가로 노출하는 운영�
 | GET | `/health` | 게이트웨이 자체 + 백엔드 ready 카운터 (`{ready, total}`) |
 | GET | `/server-status` | 백엔드 서버 상세 상태 대시보드 |
 
-> 🔒 **PII 적용 후 접근 포트 주의**: 이 엔드포인트들은 **게이트웨이** 기능이라, gemma 경로에서는 외부 `:5015`(PII 프록시)가 아니라 **내부 게이트웨이 `:6015`**에 있습니다. PII 프록시는 `/health`와 `/v1/*`만 노출하므로 `:5015/server-status`는 404입니다. 운영 호스트에서 `127.0.0.1:6015`로 조회하세요. (Qwen도 동일 — 외부 `:5016`이 아니라 내부 게이트웨이 `127.0.0.1:6016`에서 조회.)
+> 🔒 **PII 모드 접근 포트 주의**: 비PII 모드(현재 기본)에서는 `:5015`/`:5501`이 곧 게이트웨이라 `/server-status`를 그대로 조회할 수 있습니다. **PII 모드**에서는 이 엔드포인트들이 내부 게이트웨이(`:6015` 등)에 있습니다 — PII 프록시는 `/health`와 `/v1/*`만 노출하므로 `:5015/server-status`는 404이고, 운영 호스트에서 `127.0.0.1:6015`로 조회하세요. (Qwen도 동일 — `127.0.0.1:6016`.)
 
 ```bash
-# gemma: 게이트웨이는 내부 전용 → 운영 호스트에서 로컬 조회
+# 비PII 모드(현재 기본): 외부 포트가 곧 게이트웨이
+curl http://localhost:5015/server-status
+# PII 모드: 게이트웨이는 내부 전용 → 운영 호스트에서 로컬 조회
 curl http://127.0.0.1:6015/server-status
-# Qwen도 PII 적용 — 게이트웨이는 내부 전용이라 로컬 조회
 curl http://127.0.0.1:6016/server-status
 ```
 
@@ -1164,7 +1198,7 @@ python tests/traffic_test_vllm.py --base-url http://3.38.195.121:5015 --mode ove
 python tests/traffic_test_vllm.py --base-url http://3.38.195.121:5015 --mode smoke --requests 20 --concurrency 20 --max-tokens 32
 ```
 
-운영 전에는 `max_tokens >= 512` 또는 실제 서비스 평균 프롬프트/출력 길이로 한 번 더 확인합니다. 테스트 후 `/health`가 200이어야 통과입니다(gemma 경로의 `/server-status`는 내부 게이트웨이 `127.0.0.1:6015`에서 확인 — [§10.1](#101-게이트웨이-전용-엔드포인트)). 위 `--base-url :5015`는 PII 프록시를 경유하므로 마스킹 오버헤드가 포함된 실경로 성능입니다(순수 게이트웨이 성능은 내부 `:6015`로 측정).
+운영 전에는 `max_tokens >= 512` 또는 실제 서비스 평균 프롬프트/출력 길이로 한 번 더 확인합니다. 테스트 후 `/health`가 200이어야 통과입니다(`/server-status` 조회 포트는 모드에 따라 다름 — [§10.1](#101-게이트웨이-전용-엔드포인트)). PII 모드에서는 위 `--base-url :5015`가 프록시를 경유하므로 마스킹 오버헤드가 포함된 실경로 성능입니다(순수 게이트웨이 성능은 내부 `:6015`로 측정). 비PII 모드는 `:5015`가 곧 게이트웨이라 그대로 순수 성능입니다.
 
 ### 14.3.1 속도 비교 테스트 (모델 간 매트릭스 누적)
 
@@ -1179,7 +1213,7 @@ python tests/speed_test.py --base-url http://localhost:5015     # Gemma 게이�
 python tests/speed_test.py --base-url http://localhost:5016     # Qwen 진입점(PII 프록시) (같은 파일에 누적)
 
 # 모델명 직접 지정 (자동 추출 건너뜀)
-python tests/speed_test.py --base-url http://localhost:5015 --model gemma-4-31B-it --label "Gemma-32k"
+python tests/speed_test.py --base-url http://localhost:5015 --model gemma-4-26B-A4B-it --label "Gemma-32k"
 
 # 빠른 구문/연결 확인 (동시성 1, max_tokens 512만)
 python tests/speed_test.py --base-url http://localhost:5015 --quick
@@ -1299,16 +1333,18 @@ llm-serving/
 │   │   ├── traffic_test_vllm.py (smoke/overload 트래픽 테스트)
 │   │   ├── speed_test.py        (모델 간 속도 매트릭스 누적)
 │   │   └── results/             (speed_results.md 등 누적 리포트)
-│   ├── instances/               ← 인스턴스 단위 yaml (vLLM 1대 = 1 yaml). 운영계 prd 기준
-│   │   ├── prd-gemma.yaml       (gateway_port: 6501, port hint: 7070, gpus: [0])  # 외부는 PII :5501
-│   │   ├── prd-qwen.yaml        (gateway_port: 6502, port hint: 7080, gpus: [0])  # 외부는 PII :5502
-│   │   │                        (연구계: gemma.yaml gw:6015/:5015, qwen.yaml gw:6016/:5016)
+│   ├── instances/               ← 인스턴스 단위 yaml (vLLM 1대 = 1 yaml)
+│   │   ├── gemma-26b.yaml       (연구 비PII, gateway_port: 5015, port hint: 7071, gpus: [0,1])
+│   │   ├── gemma.yaml           (연구 PII, gateway_port: 6015 — 외부는 프록시 :5015)
+│   │   ├── qwen.yaml            (연구 PII, gateway_port: 6016 — 외부는 프록시 :5016)
+│   │   ├── prd-gemma.yaml       (운영 비PII, gateway_port: 5501, port hint: 7070, gpus: [0])
+│   │   ├── prd-pii-gemma.yaml   (운영 PII, gateway_port: 6501 — 외부는 프록시 :5501)
+│   │   ├── prd-pii-qwen.yaml    (운영 PII, gateway_port: 6502 — 외부는 프록시 :5502)
 │   │   └── .runtime/            ← launcher가 기록하는 실제 사용 포트/PID (gitignore 대상)
-│   │       ├── prd-gemma.json   (port, pid, model, started_at)
-│   │       └── prd-qwen.json
+│   │       └── <name>.json      (port, pid, model, started_at)
 │   ├── gateways/                ← 게이트웨이 단위 yaml
-│   │   ├── 6501.yaml            (prd-gemma 페어 내부전용, max_inflight=2, max_queue=18)
-│   │   └── 6502.yaml            (prd-qwen 페어 내부전용, max_inflight=2, max_queue=4)  # 외부는 PII :5502
+│   │   ├── 5015.yaml · 5501.yaml    (비PII — 외부 직접 노출 0.0.0.0)
+│   │   └── 6015 · 6016 · 6501 · 6502.yaml  (PII — 내부전용 127.0.0.1, 외부는 프록시)
 │   ├── slm_research/            ← 모델 비교/연구 노트 (Gemma 4, Qwen 3.5/3.6)
 │   ├── bugfix/                  ← 인시던트 기록 (원인 → 수정 → 재발 방지)
 │   └── logs/                    ← 런타임 로그 (gitignore 대상)
@@ -1341,6 +1377,7 @@ llm-serving/
 
 - [vLLM 공식 문서](https://docs.vllm.ai/)
 - [vLLM GitHub Issues](https://github.com/vllm-project/vllm/issues)
-- [Gemma 4 (Google) HuggingFace](https://huggingface.co/google/gemma-4-31B-it)
+- [Gemma 4 26B-A4B (Google) HuggingFace](https://huggingface.co/google/gemma-4-26B-A4B-it)
+- [Gemma 4 31B (Google) HuggingFace](https://huggingface.co/google/gemma-4-31B-it)
 - [Qwen3.6 HuggingFace 모델 카드](https://huggingface.co/Qwen/Qwen3.6-27B-FP8)
 - [OpenAI Chat Completions API](https://platform.openai.com/docs/api-reference/chat) (vLLM이 호환하는 API 명세)

@@ -258,6 +258,15 @@ vllm serve google/gemma-4-31B-it \
 | **긴 prompt + 짧은 응답** (RAG, 분류) | **MTP 비활성** 권장. GB10 Test B에서 −7.2% throughput / TPOT +30.7% 회귀 확인. |
 | **장문맥 응답** (>128K) | Qwen 3.6 (262K native, YaRN 1M). MTP는 짧은 출력에서 이득이 크므로 효과 제한. |
 
+### 5.4 본 환경 실측 (2026-07-21, L40S×2 TP2 — 사후 추가)
+
+§5의 "L40S 직접 검증되지 않음" 주의에 대한 사내 실측 결과. 설정·운영 노하우 원본은 `instances/gemma-26b.yaml` 및 `instances/_SCHEMA.txt`, 속도 수치 원본은 `tests/results/speed_results.md`.
+
+- **Gemma 4 31B-it + assistant drafter** (`num_speculative_tokens: 4`): acceptance **70~85% 관찰** — GB10 계열 이슈 #41789(저 acceptance)는 본 환경에서 재현되지 않음.
+- **Gemma 4 26B-A4B-it (MoE) + assistant drafter** (fp8, `num_speculative_tokens: 4`): 저동시성에서 acceptance **32~47% 관찰** — MoE의 저동시성 drafter 이득 제한(공식 경고, §5.2)과 부합. 동시성 4+ 실측 후 `num_speculative_tokens` 4→2 하향 검토(백로그).
+- 그래도 절대 속도는 26B-A4B가 우위: 동시성 1에서 TPS 168.5~171.2 / TTFT ~49ms로 31B(70.5~72.5 / ~88ms) 대비 **약 2.4배**, 동시성 10에서도 81.0 vs 43.2로 약 1.9배.
+- drafter `model`은 인스턴스 yaml에서 `${model}-assistant`로 쓰면 런처가 본체 model을 자동 치환한다. ⚠️ Gemma 4는 `method` 키 명시 금지(자동 감지, 명시 시 NotImplementedError).
+
 ---
 
 ## 6. Sources

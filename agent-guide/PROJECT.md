@@ -6,7 +6,7 @@ last-updated: 2026-07-21 (gemma-26b·5015 직접 게이트웨이·download 명�
 
 # 프로젝트 개요
 
-> 서버 설치·운영·배포·서빙과 관련된 모든 인프라 구성을 한 레포에서 관리합니다. 로컬 dev / AWS 인프라 / LLM 서빙을 디렉토리로 분리해 각 영역을 독립적으로 갱신할 수 있게 구성한 **운영 자산 모음**입니다.
+> 서버 설치·운영·배포·서빙 인프라 구성을 한 레포에서 관리하는 **운영 자산 모음**. 로컬 dev / AWS 인프라 / LLM 서빙을 디렉토리로 분리해 영역별로 독립 갱신합니다.
 
 ---
 
@@ -121,7 +121,7 @@ docker/
 | **베이스 OS** | Ubuntu 24.04, NVIDIA CUDA 12.6.3-devel-ubuntu24.04 |
 | **GPU 호스트** | NVIDIA Open Driver, NVIDIA Container Toolkit, Fabric Manager (H100/H200/A100/B100/B200) |
 | **클라우드** | AWS EC2 (g6e/p4/p5), EBS, IAM/S3, SSM Session Manager |
-| **서빙** | vLLM (chat + audio + realtime), FastAPI 게이트웨이 (OpenAI 호환 + 대기열 기반 과부하 차단). LLM(Gemma/Qwen :5015/:5016) + STT(Voxtral :5017). 향후 SGLang 추가 예정 |
+| **서빙** | vLLM (chat + audio + realtime), FastAPI 게이트웨이 (OpenAI 호환 + 대기열 기반 과부하 차단). LLM(Gemma/Qwen :5015/:5016) + STT(Voxtral :5018, 비교 PoC :5017). 향후 SGLang 추가 예정 |
 | **런타임** | Python 3.12, Node.js LTS (nvm) |
 | **개발 도구** | Claude Code, OpenAI Codex, GitHub CLI, tmux, fzf, ripgrep |
 | **풀스택 SDK** | Next.js, FastAPI, LangChain, ChromaDB, Supabase CLI, Playwright |
@@ -154,8 +154,8 @@ docker/
 | `llm-serving/STT_API_GUIDE.md` | STT 사용자용 API 가이드 (§1~§5: transcription·realtime·통합) |
 | `llm-serving/STT_OPS_GUIDE.md` | STT 운영자용 가이드 (§6~§12: 시스템 구조·메모리 핏·의존성·트러블슈팅·QA) |
 | `llm-serving/stt/start.sh` | STT 클러스터 기동 (vllm/start.sh 패턴 풀 도입, ../vllm 코드 재사용) |
-| `llm-serving/stt/instances/voxtral.yaml` | Voxtral 인스턴스 (gateway_port 5017, GPU 2, 내부 :7172) |
-| `llm-serving/stt/gateways/5017.yaml` | STT 게이트웨이 (warmup 비활성화, audio timeout 600s) |
+| `llm-serving/stt/instances/voxtral.yaml` | Voxtral 인스턴스 (gateway_port 5018, GPU 2, 내부 :7172) |
+| `llm-serving/stt/gateways/` | STT 게이트웨이 — `5018.yaml`(voxtral 메인) + `5017.yaml`(비교 PoC). 공통: warmup 비활성화, audio timeout 600s |
 
 ---
 
@@ -187,9 +187,9 @@ python tests/speed_test.py --base-url http://localhost:5015  # 모델 간 속도
 
 # 4) STT 서빙 (Voxtral, vllm 페어 패턴 동일)
 cd ../stt
-./start.sh up              # instances/voxtral.yaml ↔ gateways/5017.yaml 페어 자동
-./start.sh status          # voxtral(:7172) + Gateway 5017 (ready 1/1)
-curl http://localhost:5017/health   # 게이트웨이 health
+./start.sh up              # instances/voxtral.yaml ↔ gateways/5018.yaml 페어 자동
+./start.sh status          # voxtral(:7172) + Gateway 5018 (ready 1/1)
+curl http://localhost:5018/health   # 게이트웨이 health
 ```
 
 > 자세한 절차/트러블슈팅은 각 디렉토리의 README 또는 `llm-serving/{VLLM,STT}_{OPS,API}_GUIDE.md` 참조.

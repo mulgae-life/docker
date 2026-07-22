@@ -2,6 +2,8 @@
 
 사내 폐쇄망 LLM 서빙 앞단에서 개인정보를 검사하는 보안 레이어. 외부 단일 포트를 프록시가 인수해 요청(in)·응답(out) 텍스트를 검사한 뒤 게이트웨이로 포워딩한다. 방화벽이 외부엔 프록시 포트만 열어 **검사 우회 경로를 차단**하는 전제 위에서 enforcement가 성립한다.
 
+> 📌 **운용 모드**: PII 가드는 **선택 모드**다(2026-07 전환). 현재 연구·운영 모두 **비PII 모드**(게이트웨이가 외부 포트에 직접, PII 스택 미기동)로 운용 중이며, 이 문서의 토폴로지·기동 절차는 **PII 모드 적용 시** 기준이다. 모드 비교는 [`../VLLM_OPS_GUIDE.md`](../VLLM_OPS_GUIDE.md) §6.1.
+
 > 빠른 호출(사용자)은 [`../VLLM_API_GUIDE.md`](../VLLM_API_GUIDE.md) §3.6~§3.7(PII 박스), 기동·정책 상세(운영자)는 [`../VLLM_OPS_GUIDE.md`](../VLLM_OPS_GUIDE.md) §7.9.
 
 ## 토폴로지
@@ -35,7 +37,9 @@ vLLM                       추론
 | **구조화** | `detectors/structured.py` | 주민(rrn)·카드(card)·전화(phone)·계좌(account)·사업자(brn)·이메일(email) | regex + 체크섬 (결정적, 모델 대체 불가) |
 | **비정형** | `detectors/ner_client.py` + `ner_server.py` | 이름(name)·주소(address)·조직(org) | NER (GPU3, `vmaca123` + `townboy` LB union) |
 
-NER 모델은 token-classification이라 vLLM 비대상 → transformers로 GPU3에 별도 서빙(`ner_server.py`). 모델 가중치는 `/models/PII/`(저장소 미포함). 모델 출처·라이선스는 [`NOTICE.md`](NOTICE.md), 조사·실측 평가는 [`pii_model_research.md`](pii_model_research.md).
+NER 모델은 token-classification이라 vLLM 비대상 → transformers로 GPU3에 별도 서빙(`ner_server.py`). GPU 번호·모델 경로·백엔드 목록·동시 처리 상한은 [`configs/ner.yaml`](configs/ner.yaml)에서 설정한다(키 상세는 [`configs/_SCHEMA.txt`](configs/_SCHEMA.txt), 일회성 오버라이드는 `PII_GPU=2 ./start.sh up`). 모델 가중치는 `/models/PII/`(저장소 미포함). 모델 출처·라이선스는 [`NOTICE.md`](NOTICE.md), 조사·실측 평가는 [`pii_model_research.md`](pii_model_research.md).
+
+> ⚠️ **알려진 한계 (2026-07-21 발견)**: NER 백엔드는 BERT 위치 임베딩 512 토큰 상한을 넘는 긴 입력에서 추론이 실패한다(청킹 미구현 → RuntimeError → 500). PII 모드를 재적용하기 전에 overlap 청킹 구현이 필요하다(백로그 P1).
 
 ## 정책 (기본값)
 
@@ -58,8 +62,8 @@ PII는 **안쪽부터** 올린다(프록시가 외부 입구를 인수하므로 
 ```bash
 # ── 운영계 서버 (gemma :5501 / qwen :5502) ──
 cd /workspace/llm-serving/vllm
-./start.sh up prd-gemma      # gemma vLLM (GPU0)  →  ./start.sh up 6501  (게이트웨이)
-./start.sh up prd-qwen       # qwen  vLLM (GPU0)  →  ./start.sh up 6502  (게이트웨이)
+./start.sh up prd-pii-gemma  # gemma vLLM (GPU0)  →  ./start.sh up 6501  (게이트웨이)
+./start.sh up prd-pii-qwen   # qwen  vLLM (GPU0)  →  ./start.sh up 6502  (게이트웨이)
 cd ../pii
 bash start.sh up 5501        # gemma 프록시 (외부 :5501 인수, NER 동반 기동)
 bash start.sh up 5502        # qwen  프록시 (외부 :5502 인수, NER 공유)
@@ -86,13 +90,13 @@ cd pii && python tests/eval_pii.py      # 한국어 합성 케이스셋, 타입�
 | 파일 | 역할 |
 |------|------|
 | `proxy.py` | 외부 포트 인수 프록시 (in/out 검사 → 게이트웨이 포워딩, 스트리밍 post) |
-| `ner_server.py` | 비정형 PII NER 서버 (GPU3, transformers token-classification) |
+| `ner_server.py` | 비정형 PII NER 서버 (GPU3, transformers token-classification. 추론은 스레드풀 + 세마포어로 동시 처리 — 상한은 `ner.yaml`의 `max_concurrency`) |
 | `config.py` | 프록시 설정 스키마 (pydantic, 오타 시 기동 단계 fail-fast) |
 | `hooks.py` | 타입 우선순위/한글 라벨 병합 |
 | `audit.py` | HMAC 감사로그 (평문 미저장) |
 | `detectors/structured.py` | 구조화 PII regex + 체크섬 |
 | `detectors/ner_client.py` | NER LB union 클라이언트 |
 | `detectors/normalize.py` | 전각→반각(NFKC) 정규화 (전각 숫자 등 우회 차단) |
-| `configs/` | gemma `proxy.yaml`(5015)·`proxy.5501.yaml`(5501) · qwen `proxy.5016.yaml`·`proxy.5502.yaml` · `proxy.e2e.yaml`(테스트) |
+| `configs/` | NER 풀 `ner.yaml`(gpu/models_dir/backends/max_concurrency) · gemma `proxy.yaml`(5015)·`proxy.5501.yaml`(5501) · qwen `proxy.5016.yaml`·`proxy.5502.yaml` · `proxy.e2e.yaml`(테스트) · 키 상세 `_SCHEMA.txt` |
 | `NOTICE.md` | NER 모델 라이선스 고지 |
 | `pii_model_research.md` | 한국어 PII 모델 조사·실측 평가 |
