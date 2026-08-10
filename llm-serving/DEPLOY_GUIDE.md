@@ -213,7 +213,7 @@ cd /workspace/llm-serving/pii && bash start.sh down 5501 && bash start.sh up 550
 |------|------|
 | `aws: command not found` (운영계) | 컨테이너에 aws CLI 미설치. 호스트에서 `sudo aws s3 sync … /volume/workspace/<USERNAME>/llm-serving/` 후 컨테이너 안에서 작업 |
 | `Unable to locate credentials` | EC2 IAM Role 미부여 또는 `aws configure` 미실행 |
-| `Permission denied: ./start.sh` | `sudo chmod +x llm-serving/*/start.sh` |
+| `Permission denied: ./start.sh` | S3가 실행권한을 보존하지 않아 raw `sync`로 받으면 644가 된다. `sudo chmod +x llm-serving/start.sh llm-serving/*/start.sh` |
 | 모델 다운로드 401/403 | gated 모델 + HF_TOKEN 미설정. `~/aws/.env` 의 `HF_TOKEN` 확인 후 `docker compose up -d --force-recreate` |
 | 모델 다운로드 timeout (폐쇄망) | EC2 외부망 차단. 네트워크 일시 개방 후 `./start.sh download <name>` → 재차단 → `up`(네트워크 미접근). 개방 불가 시 외부망 PC에서 사전 다운로드 → S3 → `/volume/models/` 이관. 절차는 [`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md) §8.2 참조 |
 | 코드 수정이 반영 안 됨 | `__pycache__` 캐시. `find /workspace/llm-serving -name __pycache__ -exec rm -rf {} +` 후 재시작 |

@@ -71,6 +71,8 @@ last-updated: 2026-08-10 (start.sh test/speed/traffic 신설 + sync.sh → start
 | `aws/start.sh` | 기능 | `SYNC_EXCLUDES`에 `.env` 추가(런타임 로드본 보호), pull에서 `.env` 부재 시 `cp` 안내 |
 | `vllm/start.sh` (help) | 수정 | `cmd_help`가 `SPEED_SCRIPT`·`TRAFFIC_SCRIPT` 유무를 보고 해당 줄을 빼도록 변경 — STT 도움말이 미지원 명령을 광고하고 있었다 |
 | `VLLM_API_GUIDE.md`·`STT_API_GUIDE.md`·`VLLM_OPS_GUIDE.md` | 문서(대표님 변경) | 연구계 외부 IP `43.203.176.149` → `43.203.142.247` 43곳. 같은 커밋에 동반 |
+| `SETUP_GUIDE.md`·`DEPLOY_GUIDE.md` | 문서 | EC2 최초 셋업의 `chmod` 대상에 `start.sh`가 빠져 raw sync 직후 `./start.sh pull`이 실행권한 없이 막히던 것을 `chmod +x *.sh`로 교체(코드 다운로드 직후로 위치 이동). DEPLOY_GUIDE 트러블슈팅에도 루트 `start.sh` 추가 |
+| `GUIDE.md` | 문서 | 정합 원칙이 가리키던 `.env.example`이 `aws/`에서는 사라져, 디렉토리별 실제 파일명으로 명시 |
 
 #### 결정 사항
 - **speed·traffic은 `test` 하위 옵션이 아니라 별도 명령** — `speed`는 합격/불합격 판정이 없어 `test`의 실행/실패 요약에 얹히지 않고, `traffic`은 부하라 성격이 다르다. 기존 "동사 하나 = 명령 하나" 구조와도 맞음.
@@ -80,10 +82,11 @@ last-updated: 2026-08-10 (start.sh test/speed/traffic 신설 + sync.sh → start
 - **push 전체 교체 채택** — 두 스크립트의 제외 목록이 전부 런타임 산출물·시크릿이라 삭제 단계에서 함께 지워지는 편이 정리가 된다. `wheels/`(246MB)는 제외 대상이 아니라 aws는 push마다 재업로드됨.
 - **`.env`는 동기화 제외, 환경별 원본만 S3로** (backend-doc-assistant 방식) — 전에는 `.env`가 동기화에 포함돼 pull 한 번에 대상 서버의 `MODE`·`USERNAME`·GPU 배정이 다른 환경 값으로 덮어써졌다. 이제 `.env.dev`/`.env.prd`만 오가고 각 서버가 `cp .env.prd .env`로 한 번 골라두면 이후 pull에 영향받지 않는다. 두 원본은 토큰·비밀번호를 담아 `.gitignore`에 넣고 S3로만 전달. AWS CLI에서 `--exclude '.env'`는 정확매칭이라 `.env.dev`/`.env.prd`는 걸리지 않는다(`--dryrun` 실측 확인).
 
-#### 함정 3건 (신규 발견)
+#### 함정 4건 (신규 발견)
 - **`push --dryrun`이 실제 삭제를 유발할 뻔** — doc-assistant의 `cmd_push`는 인자를 안 받지만 이 두 스크립트는 `"$@"` 패스스루가 있고 문서도 `--dryrun`을 권장한다. 그대로 옮기면 sync만 미리보기가 되고 `aws s3 rm`은 진짜로 실행된다. `--dryrun`만 골라 rm에도 전달(`--delete` 등 sync 전용 옵션은 rm이 모르므로 제외).
 - **검사 순서로 없는 기능 유도** — 인스턴스 차단을 `cmd_traffic`에 두니 STT에서 "게이트웨이를 쓰세요"가 미지원 안내보다 먼저 떴다. `run_suite`로 옮겨 미지원 검사 뒤에 배치.
 - **문서 예시가 실행 불가** — STT에 `./start.sh test 7171`이라 적었으나 7171은 whisper_v3의 포트일 뿐 yaml 파일명이 아니라 라우팅 실패. `whisper_v3`/`5018`로 정정. 이후 문서의 모든 명령 예시를 실제로 실행해 대조.
+- **S3는 실행권한을 보존하지 않는다** — 배포 진입점을 `start.sh`로 바꿨는데 `SETUP_GUIDE`의 최초 셋업 `chmod`는 `setup-ec2.sh user.sh`만 대상이라, raw sync로 받은 EC2에서 `./start.sh pull`이 첫 호출부터 막힌다. S3에서 실제로 받아 `-rw-rw-r--`(644)임을 확인. `chmod +x *.sh`로 교체(pull이 하는 것과 같은 범위). `DEPLOY_GUIDE`는 66행에서 `start.sh`를 챙겼는데 트러블슈팅 행에서는 빠져 있어 같이 보완 — 한쪽만 고치면 이런 비대칭이 남는다.
 
 #### 현재 상태
 완료. 검증은 실행 기반 — 인스턴스 직접 호출이 자동 회피 포트 :7071을 집어 QA 통과, `speed` 전체 순회 정상, `traffic`이 게이트웨이에서 `통과: True`. S3는 건드리지 않았고 push/pull은 가짜 `aws`로 인자 전달만 확인(반영은 대표님이 직접 실행 시).

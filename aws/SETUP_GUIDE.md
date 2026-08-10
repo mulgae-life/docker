@@ -57,6 +57,7 @@ cd /workspace/docker/aws && ./start.sh push
 # (1) 코드 다운로드 — 최초 1회는 start.sh가 아직 없어 raw 명령 (이후 갱신은 ./start.sh pull)
 mkdir -p ~/aws && aws s3 sync s3://hgi-ai-res/hjjo/aws/ ~/aws/
 cd ~/aws
+chmod +x *.sh                  # S3는 실행권한을 보존하지 않아 받은 .sh가 전부 644다. 이후 pull은 start.sh가 자동 처리
 
 # (2) 환경 모드 선택 → .env 생성
 cp .env.dev .env               # 개발 EC2
@@ -66,7 +67,6 @@ cp .env.prd .env               # 운영 EC2
 vim .env                       # VOLUME_DEVICE 등 서버 고유값 확인 (USERNAME·PASSWORD·HF_TOKEN은 채워져 있음)
 
 # (3) 호스트 셋업 (Phase 1 → 자동 reboot → Phase 2 자동 실행)
-chmod +x setup-ec2.sh user.sh
 sudo ./setup-ec2.sh
 tail -f /var/log/ec2-setup.log    # 진행 확인 (다른 터미널)
 
