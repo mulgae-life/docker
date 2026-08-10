@@ -17,7 +17,7 @@ last-updated: 2026-06-10
 | 구분 | 내용 |
 |------|------|
 | **연구계 (현 위치)** | L40S × 4 호스트의 `hjjo` 컨테이너. 서빙 프로세스(vLLM/게이트웨이/PII)는 이 컨테이너의 net/PID 네임스페이스 밖이라 `ss`/`ps`로 직접 안 보임 — 라이브 점검은 호스트 IP 경유 |
-| **운영계 (별도 서버)** | 여기서 직접 조작 불가. 코드 반영 경로: `aws s3 sync` (S3) → 운영계 EC2에서 pull — **운영자가 직접 수행** |
+| **운영계 (별도 서버)** | 여기서 직접 조작 불가. 코드 반영 경로: `./start.sh push` (S3) → 운영계에서 `./start.sh pull` — **운영자가 직접 수행** |
 
 - **운영계 실기동/재기동을 이 환경에서 시도 금지** — 여기서 띄우면 연구계에 잘못 뜹니다. 설정·코드·절차 준비까지만 하고, 실행 단계는 절차로 전달하세요.
 
@@ -76,10 +76,11 @@ last-updated: 2026-06-10
 |------|------|
 | 로컬 dev 컨테이너 기동 | `cd my-docker-server && docker compose up -d --build dev` |
 | 로컬 GPU 컨테이너 기동 | `cd my-docker-server && docker compose up -d --build` |
-| AWS 코드 배포 (S3) | `cd aws && aws s3 sync . s3://hgi-ai-res/hjjo/aws/` |
-| EC2에서 코드 동기화 | `aws s3 sync s3://hgi-ai-res/hjjo/aws/ ~/aws/` |
+| AWS 코드 배포 (S3) | `cd aws && ./start.sh push` — 전체 교체(프리픽스를 비우고 재업로드) |
+| EC2에서 코드 동기화 | `cd ~/aws && ./start.sh pull` |
+| 서빙 코드 배포 (S3) | `cd llm-serving && ./start.sh push` / 운영계에서 `./start.sh pull` |
 | EC2 호스트 셋업 | `cd ~/aws && sudo ./setup-ec2.sh` |
-| vLLM 서버 기동 | `cd llm-serving/vllm && bash start.sh` |
+| vLLM 서버 기동 | `cd llm-serving/vllm && ./start.sh up <인스턴스명>` — 무인자는 도움말, `up all`은 전체 |
 | 모델 최신 동기화 (증분) | `cd llm-serving/vllm && ./start.sh download <인스턴스명>` — 폐쇄망은 네트워크 개방 시점에 |
 
 ---

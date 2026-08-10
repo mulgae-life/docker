@@ -50,6 +50,8 @@ cd /workspace/docker/aws && ./start.sh push
 
 > ⚠️ `push`는 **전체 교체**입니다. S3 프리픽스를 비운 뒤 올려 로컬과 정확히 일치시킵니다. 로컬에서 지운 파일이 S3에 남아 `pull` 때 되살아나는 것을 막기 위해서입니다. 업로드 중 실패하면 프리픽스가 빈 상태로 남으니 반드시 다시 실행하세요. `wheels/`(246MB)는 제외 대상이 아니라 push마다 다시 올라가므로, 규모를 먼저 보려면 `./start.sh push --dryrun`을 쓰세요(삭제 단계까지 미리보기로 동작).
 
+> 🔑 `.env`는 각 서버의 런타임 로드본이라 동기화에서 빠집니다. S3로 오가는 것은 환경별 원본인 `.env.dev`·`.env.prd`뿐입니다. 그래서 서버마다 한 번 `cp`로 골라두면 이후 `pull`을 몇 번 하든 그 서버의 `.env`는 그대로 남습니다. 값을 바꿔 배포하려면 `.env`가 아니라 `.env.dev`/`.env.prd`를 고친 뒤 `push`하고, 대상 서버에서 다시 `cp` 하세요. 두 파일은 토큰과 비밀번호를 담고 있어 git에는 올라가지 않습니다(S3로만 전달).
+
 ### 3-2. EC2 인스턴스 최초 셋업
 ```bash
 # (1) 코드 다운로드 — 최초 1회는 start.sh가 아직 없어 raw 명령 (이후 갱신은 ./start.sh pull)
@@ -57,11 +59,11 @@ mkdir -p ~/aws && aws s3 sync s3://hgi-ai-res/hjjo/aws/ ~/aws/
 cd ~/aws
 
 # (2) 환경 모드 선택 → .env 생성
-cp .env.dev.example .env       # 개발 EC2
+cp .env.dev .env               # 개발 EC2
 # 또는
-cp .env.prd.example .env       # 운영 EC2
+cp .env.prd .env               # 운영 EC2
 
-vim .env                       # USERNAME, PASSWORD, VOLUME_DEVICE, HF_TOKEN 등 입력
+vim .env                       # VOLUME_DEVICE 등 서버 고유값 확인 (USERNAME·PASSWORD·HF_TOKEN은 채워져 있음)
 
 # (3) 호스트 셋업 (Phase 1 → 자동 reboot → Phase 2 자동 실행)
 chmod +x setup-ec2.sh user.sh
@@ -78,7 +80,7 @@ docker compose logs -f llm        # 로그 확인
 
 ## 4. `.env` 주요 키
 
-> 전체 키와 기본값은 `.env.dev.example` / `.env.prd.example` 참조. 아래는 자주 만지는 키.
+> 전체 키와 기본값은 `.env.dev` / `.env.prd` 참조. 아래는 자주 만지는 키.
 
 **사용자 / 시스템**
 
@@ -225,8 +227,8 @@ sudo docker exec -it <container_name> bash
 ## 8. 운영 환경 (prd) 별도 안내
 
 ```bash
-cp .env.prd.example .env       # MODE=prd, USERNAME=root 기본
-vim .env                       # PASSWORD, HF_TOKEN, EXTRA_REQUIREMENTS 등
+cp .env.prd .env               # MODE=prd, USERNAME=root 기본
+vim .env                       # EXTRA_REQUIREMENTS 등 서버별로 다른 값만 확인
 sudo ./setup-ec2.sh
 docker compose up -d
 ```
@@ -247,6 +249,7 @@ docker compose up -d
 cd /workspace/docker/aws && ./start.sh push
 
 # (2) EC2 → 다운로드 + 재빌드 (pull이 --delete로 잔재 정리 + *.sh 실행권한 자동 부여)
+#     .env는 동기화 제외라 이 서버 설정 그대로 유지됨. 환경 원본을 고쳤다면 cp .env.prd .env 로 다시 반영
 cd ~/aws && ./start.sh pull
 docker compose build --no-cache && docker compose up -d
 sudo ~/aws/user.sh rebuild              # 사용자 컨테이너 일괄 갱신

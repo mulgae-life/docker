@@ -3,9 +3,11 @@
 # 사용법: ./start.sh {push|pull} [추가 aws s3 sync 옵션...]
 #
 # 이 파일은 llm-serving 루트의 '코드 배포' 진입점이고, 하위 vllm/·stt/·pii/의 start.sh는
-# '서비스 제어'(up/down/status/test) 진입점이다. 이름은 같지만 역할이 다르니 혼동 주의:
+# '서비스 제어' 진입점이다. 이름은 같지만 역할이 다르니 혼동 주의:
 #   배포:      llm-serving/start.sh push|pull
 #   서비스:    llm-serving/{vllm,stt,pii}/start.sh up|down|status|...
+#              QA 명령은 클러스터마다 다르다 — vllm은 test·speed·traffic,
+#              stt는 test만, pii는 up|down|status만 받는다.
 #
 # 모델 기동/재시작은 이 스크립트 책임이 아니다 (SRP):
 #   - vLLM: cd vllm && ./start.sh restart <name>

@@ -89,7 +89,7 @@ llm-serving/stt/
 
 ## 7. 기동·중지·재시작
 
-> `stt/start.sh`는 `../vllm/start.sh`를 호출하는 thin wrapper(옵션 A, 2026-05-12). 운영 로직(up/down/status/restart, `[name]` 라우팅, confirm 프롬프트, fcntl 직렬화, atomic runtime write, cmdline PID 매칭)은 vllm 본체 단일 출처. 호출 사용법은 vllm/와 동일하며 라벨만 `═══ STT 클러스터 상태 ═══`로 표시.
+> `stt/start.sh`는 `../vllm/start.sh`를 호출하는 thin wrapper(옵션 A, 2026-05-12). 운영 로직(up/down/status/restart, `[name]` 라우팅, confirm 프롬프트, fcntl 직렬화, atomic runtime write, cmdline PID 매칭)은 vllm 본체 단일 출처. 호출 사용법은 vllm/와 동일하며 라벨만 `═══ STT 클러스터 상태 ═══`로 표시. 다만 `speed`·`traffic`은 STT용 테스트 스크립트가 없어 wrapper가 빈 값으로 막고 "미지원"으로 거부한다(`test`는 `tests/test_stt_server.py`로 연결).
 
 ### 7.1 명령 요약
 

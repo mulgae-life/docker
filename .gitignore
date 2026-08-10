@@ -1,4 +1,9 @@
+# .env는 각 서버의 런타임 로드본이라 git에도 S3에도 올리지 않는다.
+# .env.dev/.env.prd는 환경별 원본(토큰·비밀번호 포함) — git 대신 S3로만 전달하고,
+# 배포 후 각 서버에서 `cp .env.prd .env`로 골라 쓴다.
 .env
+.env.dev
+.env.prd
 
 .vllm_serve_*
 

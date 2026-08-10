@@ -727,7 +727,7 @@ run_suite() {
     #  "게이트웨이를 쓰세요"라고 안내하면 없는 기능으로 사용자를 두 번 걷게 만든다.)
     if [ "$gateway_only" -eq 1 ] && [ -n "$target" ] && [[ "$target" != http* ]] \
        && [ -f "$INSTANCES_DIR/${target}.yaml" ]; then
-        echo "ERROR: '$target'은 인스턴스입니다. $label는 게이트웨이만 대상으로 합니다." >&2
+        echo "ERROR: '$target' — 인스턴스입니다. $label는 게이트웨이만 대상으로 합니다." >&2
         echo "  통과 조건에 게이트웨이 전용 /server-status가 들어가 인스턴스는 항상 404로 실패합니다." >&2
         echo "  게이트웨이: $(list_gateway_yamls | xargs -n1 basename 2>/dev/null | sed 's/\.yaml$//' | tr '\n' ' ')" >&2
         exit 1
@@ -806,6 +806,25 @@ cmd_help() {
     gw=$(list_gateway_yamls | xargs -n1 basename 2>/dev/null | sed 's/\.yaml$//' | tr '\n' ' ')
     local first_inst="${inst%% *}" first_gw="${gw%% *}"   # 예시용 첫 항목 (파이프 없이 첫 단어)
 
+    # speed/traffic은 클러스터마다 지원 여부가 다르다(STT는 해당 테스트 스크립트가 없어 미지원).
+    # 도움말에 그대로 두면 없는 기능을 광고하게 되므로, 스크립트가 비어 있으면 줄 자체를 뺀다.
+    # 각 변수는 개행으로 끝나고 heredoc에서 붙여 쓰므로, 비면 빈 줄도 남지 않는다.
+    local speed_cmd="" traffic_cmd="" speed_ex="" traffic_ex="" traffic_policy=""
+    if [ -n "$SPEED_SCRIPT" ]; then
+        speed_cmd="  speed [name|all|URL] 속도 측정 — TTFT/TPS 매트릭스, 결과는 tests/results/에 누적
+"
+        speed_ex="  ./start.sh speed ${first_gw:-<포트>} --quick   # 속도 1조합만 (연결 확인용)
+"
+    fi
+    if [ -n "$TRAFFIC_SCRIPT" ]; then
+        traffic_cmd="  traffic <포트|URL>   하드 부하 테스트 (기본 동시 20) — 게이트웨이만, 대상 명시 필수
+"
+        traffic_ex="  ./start.sh traffic ${first_gw:-<포트>} --concurrency 50   # 부하 강도 지정
+"
+        traffic_policy="           traffic은 부하가 크므로 무인자/all 호출을 아예 거부한다.
+"
+    fi
+
     cat <<EOF
 $CLUSTER_LABEL 클러스터 제어 스크립트
 
@@ -820,9 +839,7 @@ $CLUSTER_LABEL 클러스터 제어 스크립트
   download [name|all]  모델 다운로드/최신 동기화 (서빙 미터치, 네트워크 필요)
   test [name|all|URL]  기능 QA (무인자는 기동된 게이트웨이 전부, 미기동은 SKIP)
                        대상 뒤 인자는 tests/의 해당 스크립트로 그대로 전달
-  speed [name|all|URL] 속도 측정 — TTFT/TPS 매트릭스, 결과는 tests/results/에 누적
-  traffic <포트|URL>   하드 부하 테스트 (기본 동시 20) — 게이트웨이만, 대상 명시 필수
-  help                 이 도움말
+${speed_cmd}${traffic_cmd}  help                 이 도움말
 
 [name] 자리:
   all        전체 인스턴스 + 게이트웨이
@@ -840,13 +857,10 @@ $CLUSTER_LABEL 클러스터 제어 스크립트
   ./start.sh test ${first_gw:-<포트>}          # 게이트웨이 1대만
   ./start.sh test ${first_inst:-<이름>} --category infra inference   # 인스턴스 직접, 카테고리 한정
   ./start.sh test --list           # 테스트 카테고리 목록
-  ./start.sh speed ${first_gw:-<포트>} --quick   # 속도 1조합만 (연결 확인용)
-  ./start.sh traffic ${first_gw:-<포트>} --concurrency 50   # 부하 강도 지정
-
+${speed_ex}${traffic_ex}
 안전 정책: 무인자 up/down/restart/download는 [y/N] 기본 No (사고 방지).
            비대화 환경(파이프/cron)은 'all' 또는 이름 명시 필수.
-           traffic은 부하가 크므로 무인자/all 호출을 아예 거부한다.
-폐쇄망 절차: 네트워크 개방 → download → 차단 → up (up은 네트워크 미접근).
+${traffic_policy}폐쇄망 절차: 네트워크 개방 → download → 차단 → up (up은 네트워크 미접근).
 EOF
 }
 

@@ -50,7 +50,7 @@ cd /workspace/docker/llm-serving && ./start.sh push
 
 > ⚠️ `push`는 **전체 교체**입니다. S3 프리픽스를 비운 뒤 올려 로컬과 정확히 일치시킵니다. 증분만 올리면 로컬에서 지우거나 이름을 바꾼 파일이 S3에 남아 `pull` 때 되살아나기 때문입니다. 업로드 단계에서 중단되면 프리픽스가 빈 상태로 남으므로 반드시 `push`를 다시 실행하세요. 규모를 먼저 보려면 `./start.sh push --dryrun`을 쓰면 삭제 단계까지 미리보기로 동작합니다.
 
-> 루트의 `start.sh`는 **코드 배포**(push·pull) 전용이고, `vllm/`·`stt/`·`pii/` 아래의 `start.sh`는 **서비스 제어**(up·down·status·test)입니다. 이름이 같으니 실행 위치를 확인하세요.
+> 루트의 `start.sh`는 **코드 배포**(push·pull) 전용이고, `vllm/`·`stt/`·`pii/` 아래의 `start.sh`는 **서비스 제어**입니다. 이름이 같으니 실행 위치를 확인하세요. 제어 명령은 클러스터마다 다릅니다. `vllm/`은 up·down·status·logs·download·test·speed·traffic 전부, `stt/`는 speed·traffic을 뺀 나머지, `pii/`는 up·down·status만 받습니다.
 
 ---
 

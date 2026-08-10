@@ -57,7 +57,8 @@ docker/
 │   ├── Dockerfile.llm                # vLLM 베이스 + SSH (dev/prd)
 │   ├── entrypoint-llm.sh
 │   ├── requirements.txt              # 컨테이너 내 pip (transformers는 --no-deps)
-│   ├── .env.dev.example / .env.prd.example
+│   ├── .env.dev / .env.prd           # 환경별 원본 (S3만, git 제외) — 배포 후 cp .env.dev .env
+│   ├── .env                          # 각 서버 런타임 로드본 (S3 동기화 제외, git 제외)
 │   ├── ssh-config-sample
 │   └── README.md
 │
@@ -89,7 +90,7 @@ docker/
     │   ├── tests/                   # 테스트 코드/픽스처/결과 디렉토리
     │   │   ├── test_vllm_server.py  # 서버 헬스/추론 9 카테고리 QA
     │   │   ├── traffic_test_vllm.py # 보수적 트래픽/과부하 테스트
-    │   │   ├── speed_test.py        # 모델 간 속도 매트릭스 누적 (--base-url 단독)
+    │   │   ├── speed_test.py        # 모델 간 속도 매트릭스 누적 (진입점 ./start.sh speed)
     │   │   ├── image.png            # 멀티모달 fixture
     │   │   └── results/             # speed_results.md 등 누적 리포트
     │   ├── slm_research/             # SLM 비교 (Gemma, Qwen)
@@ -175,8 +176,8 @@ ssh <USERNAME>@localhost -p 5000   # cfd
 
 # 2) AWS EC2 GPU 인프라 (Amazon Linux 2023)
 cd aws
-cp .env.dev.example .env   # 또는 .env.prd.example
-vim .env                   # USERNAME/PASSWORD/VOLUME_DEVICE/HF_TOKEN
+cp .env.dev .env           # 또는 .env.prd (S3에서 받은 환경별 원본)
+vim .env                   # VOLUME_DEVICE 등 서버 고유값 확인
 sudo ./setup-ec2.sh        # Phase 1 → 자동 reboot → Phase 2
 docker compose up -d --build
 sudo ./user.sh up jin --password 1234 --gpus 0,1   # 추가 사용자

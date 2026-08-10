@@ -16,7 +16,7 @@ last-updated: 2026-08-10 (start.sh test/speed/traffic 신설 + sync.sh → start
 |------|------|
 | **이슈 트래커** | 별도 도구 없음 (git history + 본 SESSION.md "다음 작업" 표) |
 | **원격 레포** | `git@github.com:mulgae-life/docker.git` (`origin/main`) |
-| **배포 채널** | `aws s3 sync . s3://hgi-ai-res/hjjo/aws/` (코드) → EC2 동기화 |
+| **배포 채널** | `aws/start.sh push`·`llm-serving/start.sh push` (S3 전체 교체) → 대상 서버에서 `./start.sh pull` |
 
 ---
 
@@ -66,6 +66,11 @@ last-updated: 2026-08-10 (start.sh test/speed/traffic 신설 + sync.sh → start
 | `VLLM_OPS_GUIDE.md` | 문서 | 명령 목록 + §14.1·§14.3·§14.3.1 진입점 |
 | `STT_OPS_GUIDE.md` | 문서 | 명령 목록 + §11 QA 체크리스트 |
 | `DEPLOY_GUIDE.md`·`SETUP_GUIDE.md` | 문서 | `sync.sh` 참조 10곳 교체, 전체 교체 push 경고, 이름 충돌 주의 |
+| `GUIDE.md` | 문서 | "자주 쓰는 명령"의 raw `aws s3 sync` 2행을 `./start.sh push`·`pull`로 교체, 서빙 코드 배포 행 신설 |
+| `aws/.env.dev`·`.env.prd` | 신설 | 환경별 원본. `.env.prd`는 기존 `.env` 복사, `.env.dev`는 옛 dev 템플릿에 비밀번호·HF 토큰만 채움. 구 `.env.*.example` 2개는 `.archive/2026-08-10_env-example/`로 이동 |
+| `aws/start.sh` | 기능 | `SYNC_EXCLUDES`에 `.env` 추가(런타임 로드본 보호), pull에서 `.env` 부재 시 `cp` 안내 |
+| `vllm/start.sh` (help) | 수정 | `cmd_help`가 `SPEED_SCRIPT`·`TRAFFIC_SCRIPT` 유무를 보고 해당 줄을 빼도록 변경 — STT 도움말이 미지원 명령을 광고하고 있었다 |
+| `VLLM_API_GUIDE.md`·`STT_API_GUIDE.md`·`VLLM_OPS_GUIDE.md` | 문서(대표님 변경) | 연구계 외부 IP `43.203.176.149` → `43.203.142.247` 43곳. 같은 커밋에 동반 |
 
 #### 결정 사항
 - **speed·traffic은 `test` 하위 옵션이 아니라 별도 명령** — `speed`는 합격/불합격 판정이 없어 `test`의 실행/실패 요약에 얹히지 않고, `traffic`은 부하라 성격이 다르다. 기존 "동사 하나 = 명령 하나" 구조와도 맞음.
@@ -73,6 +78,7 @@ last-updated: 2026-08-10 (start.sh test/speed/traffic 신설 + sync.sh → start
 - **단일 대상은 미기동이어도 SKIP하지 않음** — 이름을 찍은 것은 "떠 있어야 한다"는 기대. 무인자 `all`만 SKIP(게이트웨이 6대 중 일부만 띄우는 것이 정상 운영이라, 안 띄운 대상의 실패로 진짜 실패가 묻힌다).
 - **대상은 첫 자리에서만 인식** — `--category`가 `nargs="*"`라 비대시 인자를 훑으면 `test --category infra`의 `infra`를 대상으로 오인한다(`cmd_logs`의 `--lines`는 값이 하나뿐이라 그 방식이 통했음).
 - **push 전체 교체 채택** — 두 스크립트의 제외 목록이 전부 런타임 산출물·시크릿이라 삭제 단계에서 함께 지워지는 편이 정리가 된다. `wheels/`(246MB)는 제외 대상이 아니라 aws는 push마다 재업로드됨.
+- **`.env`는 동기화 제외, 환경별 원본만 S3로** (backend-doc-assistant 방식) — 전에는 `.env`가 동기화에 포함돼 pull 한 번에 대상 서버의 `MODE`·`USERNAME`·GPU 배정이 다른 환경 값으로 덮어써졌다. 이제 `.env.dev`/`.env.prd`만 오가고 각 서버가 `cp .env.prd .env`로 한 번 골라두면 이후 pull에 영향받지 않는다. 두 원본은 토큰·비밀번호를 담아 `.gitignore`에 넣고 S3로만 전달. AWS CLI에서 `--exclude '.env'`는 정확매칭이라 `.env.dev`/`.env.prd`는 걸리지 않는다(`--dryrun` 실측 확인).
 
 #### 함정 3건 (신규 발견)
 - **`push --dryrun`이 실제 삭제를 유발할 뻔** — doc-assistant의 `cmd_push`는 인자를 안 받지만 이 두 스크립트는 `"$@"` 패스스루가 있고 문서도 `--dryrun`을 권장한다. 그대로 옮기면 sync만 미리보기가 되고 `aws s3 rm`은 진짜로 실행된다. `--dryrun`만 골라 rm에도 전달(`--delete` 등 sync 전용 옵션은 rm이 모르므로 제외).

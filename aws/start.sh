@@ -21,7 +21,11 @@ S3_URI="${AWS_INFRA_S3_URI:-s3://hgi-ai-res/hjjo/aws/}"
 # push(로컬→S3) / pull(S3→로컬) 공통 제외 목록.
 # ※ wheels/ 는 제외하지 않는다 — 246MB nightly wheel이지만 Dockerfile.llm이 COPY로
 #    빌드 타임에 쓰므로 S3에는 반드시 올라가야 한다 (git에서만 .gitignore로 제외).
-# ※ .env 는 동기화에 포함 — 내부망 전용 정책(시크릿 마스킹 없이 S3 보관).
+# ※ .env(각 서버의 런타임 로드본)는 제외한다 — 환경별 .env.dev/.env.prd만 S3에 보관하고
+#    각 서버가 배포 후 알맞은 것을 .env로 복사한다. 제외하지 않으면 pull 한 번에
+#    그 서버의 .env가 다른 환경 값으로 덮어써진다(MODE·USERNAME·GPU 배정까지 뒤바뀜).
+#    .env.dev/.env.prd는 '.env' 정확매칭에 걸리지 않아 그대로 동기화된다.
+#    두 파일은 토큰·비밀번호를 담고 있어 git에는 올리지 않는다(내부망 전용 정책, S3로만 전달).
 SYNC_EXCLUDES=(
     --exclude '.git/*'
     --exclude '**/__pycache__/*'
@@ -29,6 +33,7 @@ SYNC_EXCLUDES=(
     --exclude '.archive/*'
     --exclude '.claude/*'
     --exclude '*.log'
+    --exclude '.env'
 )
 
 require_aws() {
@@ -72,7 +77,7 @@ cmd_push() {
         echo "[push] S3 업로드 실패 — 프리픽스가 비워진 상태이니 반드시 push를 재실행할 것"
         exit 1
     fi
-    echo "[push] 업로드 완료 (.env·wheels/ 포함 — 내부망 전용 정책)"
+    echo "[push] 업로드 완료 (.env.dev·.env.prd·wheels/ 포함, .env 런타임본은 제외)"
     echo "[push] 운영계 적용: ./start.sh pull 후 docker compose build && ./user.sh rebuild <name>"
 }
 
@@ -88,7 +93,13 @@ cmd_pull() {
         exit 1
     fi
     chmod +x "$SCRIPT_DIR"/*.sh 2>/dev/null || true
-    echo "[pull] 다운로드 완료"
+    echo "[pull] 다운로드 완료 (.env 런타임본은 제외 — 기존 설정 유지됨)"
+    # 최초 배포 서버에는 .env가 없다. 여기서 안내하지 않으면 docker compose가
+    # 빈 변수로 뜨면서 원인이 드러나지 않는 실패를 낸다.
+    if [ ! -f "$SCRIPT_DIR/.env" ]; then
+        echo "[pull] .env가 없습니다. 최초 1회 환경에 맞는 설정을 복사하세요:"
+        echo "         cp .env.dev .env   (개발계)   또는   cp .env.prd .env   (운영계)"
+    fi
     echo "[pull] 다음 단계: docker compose build && ./user.sh rebuild <name>"
 }
 
