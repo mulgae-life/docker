@@ -112,6 +112,9 @@ cd llm-serving/stt
 ./start.sh logs 5017                # 게이트웨이 단독 tail -F (logs/gateway_5017.log)
 ./start.sh logs --lines 200         # 초기 라인 수 오버라이드 (-n N alias 가능)
 ./start.sh download voxtral         # 모델 다운로드/최신 동기화 (서빙 미터치, §8 참조)
+./start.sh test                     # 기동된 게이트웨이 전부 QA 테스트 (미기동은 SKIP, §11 참조)
+./start.sh test 5018                # 게이트웨이 단독
+./start.sh test whisper_v3          # 인스턴스 단독 (게이트웨이 미경유 직접 호출)
 ```
 
 `<name>`이 `instances/<name>.yaml`이면 인스턴스, `gateways/<name>.yaml`이면 게이트웨이로 자동 라우팅. `all` 명시는 확인 없이 전체 적용. 같은 이름이 양쪽에 있으면 즉시 에러.
@@ -259,7 +262,16 @@ overload:
 
 ## 11. QA 체크리스트
 
-게이트웨이 + 인스턴스 정상 기동 후:
+게이트웨이 + 인스턴스 정상 기동 후, 자동 검증은 `./start.sh test`로 돌립니다. `tests/test_stt_server.py`의 세 카테고리(`infra`·`transcription`·`edge`)를 실행하며, 하나라도 실패하면 종료 코드 1을 냅니다.
+
+```bash
+./start.sh test                 # 기동된 게이트웨이 전부 (5017·5018)
+./start.sh test 5018            # voxtral 게이트웨이만
+./start.sh test whisper_v3      # 인스턴스 직접 (게이트웨이 미경유)
+./start.sh test --category infra
+```
+
+아래는 개별 항목을 손으로 확인할 때의 절차입니다.
 
 ```bash
 # 1) 게이트웨이 health (voxtral 메인 = 5018)

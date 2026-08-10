@@ -164,6 +164,10 @@ cd /workspace/llm-serving/vllm
 ./start.sh logs <name>       # 단일 대상 tail -F (인스턴스/게이트웨이 자동 라우팅)
 ./start.sh logs --lines 200  # 초기 라인 수 오버라이드 (-n N alias 가능)
 ./start.sh download <name>   # 모델 다운로드/최신 동기화 (서빙 미터치, §8 참조)
+./start.sh test              # 기동된 게이트웨이 전부 기능 QA (미기동은 SKIP, §14 참조)
+./start.sh test <name>       # 단일 대상 (인스턴스는 게이트웨이 미경유 직접 호출)
+./start.sh speed <name>      # 속도 측정 — TTFT/TPS 매트릭스 (§14.3.1)
+./start.sh traffic <포트>    # 하드 부하 — 게이트웨이만, 대상 명시 필수 (§14.3)
 ```
 
 > ⚠️ **안전 정책**: 무인자 호출은 [y/N] 기본 No로 묻는다 (다른 모델/게이트웨이를 실수로 stop시키는 사고 방지). 자동화 스크립트/cron 등 비대화 환경에서는 prompt 띄울 곳이 없으므로 무인자 호출이 거부되며 `'all'` 또는 이름을 명시해야 한다.
@@ -330,7 +334,7 @@ bash start.sh down 5015                  # 특정 프록시만 (NER 유지)
 bash start.sh down all                   # 프록시 전부 + NER
 ```
 
-> - **PII 감사로그 salt**: `pii/start.sh`가 `configs/audit.salt`(없으면 자동 생성, 권한 600)에서 읽어 `PII_AUDIT_SALT`로 주입한다. salt는 환경별 시크릿이라 git/S3 동기화에서 제외된다(`.gitignore`, `sync.sh`).
+> - **PII 감사로그 salt**: `pii/start.sh`가 `configs/audit.salt`(없으면 자동 생성, 권한 600)에서 읽어 `PII_AUDIT_SALT`로 주입한다. salt는 환경별 시크릿이라 git/S3 동기화에서 제외된다(`.gitignore`, 루트 `start.sh`).
 > - **검사 정책**: 주민·카드 = 차단(422), 이름·주소·전화·조직·계좌·사업자·이메일 = 마스킹. 설정은 `pii/configs/proxy.yaml`(5015)·`proxy.5501.yaml`(5501).
 > - **정확성 회귀 평가**: `cd pii && python tests/eval_pii.py` (한국어 합성 케이스셋, 타입별 precision/recall + 과탐).
 
@@ -518,8 +522,8 @@ CLI 인자  >  instances/<name>.yaml  >  vLLM 기본값
 ```env
 PROVIDER=huggingface
 # 페어 게이트웨이 중 선택:
-HF_BASE_URL=http://43.203.176.149:5015/v1     # Gemma 페어
-# HF_BASE_URL=http://43.203.176.149:5016/v1   # Qwen 페어
+HF_BASE_URL=http://43.203.142.247:5015/v1     # Gemma 페어
+# HF_BASE_URL=http://43.203.142.247:5016/v1   # Qwen 페어
 CHAT_MODEL=gemma-4-26B-A4B-it               # 프로파일 따라 gemma-4-31B-it 또는 Qwen3.6-27B-FP8
 RERANKER_MODEL=gemma-4-26B-A4B-it
 ```
@@ -621,7 +625,7 @@ cat > /tmp/qwen_req.json <<'EOF'
 }
 EOF
 
-curl http://43.203.176.149:5016/v1/chat/completions \
+curl http://43.203.142.247:5016/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d @/tmp/qwen_req.json
 ```
@@ -629,7 +633,7 @@ curl http://43.203.176.149:5016/v1/chat/completions \
 **한 줄 명령**:
 
 ```bash
-curl -sS http://43.203.176.149:5016/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"Qwen3.6-27B-FP8","messages":[{"role":"system","content":"자세하게 답변해줘."},{"role":"user","content":"미국인과 한국인의 차이점 비교 설명해줘"}],"max_tokens":10000,"temperature":1.0,"presence_penalty":1.0,"chat_template_kwargs":{"enable_thinking":true}}'
+curl -sS http://43.203.142.247:5016/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"Qwen3.6-27B-FP8","messages":[{"role":"system","content":"자세하게 답변해줘."},{"role":"user","content":"미국인과 한국인의 차이점 비교 설명해줘"}],"max_tokens":10000,"temperature":1.0,"presence_penalty":1.0,"chat_template_kwargs":{"enable_thinking":true}}'
 ```
 
 **Thinking OFF — 빠른 응답**:
@@ -649,7 +653,7 @@ cat > /tmp/qwen_req_nothink.json <<'EOF'
 }
 EOF
 
-curl http://43.203.176.149:5016/v1/chat/completions \
+curl http://43.203.142.247:5016/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d @/tmp/qwen_req_nothink.json
 ```
@@ -658,12 +662,12 @@ curl http://43.203.176.149:5016/v1/chat/completions \
 
 ```bash
 # 사고 과정 + 최종 답변 모두
-curl -sS http://43.203.176.149:5016/v1/chat/completions \
+curl -sS http://43.203.142.247:5016/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d @/tmp/qwen_req.json | jq '.choices[0].message | {reasoning, content}'
 
 # 최종 답변만
-curl -sS http://43.203.176.149:5016/v1/chat/completions \
+curl -sS http://43.203.142.247:5016/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d @/tmp/qwen_req.json | jq -r '.choices[0].message.content'
 ```
@@ -1105,9 +1109,24 @@ cp E=128,N=352,device_name=NVIDIA_RTX_PRO_6000_Blackwell_Workstation_Edition,dty
 
 ### 14.1 기본 사용법
 
+`./start.sh test`가 진입점입니다. `[name]`을 실제 포트로 바꿔 `tests/test_vllm_server.py`를 호출하므로, launcher가 포트를 자동 회피했더라도 포트를 직접 찾을 필요가 없습니다.
+
 ```bash
 cd /workspace/llm-serving/vllm
 
+./start.sh test                      # 기동된 게이트웨이 전부 (미기동은 SKIP)
+./start.sh test 5015                 # 게이트웨이 1대
+./start.sh test gemma-26b            # 인스턴스 직접 (게이트웨이 미경유, runtime의 실제 포트)
+./start.sh test http://gpu-server:5015   # 원격 서버
+./start.sh test 5015 --category infra inference tool   # 대상 뒤 인자는 테스트 스크립트로 그대로 전달
+./start.sh test --list               # 카테고리 목록
+```
+
+전체 카테고리를 다 돌리면 멀티모달·캐싱 항목 때문에 대상 1대당 수 분이 걸립니다. 배포 직후 빠르게 확인할 때는 `--category infra inference`로 좁히세요. 하나라도 실패하면 종료 코드 1이라 cron·CI에서 그대로 판정에 쓸 수 있습니다.
+
+아래는 테스트 스크립트를 직접 호출하는 방법입니다. 포트를 직접 지정하거나 `-v` 같은 옵션을 쓸 때 참고하세요.
+
+```bash
 # 전체 테스트 (모델명 자동 추출 — 아래 우선순위)
 python tests/test_vllm_server.py
 
@@ -1185,17 +1204,27 @@ grep -B1 -A20 "FAIL " tests/logs/test_20260430_144909.log
 
 `traffic_test_vllm.py`는 실제 운영 서버 보호를 우선한 보수적 트래픽 테스트입니다. 기본은 저강도 smoke 확인이며, overload 모드는 429 과부하 방어 응답을 정상 방어로 집계합니다.
 
+진입점은 `./start.sh traffic`입니다. 부하가 큰 명령이라 두 가지를 강제합니다. 대상을 반드시 찍어야 하고(무인자·`all` 거부), 게이트웨이만 받습니다. 인스턴스를 직접 겨냥하면 통과 조건에 들어가는 `/server-status`가 게이트웨이 전용이라 404가 떠서 부하 결과와 무관하게 항상 실패 판정이 납니다.
+
+```bash
+./start.sh traffic 5015                       # 게이트웨이 대상, 기본 설정
+./start.sh traffic 5015 --mode overload       # 뒤 인자는 traffic_test_vllm.py로 그대로 전달
+./start.sh traffic http://호스트:5015 --requests 20 --concurrency 20
+```
+
+아래는 스크립트를 직접 호출하는 방법입니다.
+
 ```bash
 cd llm-serving/vllm
 
 # 저강도 생존/성공률 확인
-python tests/traffic_test_vllm.py --base-url http://43.203.176.149:5015 --mode smoke
+python tests/traffic_test_vllm.py --base-url http://43.203.142.247:5015 --mode smoke
 
 # 대기열/429 방어 확인
-python tests/traffic_test_vllm.py --base-url http://43.203.176.149:5015 --mode overload
+python tests/traffic_test_vllm.py --base-url http://43.203.142.247:5015 --mode overload
 
 # 동시 사용자 20명 기준 짧은 응답 테스트
-python tests/traffic_test_vllm.py --base-url http://43.203.176.149:5015 --mode smoke --requests 20 --concurrency 20 --max-tokens 32
+python tests/traffic_test_vllm.py --base-url http://43.203.142.247:5015 --mode smoke --requests 20 --concurrency 20 --max-tokens 32
 ```
 
 운영 전에는 `max_tokens >= 512` 또는 실제 서비스 평균 프롬프트/출력 길이로 한 번 더 확인합니다. 테스트 후 `/health`가 200이어야 통과입니다(`/server-status` 조회 포트는 모드에 따라 다름 — [§10.1](#101-게이트웨이-전용-엔드포인트)). PII 모드에서는 위 `--base-url :5015`가 프록시를 경유하므로 마스킹 오버헤드가 포함된 실경로 성능입니다(순수 게이트웨이 성능은 내부 `:6015`로 측정). 비PII 모드는 `:5015`가 곧 게이트웨이라 그대로 순수 성능입니다.
@@ -1203,6 +1232,19 @@ python tests/traffic_test_vllm.py --base-url http://43.203.176.149:5015 --mode s
 ### 14.3.1 속도 비교 테스트 (모델 간 매트릭스 누적)
 
 `tests/speed_test.py`는 게이트웨이 단위 속도 측정 도구입니다. 모델명은 `{base_url}/v1/models`에서 자동 추출하며, 결과는 `tests/results/speed_results.md`에 Markdown 테이블 행으로 누적 append 됩니다. 여러 모델 비교는 게이트웨이별로 두 번 호출하면 같은 파일에 이어 쌓입니다.
+
+진입점은 `./start.sh speed`입니다. 합격·불합격 판정이 없는 측정 도구라, 실패로 잡히는 것은 연결 자체가 안 될 때뿐입니다. 인스턴스 직접 지정도 됩니다.
+
+```bash
+./start.sh speed 5015              # 게이트웨이 대상, 6조합 측정
+./start.sh speed gemma-26b         # 인스턴스 직접 (게이트웨이 오버헤드 제외한 순수 속도)
+./start.sh speed 5015 --quick      # 1조합만 (연결 확인용)
+./start.sh speed                   # 기동된 게이트웨이 전부 — 같은 파일에 이어서 누적
+```
+
+무인자로 돌리면 기동된 게이트웨이를 순회하며 한 파일에 쌓으므로, 모델 간 비교표를 한 번에 만들 수 있습니다.
+
+아래는 스크립트를 직접 호출하는 방법입니다.
 
 ```bash
 cd llm-serving/vllm

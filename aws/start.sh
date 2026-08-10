@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # aws/ 인프라 코드 S3 동기화 (로컬 ↔ S3)
-# 사용법: ./sync.sh {push|pull} [추가 aws s3 sync 옵션...]
+# 사용법: ./start.sh {push|pull} [추가 aws s3 sync 옵션...]
 #
 # 재빌드/재기동은 이 스크립트 책임이 아니다 (SRP):
 #   - 이미지 재빌드: docker compose build  (SETUP_GUIDE.md §9-1)
@@ -38,25 +38,52 @@ require_aws() {
     fi
 }
 
-# 로컬 → S3 업로드 (개발 머신에서 코드 변경 반영)
+# 로컬 → S3 전체 교체 업로드 (개발 머신에서 코드 변경 반영)
+# 증분 sync만으로는 로컬에서 지우거나 이름을 바꾼 파일이 S3에 남아 pull 때 되살아난다.
+# 프리픽스를 비운 뒤 올려 로컬과 정확히 일치시킨다.
+# 제외 목록(.git/·__pycache__/·.archive/·*.log)은 애초에 S3에 있어서는 안 되는 것들이라
+# 삭제 단계에서 함께 지워져도 잃을 것이 없다.
+# ※ wheels/(246MB)는 제외 대상이 아니라, 전체 교체 방식에서는 push마다 다시 올라간다.
+#    변경분만 올리고 싶으면 --dryrun으로 규모를 먼저 확인할 것.
 cmd_push() {
     require_aws push
 
+    # 버킷 루트 오설정 시 rm --recursive가 버킷 전체를 지우는 것을 차단
+    if [[ ! "$S3_URI" =~ ^s3://[^/]+/.+ ]]; then
+        echo "[push] S3_URI가 버킷 루트이거나 형식 오류: $S3_URI — 중단"
+        exit 1
+    fi
+
+    # --dryrun은 삭제 단계에도 붙인다. sync에만 넘기면 "미리보기"로 부른 호출이
+    # S3를 실제로 비워버린다. --delete 같은 sync 전용 옵션은 rm이 모르므로 걸러낸다.
+    local rm_opts=() a
+    for a in "$@"; do
+        [ "$a" = "--dryrun" ] && rm_opts+=(--dryrun)
+    done
+
+    echo "[push] S3 기존 객체 전체 삭제: $S3_URI"
+    if ! aws s3 rm "$S3_URI" --recursive "${rm_opts[@]}"; then
+        echo "[push] S3 삭제 실패 — 경로/권한(IAM Role) 확인 후 재시도"
+        exit 1
+    fi
+
     echo "[push] 로컬 → S3 업로드: $SCRIPT_DIR → $S3_URI"
     if ! aws s3 sync "$SCRIPT_DIR" "$S3_URI" "${SYNC_EXCLUDES[@]}" "$@"; then
-        echo "[push] S3 업로드 실패 — 경로/권한(IAM Role) 확인 후 재시도"
+        echo "[push] S3 업로드 실패 — 프리픽스가 비워진 상태이니 반드시 push를 재실행할 것"
         exit 1
     fi
     echo "[push] 업로드 완료 (.env·wheels/ 포함 — 내부망 전용 정책)"
-    echo "[push] 운영계 적용: ./sync.sh pull 후 docker compose build && ./user.sh rebuild <name>"
+    echo "[push] 운영계 적용: ./start.sh pull 후 docker compose build && ./user.sh rebuild <name>"
 }
 
 # S3 → 로컬 다운로드 (EC2 호스트에서 코드 받기)
+# --delete: S3에서 사라진 파일을 로컬에서도 지워 push(전체 교체)와 정확히 일치시킨다.
+# 제외 목록(.git/·.archive/·*.log 등)은 --delete에서도 삭제되지 않고 보호된다.
 cmd_pull() {
     require_aws pull
 
-    echo "[pull] S3 → 로컬 다운로드: $S3_URI → $SCRIPT_DIR"
-    if ! aws s3 sync "$S3_URI" "$SCRIPT_DIR" "${SYNC_EXCLUDES[@]}" "$@"; then
+    echo "[pull] S3 → 로컬 동기화(잔재 삭제 포함): $S3_URI → $SCRIPT_DIR"
+    if ! aws s3 sync "$S3_URI" "$SCRIPT_DIR" --delete "${SYNC_EXCLUDES[@]}" "$@"; then
         echo "[pull] S3 다운로드 실패 — 경로/권한(IAM Role) 확인 후 재시도"
         exit 1
     fi
@@ -71,12 +98,11 @@ case "${1:-}" in
     *)
         echo "사용법: $0 {push|pull} [추가 aws s3 sync 옵션...]"
         echo ""
-        echo "  push   로컬 → S3 업로드 (개발 머신)"
-        echo "  pull   S3 → 로컬 다운로드 (EC2 호스트)"
+        echo "  push   로컬 → S3 전체 교체 업로드 (기존 S3 객체 삭제 후 업로드, 개발 머신)"
+        echo "  pull   S3 → 로컬 받기 (S3에 없는 로컬 파일 삭제, EC2 호스트)"
         echo ""
         echo "추가 옵션 예시:"
-        echo "  ./sync.sh push --dryrun        업로드 미리보기 (실제 전송 안 함)"
-        echo "  ./sync.sh push --delete        로컬에서 지운 파일을 S3에서도 삭제"
+        echo "  ./start.sh push --dryrun       업로드 미리보기 (삭제 단계도 미리보기로 동작)"
         exit 1
         ;;
 esac

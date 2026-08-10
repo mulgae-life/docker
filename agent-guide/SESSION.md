@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-07-22 (연구계 IP 변경 43.203.176.149 문서 반영 + 가이드 문서 정합 일괄 갱신)
+last-updated: 2026-08-10 (start.sh test/speed/traffic 신설 + sync.sh → start.sh 배포 진입점 통일)
 ---
 
 # 세션 상태
@@ -26,7 +26,7 @@ last-updated: 2026-07-22 (연구계 IP 변경 43.203.176.149 문서 반영 + 가
 |---------|------|------|
 | P1 | **:5015 운영 프로파일 (26B 기준)**: 2026-07-21부터 :5015 = 비PII 직접 게이트웨이 + gemma-26b(fp8·TP2·gmu 0.9·max_len 32768, overload 20/40). 잔존: 장문 트래픽 기준 latency·429 비율 측정. | 갱신(모델 교체), 장문 검증 잔존 |
 | P1 | **MTP 실기동 검증 (31B/26B/Qwen)**: 31B·Qwen 27B(5/13) + 26B-A4B(7/21, QA 통과) 실기동 확인. 잔존: ① Qwen 5016 재기동·가용성 ② acceptance/TPOT 사내 벤치(`slm_research/mtp.md` §5 참고). | 부분 완료, 벤치 잔존 |
-| P1 | **모델 간 속도 매트릭스**: `tests/speed_test.py --base-url`. 26B-A4B 6행 확보(c=1 TPS 168.5 / c=10 TPS 81 — 31B quick 64.8 대비 단발 약 2.6배). 잔존: 31B·Qwen 풀 매트릭스로 3모델 비교 완성. | 부분 완료(26B 측정) |
+| P1 | **모델 간 속도 매트릭스**: `./start.sh speed [name\|all]` (8/10 진입점 신설 — 무인자면 기동된 게이트웨이를 순회하며 같은 파일에 누적). 26B-A4B 6행 확보(c=1 TPS 168.5 / c=10 TPS 81 — 31B quick 64.8 대비 단발 약 2.6배). 잔존: 31B·Qwen 풀 매트릭스로 3모델 비교 완성. | 부분 완료(26B 측정) |
 | P1 | `llm-serving/sglang/` 디렉토리 골격 (운영 가이드 + 런처 + 설정 + 테스트) | Todo |
 | P1 | **STT 한국어 정성 비교 (PoC 잔여)**: 시나리오 E(정확도+offline) 채택 완료 — 1순위 Whisper-large-v3(+한국어 fine-tune 트랙). `test_stt.py`(WER/RTF/정성) 작성으로 실측 확정. | 의사결정 ✅, 실측 대기 |
 | P2 | **26B-A4B MTP 튜닝**: acceptance 32~47%(31B 70~85% 대비 낮음 — MoE 저동시성 특성). 동시성 4+ 실측 후 낮으면 `num_speculative_tokens 4→2` 또는 MTP off A/B. | 신규 (2026-07-21) |
@@ -49,6 +49,40 @@ last-updated: 2026-07-22 (연구계 IP 변경 43.203.176.149 문서 반영 + 가
 ---
 
 ## 최근 세션
+
+### 2026-08-10 (start.sh QA 명령 3종 신설 + S3 배포 진입점을 start.sh로 통일)
+
+#### 세션 목표
+`tests/`에 스크립트는 있는데 `start.sh`에서 부를 길이 없어 손으로 `python tests/...`를 치던 것을 명령으로 승격. 이어서 `sync.sh`를 `start.sh`로 바꾸고 backend-doc-assistant의 push/pull 방식을 반영.
+
+#### 변경 파일
+| 파일 | 변경 유형 | 요약 |
+|------|----------|------|
+| `llm-serving/vllm/start.sh` | 기능 추가 | `test`·`speed`·`traffic` 3종. 공통 실행기 `run_suite`(스크립트·라벨·all허용·게이트웨이전용 4파라미터)로 대상 라우팅 일원화 |
+| `llm-serving/stt/start.sh` | 설정 | `TEST_SCRIPT`=STT 스위트, `SPEED_SCRIPT`·`TRAFFIC_SCRIPT`=빈 값(미지원 표시) |
+| `llm-serving/vllm/tests/test_vllm_server.py` | 버그픽스 | yaml fallback이 `tests/gateways/`를 봐서 항상 실패 → `dirname` 한 단계 상향 |
+| `llm-serving/sync.sh` → `start.sh` | rename+기능 | push=프리픽스 비운 뒤 전체 업로드(버킷 루트 가드), pull=`--delete`. chmod 대상에 루트 start.sh 추가 |
+| `aws/sync.sh` → `start.sh` | rename+기능 | 동일 적용 |
+| `VLLM_OPS_GUIDE.md` | 문서 | 명령 목록 + §14.1·§14.3·§14.3.1 진입점 |
+| `STT_OPS_GUIDE.md` | 문서 | 명령 목록 + §11 QA 체크리스트 |
+| `DEPLOY_GUIDE.md`·`SETUP_GUIDE.md` | 문서 | `sync.sh` 참조 10곳 교체, 전체 교체 push 경고, 이름 충돌 주의 |
+
+#### 결정 사항
+- **speed·traffic은 `test` 하위 옵션이 아니라 별도 명령** — `speed`는 합격/불합격 판정이 없어 `test`의 실행/실패 요약에 얹히지 않고, `traffic`은 부하라 성격이 다르다. 기존 "동사 하나 = 명령 하나" 구조와도 맞음.
+- **`traffic`은 무인자·`all` 거부 + 게이트웨이 전용** — 무인자 순회를 허용하면 운영 게이트웨이까지 동시 20 부하를 받는다. 인스턴스는 `/server-status`가 없어(vllm_gateway.py 전용) 부하 결과와 무관하게 항상 실패 판정이 나므로 대상 단계에서 차단. 실측: 게이트웨이 :5015 → 200 / 인스턴스 :7071 → 404.
+- **단일 대상은 미기동이어도 SKIP하지 않음** — 이름을 찍은 것은 "떠 있어야 한다"는 기대. 무인자 `all`만 SKIP(게이트웨이 6대 중 일부만 띄우는 것이 정상 운영이라, 안 띄운 대상의 실패로 진짜 실패가 묻힌다).
+- **대상은 첫 자리에서만 인식** — `--category`가 `nargs="*"`라 비대시 인자를 훑으면 `test --category infra`의 `infra`를 대상으로 오인한다(`cmd_logs`의 `--lines`는 값이 하나뿐이라 그 방식이 통했음).
+- **push 전체 교체 채택** — 두 스크립트의 제외 목록이 전부 런타임 산출물·시크릿이라 삭제 단계에서 함께 지워지는 편이 정리가 된다. `wheels/`(246MB)는 제외 대상이 아니라 aws는 push마다 재업로드됨.
+
+#### 함정 3건 (신규 발견)
+- **`push --dryrun`이 실제 삭제를 유발할 뻔** — doc-assistant의 `cmd_push`는 인자를 안 받지만 이 두 스크립트는 `"$@"` 패스스루가 있고 문서도 `--dryrun`을 권장한다. 그대로 옮기면 sync만 미리보기가 되고 `aws s3 rm`은 진짜로 실행된다. `--dryrun`만 골라 rm에도 전달(`--delete` 등 sync 전용 옵션은 rm이 모르므로 제외).
+- **검사 순서로 없는 기능 유도** — 인스턴스 차단을 `cmd_traffic`에 두니 STT에서 "게이트웨이를 쓰세요"가 미지원 안내보다 먼저 떴다. `run_suite`로 옮겨 미지원 검사 뒤에 배치.
+- **문서 예시가 실행 불가** — STT에 `./start.sh test 7171`이라 적었으나 7171은 whisper_v3의 포트일 뿐 yaml 파일명이 아니라 라우팅 실패. `whisper_v3`/`5018`로 정정. 이후 문서의 모든 명령 예시를 실제로 실행해 대조.
+
+#### 현재 상태
+완료. 검증은 실행 기반 — 인스턴스 직접 호출이 자동 회피 포트 :7071을 집어 QA 통과, `speed` 전체 순회 정상, `traffic`이 게이트웨이에서 `통과: True`. S3는 건드리지 않았고 push/pull은 가짜 `aws`로 인자 전달만 확인(반영은 대표님이 직접 실행 시).
+
+> 부수: 검증 중 `aws/start.sh pull`의 `chmod +x *.sh`가 `entrypoint-llm.sh`를 644→755로 바꿔 `git checkout`으로 복원. `Dockerfile.llm`이 COPY 후 `RUN chmod +x`를 하므로 동작 영향은 없음.
 
 ### 2026-07-22 (가이드 문서 정합 일괄 갱신 + STT 포트 정정 + 문체 점검)
 

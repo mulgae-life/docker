@@ -13,7 +13,7 @@
 ```
 [로컬]                          [S3]                          [운영계 컨테이너]
 /workspace/docker/llm-serving  →  s3://hgi-ai-res/hjjo/  →  /workspace/llm-serving/
-   (sync.sh push)                   llm-serving/              (sync.sh pull → ./start.sh)
+   (start.sh push)                  llm-serving/              (start.sh pull → 클러스터별 start.sh up)
 
                                                             /models/  ← 첫 기동 시 자동 다운로드
                                                                         (갱신은 ./start.sh download — 폐쇄망은 네트워크 개방 시점에)
@@ -43,10 +43,14 @@
 ## 1. 로컬 → S3 (코드 업로드)
 
 ```bash
-cd /workspace/docker/llm-serving && ./sync.sh push
+cd /workspace/docker/llm-serving && ./start.sh push
 ```
 
-> `logs/`, `__pycache__/`, 런처 임시 config(`.vllm_serve_*`·`.runtime/`), `samples/`, `audit.salt`는 런타임 산출물/시크릿이라 `sync.sh`가 자동 제외.
+> `logs/`, `__pycache__/`, 런처 임시 config(`.vllm_serve_*`·`.runtime/`), `samples/`, `audit.salt`는 런타임 산출물/시크릿이라 `start.sh`가 자동 제외.
+
+> ⚠️ `push`는 **전체 교체**입니다. S3 프리픽스를 비운 뒤 올려 로컬과 정확히 일치시킵니다. 증분만 올리면 로컬에서 지우거나 이름을 바꾼 파일이 S3에 남아 `pull` 때 되살아나기 때문입니다. 업로드 단계에서 중단되면 프리픽스가 빈 상태로 남으므로 반드시 `push`를 다시 실행하세요. 규모를 먼저 보려면 `./start.sh push --dryrun`을 쓰면 삭제 단계까지 미리보기로 동작합니다.
+
+> 루트의 `start.sh`는 **코드 배포**(push·pull) 전용이고, `vllm/`·`stt/`·`pii/` 아래의 `start.sh`는 **서비스 제어**(up·down·status·test)입니다. 이름이 같으니 실행 위치를 확인하세요.
 
 ---
 
@@ -57,9 +61,9 @@ cd /workspace/docker/llm-serving && ./sync.sh push
 ```bash
 docker exec -it gemma bash               # 컨테이너 이름은 환경에 맞게 (예: gemma, llm-root, jin)
 
-# 컨테이너 안에서 — 최초 1회는 sync.sh가 아직 없어 raw 명령 (이후 갱신은 ./sync.sh pull)
+# 컨테이너 안에서 — 최초 1회는 start.sh가 아직 없어 raw 명령 (이후 갱신은 ./start.sh pull)
 sudo aws s3 sync s3://hgi-ai-res/hjjo/llm-serving/ /workspace/llm-serving/
-sudo chmod +x /workspace/llm-serving/*/start.sh /workspace/llm-serving/sync.sh
+sudo chmod +x /workspace/llm-serving/start.sh /workspace/llm-serving/*/start.sh
 ```
 
 > 컨테이너 이름 확인: `docker ps`. user.sh 로 띄운 컨테이너는 이름 그대로(`gemma` 등), 메인 compose 는 `llm-<USERNAME>`.
@@ -186,10 +190,10 @@ cd ../pii && python tests/eval_pii.py
 
 ```bash
 # (로컬) 수정 후 S3 재업로드
-cd /workspace/docker/llm-serving && ./sync.sh push
+cd /workspace/docker/llm-serving && ./start.sh push
 
 # (운영계) 재다운로드 + 재시작
-cd /workspace/llm-serving && sudo ./sync.sh pull
+cd /workspace/llm-serving && sudo ./start.sh pull
 cd vllm && ./start.sh restart <name>  # 또는 stt; 무인자는 [y/N] 전체 재시작 프롬프트, 'all'은 확인 없이 전체
 
 # 모델(가중치·chat template) 갱신은 코드 sync와 별개 — 네트워크 개방 시점에 증분 동기화
@@ -199,7 +203,7 @@ cd /workspace/llm-serving/vllm && ./start.sh download <name>   # 이후 네트�
 cd /workspace/llm-serving/pii && bash start.sh down 5501 && bash start.sh up 5501  # 연구계는 5015
 ```
 
-> 로컬에서 파일을 삭제했다면 운영계에 잔존하므로 `./sync.sh push --delete` 처럼 옵션을 덧붙인다(sync로 그대로 패스스루). 처음에는 `--dryrun` 으로 확인 권장.
+> 로컬에서 파일을 지우거나 이름을 바꿨어도 별도 옵션이 필요 없다. `push`가 S3 프리픽스를 비우고 다시 올리고, `pull`이 `--delete`로 받으므로 로컬 → S3 → 운영계가 그대로 일치한다. 제외 목록(`logs/`·`.runtime/`·`audit.salt` 등)은 `--delete`에서도 보호되어 운영계의 로그와 시크릿은 지워지지 않는다. 규모를 먼저 보려면 `--dryrun`을 붙인다.
 
 ---
 

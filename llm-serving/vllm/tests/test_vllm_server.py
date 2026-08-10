@@ -1150,7 +1150,9 @@ def _resolve_model_from_config(base_url: str) -> str:
     if port is None:
         raise RuntimeError(f"--base-url에서 포트를 추출할 수 없습니다: {base_url}")
 
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    # 이 파일은 vllm/tests/ 에 있고 yaml은 vllm/gateways·instances/ 에 있다.
+    # tests/ 기준으로 join하면 존재하지 않는 tests/gateways/를 보게 되어 fallback이 항상 실패한다.
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     gw_yaml = os.path.join(base_dir, "gateways", f"{port}.yaml")
     if not os.path.isfile(gw_yaml):
         raise RuntimeError(f"게이트웨이 설정 없음: {gw_yaml}")

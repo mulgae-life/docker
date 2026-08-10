@@ -50,6 +50,7 @@ docker/
 │   └── README.md
 │
 ├── aws/                              # AWS EC2 GPU 인프라
+│   ├── start.sh                      # S3 코드 배포 (push=전체 교체 / pull=--delete 받기)
 │   ├── setup-ec2.sh                  # Phase 1 → reboot → Phase 2 자동
 │   ├── user.sh                       # 다중 사용자 컨테이너 (포트 자동 할당)
 │   ├── docker-compose.yml            # vLLM 베이스 컨테이너
@@ -61,6 +62,7 @@ docker/
 │   └── README.md
 │
 └── llm-serving/                      # LLM/STT 서빙 프레임워크 모음
+    ├── start.sh                      # S3 코드 배포 (push/pull) — 하위 start.sh(서비스 제어)와 역할 다름
     ├── README.md                     # 프레임워크 인덱스
     ├── DEPLOY_GUIDE.md               # 서빙 인프라 배포 가이드 (LLM+STT 공용)
     ├── VLLM_API_GUIDE.md             # vLLM 사용자용 API 가이드 (호출 예시·파라미터)
@@ -68,7 +70,7 @@ docker/
     ├── STT_API_GUIDE.md              # STT 사용자용 API 가이드 (transcription·realtime·통합)
     ├── STT_OPS_GUIDE.md              # STT 운영자용 가이드 (시스템 구조·메모리 핏·의존성)
     ├── vllm/                         # LLM 운영 중 (격리 페어 + 자동 디스커버리)
-    │   ├── start.sh                  # 빠른 기동 (instances/+gateways/ 자동 순회) + download 모델 동기화
+    │   ├── start.sh                  # 서비스 제어 (up/down/status/logs) + download 모델 동기화 + test/speed/traffic QA
     │   ├── vllm_server_launcher.py   # 단일 vLLM 기동 + 포트 자동 회피 + 모델 증분 동기화(--download-only) + ${model} 치환
     │   ├── vllm_gateway.py           # OpenAI 호환 게이트웨이 (chat + audio + realtime)
     │   ├── instances/                # 인스턴스 yaml (키당 제목 한줄 슬림, 상세는 _SCHEMA.txt)
@@ -136,15 +138,17 @@ docker/
 | 파일 | 역할 |
 |------|------|
 | `my-docker-server/docker-compose.yml` | `cfd`(GPU) + `dev`(풀스택) 서비스 정의, 호스트 홈 영속화 |
+| `aws/start.sh` | S3 코드 배포 (`push` 전체 교체 / `pull` `--delete` 받기). 구 `sync.sh` |
+| `llm-serving/start.sh` | S3 코드 배포 (`push`/`pull`). 구 `sync.sh` — 하위 `vllm/`·`stt/`·`pii/`의 `start.sh`는 서비스 제어라 역할이 다름 |
 | `aws/setup-ec2.sh` | Amazon Linux 2023 호스트 1회 셋업 (사용자/SSH/EBS/Docker/NVIDIA, Phase 1↔2 자동 전환) |
 | `aws/user.sh` | 사용자별 독립 컨테이너 + 포트 자동 할당(`up`/`down`/`list`/`rebuild`) |
 | `aws/Dockerfile.llm` | vLLM 베이스 + SSH. dev/prd 모드 분기 |
 | `aws/docker-compose.yml` | 메인 컨테이너 정의 (`.env`로 GPU/메모리/포트 제어) |
 | `llm-serving/vllm/vllm_server_launcher.py` | 다중 vLLM 서버 기동 (GPU 분할, yaml-relative runtime json) — LLM/STT 공용. `--download-only`로 모델+drafter 증분 동기화(서빙 경로는 네트워크 미접근), `speculative_config.model`의 `${model}` 치환 |
 | `llm-serving/vllm/vllm_gateway.py` | OpenAI 호환 게이트웨이 (chat/completions + audio/transcriptions + realtime WebSocket) — LLM/STT 공용 |
-| `llm-serving/vllm/tests/test_vllm_server.py` | 서버 헬스/추론 9 카테고리 QA |
-| `llm-serving/vllm/tests/traffic_test_vllm.py` | 운영 서버 보호를 우선한 smoke/overload 트래픽 테스트 |
-| `llm-serving/vllm/tests/speed_test.py` | 게이트웨이 단위 속도 매트릭스 측정 (`--base-url` 단독, 모델명 자동 추출, results/speed_results.md 누적 append) |
+| `llm-serving/vllm/tests/test_vllm_server.py` | 서버 헬스/추론 9 카테고리 QA — 진입점 `./start.sh test [name\|all\|URL]` |
+| `llm-serving/vllm/tests/traffic_test_vllm.py` | 운영 서버 보호를 우선한 smoke/overload 트래픽 테스트 — 진입점 `./start.sh traffic <포트>` (게이트웨이 전용, 대상 명시 필수) |
+| `llm-serving/vllm/tests/speed_test.py` | 게이트웨이 단위 속도 매트릭스 측정 (모델명 자동 추출, results/speed_results.md 누적 append) — 진입점 `./start.sh speed [name\|all\|URL]` |
 | `llm-serving/pii/proxy.py` | PII 가드 프록시 — 외부 5015/5501 인수, in(주민·카드 차단/이름·주소·전화 마스킹)·out 검사 후 게이트웨이 포워딩 |
 | `llm-serving/pii/start.sh` | NER+프록시 기동, 다중 포트 (`up/down/status [5015\|5501\|all]`), salt 자동주입. NER 풀 정의는 `configs/ner.yaml`(gpu/max_concurrency/backends, env `PII_GPU` 우선) |
 | `llm-serving/pii/tests/eval_pii.py` | PII 정확성 평가 (한국어 합성 케이스셋, 타입별 precision/recall + 과탐) |

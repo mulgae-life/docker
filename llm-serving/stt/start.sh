@@ -15,6 +15,9 @@
 #   ./start.sh up 5017           # gateways/5017.yaml 단독 기동
 #   ./start.sh down              # [y/N] 전체 중지 confirm 프롬프트
 #   ./start.sh status            # 상태 확인 ("STT 클러스터" 라벨로 출력)
+#   ./start.sh test              # tests/test_stt_server.py로 QA 테스트
+#   ./start.sh test 5018         # gateways/5018.yaml 단독
+#   ./start.sh test whisper_v3   # instances/whisper_v3.yaml 단독 (게이트웨이 미경유)
 # ═══════════════════════════════════════════════════════
 
 set -euo pipefail
@@ -23,4 +26,10 @@ export CLUSTER_LABEL="STT"
 export INSTANCES_DIR="$HERE/instances"
 export GATEWAYS_DIR="$HERE/gateways"
 export LOG_DIR="$HERE/logs"
+# test 명령이 vLLM 채팅 스위트가 아니라 STT transcription 스위트를 돌게 한다.
+export TEST_SCRIPT="$HERE/tests/test_stt_server.py"
+# speed/traffic은 STT용 스위트가 없다. 빈 값으로 두면 본체가 "미지원"으로 거부한다
+# (미설정으로 두면 vLLM용 chat completions 스위트가 STT 서버로 날아간다).
+export SPEED_SCRIPT=""
+export TRAFFIC_SCRIPT=""
 exec bash "$HERE/../vllm/start.sh" "$@"

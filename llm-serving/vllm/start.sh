@@ -26,6 +26,13 @@
 #   ./start.sh logs --lines N    # 초기 라인 수 오버라이드 (예: --lines 200)
 #   ./start.sh download <name>   # 모델 다운로드/최신 동기화 (서빙 미터치, 변경 파일만 증분)
 #   ./start.sh download all      # 전체 인스턴스 모델 동기화 — 폐쇄망: 네트워크 개방 시점에 실행
+#   ./start.sh test              # 기동된 게이트웨이 전부에 기능 QA (미기동 대상은 SKIP)
+#   ./start.sh test 5015         # gateways/5015.yaml 단독
+#   ./start.sh test gemma        # instances/gemma.yaml의 실제 포트에 직접 (게이트웨이 미경유)
+#   ./start.sh test <대상> --category infra   # 대상 뒤 인자는 tests/의 해당 스크립트로 그대로 전달
+#   ./start.sh test http://host:5015          # 원격 서버 대상
+#   ./start.sh speed <대상>      # 속도 매트릭스 측정 (tests/results/speed_results.md에 누적)
+#   ./start.sh traffic 5015      # 하드 부하 테스트 — 게이트웨이만, 대상 명시 필수(전체 순회 불가)
 #
 # 안전 정책: 무인자 호출은 [y/N] 기본 No로 묻는다 (사고 방지).
 # 비대화 환경(파이프/cron)에서는 'all' 또는 이름 명시 필수 (prompt 띄울 곳이 없으므로 거부).
@@ -49,6 +56,13 @@ INSTANCES_DIR="${INSTANCES_DIR:-$SCRIPT_DIR/instances}"
 GATEWAYS_DIR="${GATEWAYS_DIR:-$SCRIPT_DIR/gateways}"
 LOG_DIR="${LOG_DIR:-$SCRIPT_DIR/logs}"
 CLUSTER_LABEL="${CLUSTER_LABEL:-vLLM}"
+# test/speed/traffic 세 명령이 위임하는 스위트. 클러스터마다 검증 항목이 다르므로
+# (vLLM은 chat/tool/멀티모달, STT는 transcription) wrapper가 자기 스위트를 export한다.
+# ':-'가 아니라 '-'를 쓴다 — wrapper가 빈 문자열을 export해 "이 클러스터는 미지원"을
+# 표시할 수 있어야 한다(기본값으로 되돌아가면 STT에 vLLM용 스위트가 날아간다).
+TEST_SCRIPT="${TEST_SCRIPT-$SCRIPT_DIR/tests/test_vllm_server.py}"
+SPEED_SCRIPT="${SPEED_SCRIPT-$SCRIPT_DIR/tests/speed_test.py}"
+TRAFFIC_SCRIPT="${TRAFFIC_SCRIPT-$SCRIPT_DIR/tests/traffic_test_vllm.py}"
 mkdir -p "$LOG_DIR"
 
 # ── 인스턴스/게이트웨이 yaml 파싱 ────────────────────
@@ -627,6 +641,153 @@ cmd_download() {
     echo "완료. 실행 중인 서빙에 반영하려면 재기동 필요: ./start.sh restart <name>"
 }
 
+# [name] → 테스트 대상 base URL. 인스턴스는 runtime의 실제 port(자동 회피 반영),
+# 게이트웨이는 gateway.port를 쓴다. 매칭 실패 시 stderr 안내 후 return 1.
+resolve_test_url() {
+    local target="$1" kind
+    kind=$(detect_target_kind "$target") || return 1
+    case "$kind" in
+        instance)
+            eval "$(parse_instance_yaml "$INSTANCES_DIR/${target}.yaml")"
+            if [ -z "$INST_PORT" ]; then
+                echo "ERROR: $target — port를 알 수 없습니다 (yaml에 port 없음, runtime 미등록)" >&2
+                return 1
+            fi
+            echo "http://localhost:$INST_PORT"
+            ;;
+        gateway)
+            eval "$(parse_gateway_yaml "$GATEWAYS_DIR/${target}.yaml")"
+            if [ -z "$GW_PORT" ]; then
+                echo "ERROR: $target — gateway.port 없음" >&2
+                return 1
+            fi
+            echo "http://localhost:$GW_PORT"
+            ;;
+        *)
+            echo "ERROR: '$target' — 단일 대상이 아닙니다" >&2
+            return 1
+            ;;
+    esac
+}
+
+# test/speed/traffic 세 명령의 공통 실행기. 판정·측정 로직은 tests/의 각 스위트가
+# 갖고 있고, 여기서는 [name] → base URL 변환과 다중 대상 순회만 담당한다(제어 스크립트 SRP).
+#   $1 스크립트 경로  $2 화면 표시용 라벨  $3 무인자/all 허용(1/0)  $4 게이트웨이 전용(1/0)
+#   나머지는 스위트 스크립트로 넘길 사용자 인자
+run_suite() {
+    local script="$1" label="$2" allow_all="$3" gateway_only="$4"
+    shift 4
+
+    # 인자 규칙: 첫 자리에 '-'로 시작하지 않는 인자가 오면 그것이 대상, 나머지는 전부
+    # 스위트 스크립트로 그대로 전달. '비대시 인자를 훑어서 대상으로 잡는' 방식을 쓰면
+    # --category가 nargs="*"라 './start.sh test --category infra'의 infra를 대상으로
+    # 오인한다 (cmd_logs의 --lines는 값이 하나뿐이라 그 방식이 통했지만 여기선 깨진다).
+    local target=""
+    if [ $# -gt 0 ] && [[ "$1" != -* ]]; then
+        target="$1"
+        shift
+    fi
+
+    # 빈 문자열 = 이 클러스터가 지원하지 않는 스위트. wrapper가 명시적으로 비워 표시한다
+    # (기본값으로 두면 STT에 vLLM용 chat completions 스위트가 날아가므로 빈 값으로 막는다).
+    if [ -z "$script" ]; then
+        echo "ERROR: $CLUSTER_LABEL 클러스터는 '$label' 명령을 지원하지 않습니다." >&2
+        exit 1
+    fi
+    if [ ! -f "$script" ]; then
+        echo "ERROR: 테스트 스크립트 없음: $script" >&2
+        echo "  wrapper 클러스터라면 start.sh의 export 경로를 확인하세요." >&2
+        exit 1
+    fi
+
+    local a
+    for a in "$@"; do
+        # --list처럼 서버가 필요 없는 조회 플래그는 대상 해석 없이 그대로 위임.
+        [ "$a" = "--list" ] && exec python "$script" "$@"
+        # base URL은 이 함수가 [name]을 변환해 넘긴다. 직접 주면 인자가 두 번 붙고,
+        # 대상 미지정 시엔 게이트웨이 순회마다 같은 곳을 반복 호출하게 된다.
+        if [ "$a" = "--base-url" ] || [[ "$a" == --base-url=* ]]; then
+            echo "ERROR: --base-url은 여기서 직접 지정할 수 없습니다. 'http://host:port'를 대상 자리에 쓰세요." >&2
+            exit 1
+        fi
+    done
+
+    # 부하 스위트는 대상을 반드시 찍게 한다. 무인자 순회를 허용하면 운영 게이트웨이까지
+    # 동시 부하를 받아 실사용자 응답이 느려진다.
+    if [ "$allow_all" -eq 0 ] && { [ -z "$target" ] || [ "$target" = "all" ]; }; then
+        echo "ERROR: $label — 대상을 명시해야 합니다 (전체 순회 불가)." >&2
+        echo "  예) ./start.sh traffic $(list_gateway_yamls | head -1 | xargs -n1 basename 2>/dev/null | sed 's/\.yaml$//')" >&2
+        exit 1
+    fi
+
+    # 게이트웨이 전용 스위트에 인스턴스를 넘기는 것을 막는다. traffic은 통과 판정에
+    # /server-status를 넣는데 이 엔드포인트는 vllm_gateway.py에만 있고 launcher에는 없다.
+    # 인스턴스를 겨냥하면 404가 떠서 부하 결과와 무관하게 항상 "통과: False"가 된다.
+    # (이 검사는 위의 미지원/미존재 검사보다 뒤에 와야 한다 — 스위트 자체가 없는 클러스터에서
+    #  "게이트웨이를 쓰세요"라고 안내하면 없는 기능으로 사용자를 두 번 걷게 만든다.)
+    if [ "$gateway_only" -eq 1 ] && [ -n "$target" ] && [[ "$target" != http* ]] \
+       && [ -f "$INSTANCES_DIR/${target}.yaml" ]; then
+        echo "ERROR: '$target'은 인스턴스입니다. $label는 게이트웨이만 대상으로 합니다." >&2
+        echo "  통과 조건에 게이트웨이 전용 /server-status가 들어가 인스턴스는 항상 404로 실패합니다." >&2
+        echo "  게이트웨이: $(list_gateway_yamls | xargs -n1 basename 2>/dev/null | sed 's/\.yaml$//' | tr '\n' ' ')" >&2
+        exit 1
+    fi
+
+    # 원격 대상 — yaml에 없는 서버(운영계 등)를 직접 겨냥할 때.
+    if [[ "$target" == http://* || "$target" == https://* ]]; then
+        echo "═══ $CLUSTER_LABEL $label: $target (원격 지정) ═══"
+        exec python "$script" --base-url "$target" "$@"
+    fi
+
+    # 단일 대상은 기동 여부를 여기서 판정하지 않는다 — 미기동/무응답은 스위트 스크립트의
+    # 연결 확인 단계가 원인과 함께 안내하고 exit 1 한다. 이름을 찍어 지정했다는 것은
+    # "그 대상이 떠 있어야 한다"는 기대이므로 SKIP으로 삼키면 안 된다.
+    if [ -n "$target" ] && [ "$target" != "all" ]; then
+        local url
+        url=$(resolve_test_url "$target") || exit 1
+        echo "═══ $CLUSTER_LABEL $label: $target ($url) ═══"
+        exec python "$script" --base-url "$url" "$@"
+    fi
+
+    # all — 게이트웨이만 순회한다. 인스턴스는 게이트웨이 뒤에 있어 같은 경로를 두 번 때린다.
+    # 게이트웨이 6대 중 일부만 띄우는 것이 정상 운영 형태라, 미기동 대상은 FAIL이 아니라
+    # SKIP으로 넘긴다(안 띄운 대상의 실패로 실제 실패가 묻히는 것을 막는다).
+    echo "═══ $CLUSTER_LABEL 클러스터 전체 $label (기동된 게이트웨이 대상) ═══"
+    local ran=0 skipped=0 failed_names=()
+    while IFS= read -r yaml_path; do
+        [ -z "$yaml_path" ] && continue
+        eval "$(parse_gateway_yaml "$yaml_path")"
+        [ -z "$GW_PORT" ] && continue
+        if ! is_running "$GW_PORT"; then
+            echo "[SKIP]  Gateway $GW_NAME (:$GW_PORT) — 실행 중 아님"
+            skipped=$((skipped + 1))
+            continue
+        fi
+        ran=$((ran + 1))
+        echo ""
+        echo "── Gateway $GW_NAME (:$GW_PORT) ──"
+        if ! python "$script" --base-url "http://localhost:$GW_PORT" "$@"; then
+            failed_names+=("$GW_NAME")
+        fi
+    done < <(list_gateway_yamls)
+
+    echo ""
+    if [ "$ran" -eq 0 ]; then
+        echo "ERROR: 기동된 게이트웨이가 없습니다 (SKIP $skipped개) — './start.sh status'로 확인 후 './start.sh up' 필요" >&2
+        exit 1
+    fi
+    echo "═══ $label 요약: 실행 $ran / 실패 ${#failed_names[@]} / 건너뜀 $skipped ═══"
+    if [ ${#failed_names[@]} -gt 0 ]; then
+        echo "실패 대상: ${failed_names[*]} — 각 대상 로그는 tests/logs/ 참고" >&2
+        exit 1
+    fi
+}
+
+#                                              라벨          all  gw전용
+cmd_test()    { run_suite "$TEST_SCRIPT"    "QA 테스트"    1    0 "$@"; }
+cmd_speed()   { run_suite "$SPEED_SCRIPT"   "속도 측정"    1    0 "$@"; }
+cmd_traffic() { run_suite "$TRAFFIC_SCRIPT" "부하 테스트"  0    1 "$@"; }
+
 cmd_restart() {
     # 여기서 prompt를 한 번만 띄우고, 결정된 target('all' 또는 이름)을 cmd_down/cmd_up에 명시 전달.
     # 그러면 두 함수의 resolve_target_or_confirm은 인자 명시 분기로 빠져 prompt를 다시 띄우지 않는다.
@@ -657,6 +818,10 @@ $CLUSTER_LABEL 클러스터 제어 스크립트
   status               전체 상태 (인스턴스 + 게이트웨이)
   logs [name|all]      로그 tail -F (기본 -n 50, --lines N 으로 오버라이드)
   download [name|all]  모델 다운로드/최신 동기화 (서빙 미터치, 네트워크 필요)
+  test [name|all|URL]  기능 QA (무인자는 기동된 게이트웨이 전부, 미기동은 SKIP)
+                       대상 뒤 인자는 tests/의 해당 스크립트로 그대로 전달
+  speed [name|all|URL] 속도 측정 — TTFT/TPS 매트릭스, 결과는 tests/results/에 누적
+  traffic <포트|URL>   하드 부하 테스트 (기본 동시 20) — 게이트웨이만, 대상 명시 필수
   help                 이 도움말
 
 [name] 자리:
@@ -671,9 +836,16 @@ $CLUSTER_LABEL 클러스터 제어 스크립트
   ./start.sh logs --lines 200      # 초기 200줄부터 전체 로그 추적
   ./start.sh status                # 상태 확인
   ./start.sh download ${first_inst:-<이름>}   # 모델 최신 동기화 (변경 파일만 증분)
+  ./start.sh test                  # 기동된 게이트웨이 전부 검증
+  ./start.sh test ${first_gw:-<포트>}          # 게이트웨이 1대만
+  ./start.sh test ${first_inst:-<이름>} --category infra inference   # 인스턴스 직접, 카테고리 한정
+  ./start.sh test --list           # 테스트 카테고리 목록
+  ./start.sh speed ${first_gw:-<포트>} --quick   # 속도 1조합만 (연결 확인용)
+  ./start.sh traffic ${first_gw:-<포트>} --concurrency 50   # 부하 강도 지정
 
 안전 정책: 무인자 up/down/restart/download는 [y/N] 기본 No (사고 방지).
            비대화 환경(파이프/cron)은 'all' 또는 이름 명시 필수.
+           traffic은 부하가 크므로 무인자/all 호출을 아예 거부한다.
 폐쇄망 절차: 네트워크 개방 → download → 차단 → up (up은 네트워크 미접근).
 EOF
 }
@@ -687,6 +859,9 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         restart)        shift || true; cmd_restart "${1:-}" ;;
         logs)           shift || true; cmd_logs "$@" ;;
         download)       shift || true; cmd_download "${1:-}" ;;
+        test)           shift || true; cmd_test "$@" ;;
+        speed)          shift || true; cmd_speed "$@" ;;
+        traffic)        shift || true; cmd_traffic "$@" ;;
         help|-h|--help) cmd_help ;;
         *)              echo "ERROR: 알 수 없는 명령 '$1'" >&2; echo "" >&2; cmd_help >&2; exit 1 ;;
     esac
