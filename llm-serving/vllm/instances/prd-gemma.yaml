@@ -27,7 +27,7 @@ gpu_memory_utilization: 0.8      # GPU 메모리 비율 (0.85 멀티모달~0.92 
 # 추론
 max_model_len: 65536             # 컨텍스트 길이 (프롬프트+출력 합산)
 max_num_seqs: 20                 # 동시 처리 시퀀스 수
-max_num_batched_tokens: 65536    # 배치 최대 토큰 수 (멀티모달은 encoder_cache로 복제)
+max_num_batched_tokens: 32768    # 배치 최대 토큰 수 (멀티모달은 encoder_cache로 복제)
 seed: 42                         # 재현용 전역 시드
 
 # Thinking 모드 (reasoning 토큰 생성 제어)
