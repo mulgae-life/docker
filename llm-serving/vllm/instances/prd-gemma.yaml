@@ -7,7 +7,7 @@
 gateway_port: 5501
 
 # 모델
-model: google/gemma-4-31B-it     # HF 모델 ID (런처가 download_dir과 조합해 경로 해석)
+model: google/gemma-4-26B-A4B-it     # HF 모델 ID (런처가 download_dir과 조합해 경로 해석)
 download_dir: /models/LLM        # 모델 로컬 저장 루트 ({download_dir}/{model})
 quantization: fp8                # 온더플라이 FP8 양자화 (사전 양자화 모델은 생략)
 dtype: auto                      # 활성화 dtype (auto=config.json 따름)
@@ -25,9 +25,9 @@ tensor_parallel_size: 1          # 텐서 병렬 크기 (gpus 개수와 일치)
 gpu_memory_utilization: 0.8      # GPU 메모리 비율 (0.85 멀티모달~0.92 가중치 큼)
 
 # 추론
-max_model_len: 32768             # 컨텍스트 길이 (프롬프트+출력 합산)
+max_model_len: 65536             # 컨텍스트 길이 (프롬프트+출력 합산)
 max_num_seqs: 20                 # 동시 처리 시퀀스 수
-max_num_batched_tokens: 32768    # 배치 최대 토큰 수 (멀티모달은 encoder_cache로 복제)
+max_num_batched_tokens: 65536    # 배치 최대 토큰 수 (멀티모달은 encoder_cache로 복제)
 seed: 42                         # 재현용 전역 시드
 
 # Thinking 모드 (reasoning 토큰 생성 제어)
