@@ -298,6 +298,35 @@ print(resp.choices[0].message.content)
 - 멀티턴 히스토리에 **사고 과정은 다시 넣지 마세요** — `messages`엔 최종 `content`만 포함. Reasoning은 일회용입니다.
 - Thinking OFF 응답에는 `reasoning` 필드가 `null`.
 
+**사고 길이 조절 (`reasoning_effort`)** — Qwen3.8 전용:
+
+Thinking을 켠 상태에서 **얼마나 오래 생각할지**를 요청 단위로 조절합니다. `enable_thinking`이 켜고 끄는 스위치라면, 이쪽은 강약 조절입니다.
+
+| 값 | 동작 | 언제 |
+|----|------|------|
+| `xhigh` | 가정 검증·대안 검토까지 길게 사고 | 어려운 추론·분석. 생성량이 2배 이상 늘어 그만큼 오래 걸림 |
+| `medium` | **서버 기본값**. 중립 | 대부분의 호출 |
+| `low` | 짧게 생각하고 결론으로 직행 | 지연이 중요할 때 |
+
+```bash
+curl http://43.203.142.247:5015/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen3.8-27B-FP8",
+    "messages": [{"role": "user", "content": "이 설계의 병목을 찾아줘"}],
+    "max_tokens": 8000,
+    "reasoning_effort": "xhigh",
+    "chat_template_kwargs": {"enable_thinking": true}
+  }'
+```
+
+> ⚠️ **허용값은 `xhigh`·`medium`·`low` 3개뿐**입니다. `high`처럼 OpenAI 스펙에는 있는 값을 주면 **HTTP 400**(`Unexpected reasoning effort high`)이 납니다. 단, Thinking OFF 요청에서는 값 자체를 안 보므로 에러가 나지 않습니다.
+> Gemma 4와 Qwen3.5/3.6은 이 옵션을 **무시**합니다(에러 없음) — 모델을 바꿔도 필드를 지울 필요는 없습니다.
+> 서버 기본값은 `medium`으로 고정돼 있습니다. 지정하지 않으면 그대로 `medium`입니다.
+
+> ⚠️ **`xhigh` + 큰 `max_tokens`는 비스트리밍에서 504가 납니다.** 5015 게이트웨이의 업스트림 타임아웃은 **300초**입니다(`pii/config.py:90`). 비스트리밍은 생성이 다 끝나야 첫 바이트가 오므로 그 자리에서 걸립니다 — `max_tokens: 32000` + `xhigh`로 재보니 요청당 4~8분이 걸려 `{"error":{"type":"upstream_timeout"}}`와 함께 504로 끊겼습니다.
+> 스트리밍(`"stream": true`)은 청크가 도착할 때마다 타임아웃 타이머가 갱신돼 이 제한에 걸리지 않습니다(같은 조건에서 200으로 완주). 비스트리밍으로 길게 사고시켜야 하면 `max_tokens`를 낮추세요.
+
 ---
 
 ### 3.3 이미지 멀티모달 (Vision)
@@ -652,6 +681,7 @@ curl http://43.203.142.247:5015/v1/chat/completions \
 | `stream_options` | — | — | `{"include_usage": true}`면 스트리밍 마지막 청크에 usage 포함 |
 | `tools` | — | — | Tool Calling 함수 정의 |
 | `chat_template_kwargs` | — | — | 템플릿 인자. `{"enable_thinking": true}` 등 |
+| `reasoning_effort` | — | `medium` | **Qwen3.8 전용**, Thinking ON일 때만 실효. `xhigh`/`medium`/`low`만 허용 — 그 외는 400 ([§3.2](#32-thinking-모드-사고-과정-분리)) |
 | `skip_special_tokens` | — | true | **Gemma 4 Thinking 시 false 필수** |
 | `presence_penalty` | — | 0 | Qwen3.6 Thinking에선 1.0~1.5 권장 (반복 붕괴 방지) |
 | `extra_body` (Python SDK) | — | — | OpenAI 표준 외 vLLM 옵션 wrapping용 |

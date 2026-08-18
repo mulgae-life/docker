@@ -30,7 +30,7 @@
 9. [설정 파일](#9-설정-파일)
 10. [API 운영 레퍼런스](#10-api-운영-레퍼런스)
 11. [모델 관리](#11-모델-관리)
-12. [Qwen3.6 고급 기능](#12-qwen36-고급-기능)
+12. [Qwen3.6/3.8 고급 기능](#12-qwen3638-고급-기능)
 13. [트러블슈팅 & 운영 주의](#13-트러블슈팅--운영-주의)
 14. [QA 테스트](#14-qa-테스트)
 15. [참고 자료](#15-참고-자료)
@@ -476,6 +476,7 @@ CLI 인자  >  instances/<name>.yaml  >  vLLM 기본값
 | `seed` | 추론 | `42` |
 | **Thinking** | | |
 | `default_chat_template_kwargs` | 모델 | `{enable_thinking: false}` (챗봇 응답 지연 줄이기) |
+| └ `reasoning_effort` | 모델 | **Qwen3.8 전용.** 사고 길이 기본값 `medium`. 템플릿 기본 `xhigh`는 사고 지시문을 최대로 주입해 생성량이 늘어 챗봇엔 과다 → 명시 고정. 허용값 `xhigh`/`medium`/`low` 외에는 HTTP 400 [12.5](#125-reasoning_effort-사고-길이-제어-qwen38) |
 | `reasoning_parser` | 모델 | `gemma4` / `qwen3` 등 모델별 |
 | **멀티모달** | | |
 | `mm_encoder_tp_mode` | 멀티모달 | `data` — 비전 인코더 DP 처리 |
@@ -886,7 +887,7 @@ vllm serve google/gemma-4-31B-it \
 
 ---
 
-## 12. Qwen3.6 고급 기능
+## 12. Qwen3.6/3.8 고급 기능
 
 ### 12.1 MTP Speculative Decoding
 
@@ -952,9 +953,59 @@ default_chat_template_kwargs:
 
 | 모델 | reasoning_parser | 토큰 형식 |
 |------|-----------------|-----------|
-| Qwen 3 / 3.5 / 3.6 | `qwen3` | `<think>사고과정</think>최종답변` |
+| Qwen 3 / 3.5 / 3.6 / 3.8 | `qwen3` | `<think>사고과정</think>최종답변` |
 | Gemma 4 | `gemma4` | `<\|channel>thought...<channel\|>최종답변` |
 | DeepSeek R1 | `deepseek_r1` | `<think>사고과정</think>최종답변` |
+
+### 12.5 reasoning_effort (사고 길이 제어, Qwen3.8)
+
+Qwen3.8에서 새로 생긴 채팅 템플릿 변수입니다. thinking을 켠 호출에서 **모델이 얼마나 오래 생각할지**를 지시문으로 조절합니다. `enable_thinking`이 ON/OFF 스위치라면 `reasoning_effort`는 그 안의 강약 조절입니다.
+
+| 값 | 템플릿이 주입하는 지시문 | 용도 |
+|----|------------------------|------|
+| `xhigh` | "가정을 검증하고 대안을 검토하며 정확성·일관성을 우선하라" | 템플릿 기본값. 어려운 추론·검증 워크로드 |
+| `medium` | **없음**(중립) | 운영 기본값 — 균형 |
+| `low` | "생각을 짧고 집중되게 유지하고 곧바로 결론으로 가라" | 지연 최소화 |
+
+> ⚠️ **허용값은 이 3개뿐입니다.** 그 외 값은 채팅 템플릿이 `raise_exception`을 던져 **HTTP 400**이 됩니다(`chat_template.jinja:47-49`). vLLM의 최상위 `reasoning_effort` 필드 자체는 `none`/`minimal`/`low`/`medium`/`high`/`xhigh`/`max` 7개를 통과시키기 때문에, OpenAI 스펙상 멀쩡해 보이는 **`high`가 Qwen3.8에서는 그대로 400**입니다.
+>
+> ```
+> {"error":{"message":"Unexpected reasoning effort high. Supported types are
+>  xhigh (default), medium, and low.","type":"BadRequestError","code":400}}
+> ```
+
+**왜 서버 기본값을 medium으로 고정했나**: 템플릿 기본값이 `xhigh`라 아무것도 지정하지 않으면 사고 지시문이 항상 최대로 붙습니다. 같은 질문(알고리즘 설계)을 thinking ON으로 던져보니 총 생성 토큰이 `medium` 1,673 → `xhigh` 4,092로 2.4배였습니다. 챗봇 트래픽 대부분은 그만큼 사고할 필요가 없으므로 `instances/qwen.yaml`에서 `medium`으로 눌러두고, 필요한 호출만 `xhigh`로 올립니다.
+
+> 위 수치는 값마다 1회씩 잰 참고치입니다. 응답 지연은 같은 실측에서 effort 순서를 따르지 않았는데, 동시 트래픽에 따라 생성 속도가 요청마다 달라지기 때문입니다. 지연을 판단 근거로 쓰려면 부하가 없는 시간대에 반복 측정해야 합니다.
+
+서버 기본값을 `xhigh`로 올릴 생각이라면 PII 게이트웨이(5015)의 업스트림 타임아웃 300초를 함께 봐야 합니다(`pii/config.py:90`). 비스트리밍 요청은 생성이 300초를 넘는 순간 504로 끊깁니다(스트리밍은 청크마다 타이머가 갱신돼 영향 없음). 상세는 API 가이드 §3.2.
+
+**우선순위** — 아래로 갈수록 강합니다(아래 것이 위를 덮어씀):
+
+| 위치 | 적용 범위 |
+|------|----------|
+| 인스턴스 yaml `default_chat_template_kwargs.reasoning_effort` | 서버 전체 기본값 |
+| 요청 body `chat_template_kwargs.reasoning_effort` | 해당 요청만 변경 |
+| 요청 body **최상위** `reasoning_effort` | 가장 강함 — 위 둘을 덮어씀 |
+
+vLLM은 `merge_kwargs(서버 기본값, merge_kwargs(요청 kwargs, 최상위 필드))` 순으로 병합합니다(`renderers/params.py:28`, `entrypoints/openai/chat_completion/serving.py:194`). 최상위 필드를 주지 않으면 `None`이라 병합에서 제외되고 하위 값이 그대로 살아납니다.
+
+```bash
+# 이 요청만 깊게 생각시키기
+curl -sS http://127.0.0.1:5015/v1/chat/completions -H "Content-Type: application/json" -d '{
+  "model": "Qwen3.8-27B-FP8",
+  "messages": [{"role":"user","content":"이 설계의 병목을 찾아줘"}],
+  "max_tokens": 8000,
+  "reasoning_effort": "xhigh",
+  "chat_template_kwargs": {"enable_thinking": true}
+}'
+```
+
+**모델별 지원**:
+
+- **Qwen3.8** — 지원. 위 3값만.
+- **Qwen3.5 / 3.6, Gemma 4** — 템플릿에 이 변수가 없어 값을 줘도 **무시**됩니다(에러는 아님). 모델 교체 시 필드를 지울 필요는 없습니다.
+- **thinking OFF일 때** — 템플릿이 effort 분기 자체를 타지 않아, 잘못된 값을 줘도 400 없이 통과합니다(실측). 즉 400은 thinking을 켠 요청에서만 납니다.
 
 ---
 

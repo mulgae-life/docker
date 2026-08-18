@@ -93,6 +93,23 @@ backends로 등록한다(vllm_server_launcher.py:_LAUNCHER_KEYS가 vllm serve
   default_chat_template_kwargs.enable_thinking
       챗봇 기본은 false(불필요한 reasoning 토큰·지연 감소). 형식 —
       Gemma 4 <|channel>thought<channel|>, Qwen3.5/3.6 <think>…</think>.
+  default_chat_template_kwargs.reasoning_effort
+      Qwen3.8 신규. thinking을 켠 호출에서 사고 길이를 조절한다.
+      허용값 xhigh / medium / low 3개뿐 — 그 외 값은 채팅 템플릿이
+      raise_exception을 던져 HTTP 400이 된다(chat_template.jinja:47-49).
+      vLLM 최상위 reasoning_effort 필드는 none/minimal/low/medium/
+      high/xhigh/max 7개를 통과시키므로, 스펙상 유효해 보이는 high가
+      Qwen3.8에선 그대로 400이 된다. Gemma 4·Qwen3.5/3.6 템플릿에는
+      이 변수 자체가 없어(grep 0건) 값을 줘도 무시된다(에러 아님).
+      ▸ medium 권장. 템플릿 기본값 xhigh는 지시문으로 "가정을 검증
+        하고 대안을 검토하라"를 주입해 생성량이 늘어난다(1회 실측:
+        같은 질문에 medium 1673 → xhigh 4092 토큰). medium은 지시문을
+        넣지 않는 중립값, low는 "짧게 끝내라"를 주입한다.
+      ▸ enable_thinking: false면 템플릿이 effort 분기 자체를 타지
+        않아 잘못된 값을 줘도 에러 없이 통과한다(실측).
+      ▸ 우선순위: 요청 최상위 reasoning_effort > 요청 chat_template_
+        kwargs.reasoning_effort > 이 yaml 기본값. 상세 VLLM_OPS_GUIDE
+        §12.5.
   샘플링 기본값
       모델 generation_config.json이 vLLM 기본을 덮어씀. Gemma 4
       temp 1.0/top_k 64/top_p 0.95, Qwen3.5/3.6 temp 0.6/top_k 20/
