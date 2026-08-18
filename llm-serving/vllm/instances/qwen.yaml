@@ -4,12 +4,12 @@
 #   speculative_config, mm_processor_kwargs, tool_call_parser, reasoning_parser.
 
 # 게이트웨이 매칭 키 (vLLM 비전달, discover_from이 이 값으로 backends 등록)
-gateway_port: 6016
+gateway_port: 5015
 
 # 모델
-model: Qwen/Qwen3.6-27B-FP8      # HF 모델 ID (런처가 download_dir과 조합해 경로 해석)
+model: Qwen/Qwen3.8-27B-FP8      # HF 모델 ID (런처가 download_dir과 조합해 경로 해석)
 download_dir: /models/LLM        # 모델 로컬 저장 루트 ({download_dir}/{model})
-# quantization: fp8              # Qwen3.6-27B-FP8 사전 양자화 — 생략 (자동 감지)
+# quantization: fp8              # Qwen3.8-27B-FP8 사전 양자화 — 생략 (자동 감지)
 dtype: auto                      # 활성화 dtype (auto=config.json 따름)
 # served_model_name: [<별칭>]    # API 모델 별칭 (미설정 시 model에서 자동 추출)
 # trust_remote_code: true        # 네이티브 미지원 모델만
@@ -25,14 +25,17 @@ tensor_parallel_size: 2          # 텐서 병렬 크기 (gpus 개수와 일치)
 gpu_memory_utilization: 0.93     # GPU 메모리 비율 (0.85 멀티모달~0.92 가중치 큼)
 
 # 추론
-max_model_len: 32768             # 컨텍스트 길이 (프롬프트+출력 합산)
+max_model_len: 65536             # 컨텍스트 길이 (프롬프트+출력 합산)
 max_num_seqs: 20                 # 동시 처리 시퀀스 수
-max_num_batched_tokens: 81920    # 배치 최대 토큰 수 (멀티모달은 encoder_cache로 복제)
+max_num_batched_tokens: 32768    # 배치 최대 토큰 수 (멀티모달은 encoder_cache로 복제)
 seed: 42                         # 재현용 전역 시드
 
 # Thinking 모드 (reasoning 토큰 생성 제어)
 default_chat_template_kwargs:
   enable_thinking: false         # 챗봇 기본: thinking 비활성 (지연 감소)
+  reasoning_effort: medium       # ⚠️ Qwen3.8 신규. 템플릿 기본 xhigh는 과다(수만 reasoning 토큰)
+                                 #    thinking 켠 호출에만 실효. 값은 xhigh/medium/low만 유효
+                                 #    (high·minimal 등은 템플릿 미분기 → medium과 동일)
 
 # 성능 최적화
 enable_prefix_caching: true      # 시스템 프롬프트 KV 재사용 (TTFT 감소)
@@ -45,7 +48,7 @@ speculative_config:
   num_speculative_tokens: 2      # ⚠️ >1 acceptance rate 저하 가능 — 모니터링 후 상향
 
 # 멀티모달
-mm_encoder_tp_mode: data         # vision encoder DP 처리 (Qwen3.5/3.6 레시피)
+mm_encoder_tp_mode: data         # vision encoder DP 처리 (Qwen3.5~3.8 레시피)
 mm_processor_cache_type: shm     # 멀티모달 입력 shared memory 공유 (IPC 절감)
 mm_processor_kwargs: {}          # Qwen3-VL은 빈 dict (min/max_pixels·fps 별도 체계)
 limit_mm_per_prompt:
