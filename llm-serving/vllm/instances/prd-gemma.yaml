@@ -22,7 +22,7 @@ uvicorn_log_level: info          # HTTP 서버 로그 레벨
 # GPU / 메모리
 gpus: [0]                        # 사용 GPU 번호 목록
 tensor_parallel_size: 1          # 텐서 병렬 크기 (gpus 개수와 일치)
-gpu_memory_utilization: 0.8      # GPU 메모리 비율 (0.85 멀티모달~0.92 가중치 큼)
+gpu_memory_utilization: 0.9      # GPU 메모리 비율 (0.85 멀티모달~0.92 가중치 큼)
                                  # ⚠️ 이 비율 안에 가중치+활성화+KV가 모두 들어간다. 올리면
                                  #    KV만 늘고 활성화 여유가 줄어 대형 배치에서 OOM
 

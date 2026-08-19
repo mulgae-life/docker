@@ -294,17 +294,35 @@ Qwen은 불필요. env HF_TOKEN으로도 전달 가능.
 
 ── GPU 메모리 참고 (gpu_memory_utilization=0.95 기준) ────────────────
 
-L40S 46GB × 1장
+⚠️ 표를 고르기 전에 인스턴스가 어느 환경인지 먼저 본다. GPU가 다르면
+   같은 tensor_parallel_size라도 결론이 뒤집힌다.
+     연구계(이 컨테이너)  L40S 46GB, 2장 묶어 TP2  → qwen / gemma / gemma-26b
+     개발(테스트)계·운영계 RTX PRO 6000 96GB 1장 TP1 → prd-*
+   기준 환경은 RTX PRO 6000이다. 연구계가 L40S 2장인 것은 여기 GPU가
+   L40S뿐이라 96GB 1장을 2장으로 대신하는 것이다.
+
+RTX PRO 6000 96GB × 1장 (개발·운영계 — prd-* 기준)
+  모델                 가중치    KV Cache 가용   권장 max_model_len
+  26B-A4B FP8 (온라인) ~26 GB    ~57 GB          65536~131072
+  31B FP8 (온라인)     ~29 GB    ~54 GB          65536~131072
+  27B FP8              ~27 GB    ~56 GB          65536~131072
+  ※ 계산 추정치다. 기동 로그의 "Available KV cache memory" /
+     "GPU KV cache size"로 실측 확정할 것.
+
+L40S 46GB × 2장 (tensor_parallel_size: 2 — 연구계)
+  모델               가중치    KV Cache 가용   권장 max_model_len
+  31B FP8 (온라인)   ~29 GB    ~58.4 GB        65536~131072
+  27B FP8            ~27 GB    ~60.4 GB        65536~131072
+  실측(gemma-26b, util 0.9, max_model_len 32768):
+    Available KV cache memory 20.53 GiB/GPU, GPU KV cache size 195,633 tokens
+
+L40S 46GB × 1장 (참고 — 이 구성으로 운영 중인 인스턴스는 없다)
   모델               가중치    KV Cache 가용   권장 max_model_len
   31B FP8 (온라인)   ~29 GB    ~14.7 GB        12288
   27B FP8            ~27 GB    ~16.7 GB        12288~16384
   14B BF16           ~28 GB    ~15.7 GB        12288~32768
   8B BF16            ~16 GB    ~27.7 GB        32768~65536
-
-L40S 46GB × 2장 (tensor_parallel_size: 2)
-  모델               가중치    KV Cache 가용   권장 max_model_len
-  31B FP8 (온라인)   ~29 GB    ~58.4 GB        65536~131072
-  27B FP8            ~27 GB    ~60.4 GB        65536~131072
+  ⚠️ TP1이라고 이 표를 보면 안 된다. prd-*는 TP1이지만 96GB 표를 본다.
 
 
 ── 기동 실패 유발 함정 요약 (yaml에 주의 inline 유지) ───────────────
