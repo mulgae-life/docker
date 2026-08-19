@@ -20,7 +20,10 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import io
 import json
+import math
 import os
 import queue
 import statistics
@@ -66,7 +69,13 @@ DEFAULT_TRAFFIC_CONFIG = {
     "min_requests_before_break": 10,
     "require_200": True,
     "require_429": False,
+    "image_ratio": 0.5,
+    "image_edge": 4096,
 }
+
+# 멀티모달 부하용 이미지 풀. --image-ratio > 0일 때만 채워진다.
+_IMAGE_POOL: list[str] = []
+_IMAGE_RATIO = 0.0
 
 MAX_DASHBOARD_TEXT_CHARS = 20000
 
@@ -122,12 +131,14 @@ class DashboardState:
             self._error = error
             self._completed_at = time.time()
 
-    def start_request(self, index: int, prompt_config: dict[str, Any]) -> None:
+    def start_request(self, index: int, prompt_config: dict[str, Any],
+                      has_image: bool) -> None:
         with self._lock:
             self._requests[index] = {
                 "index": index + 1,
                 "prompt": str(prompt_config["content"]),
                 "enable_thinking": bool(prompt_config["enable_thinking"]),
+                "has_image": has_image,
                 "status": "진행 중",
                 "started_at": time.time(),
                 "finished_at": None,
@@ -154,6 +165,7 @@ class DashboardState:
                     "index": result.index + 1,
                     "prompt": "",
                     "enable_thinking": False,
+                    "has_image": False,
                     "started_at": None,
                     "answer": "",
                     "thinking": "",
@@ -417,6 +429,7 @@ _DASHBOARD_HTML = """<!doctype html>
     .badge.done { color: var(--success); border-color: rgba(22, 163, 74, 0.36); }
     .badge.fail { color: var(--danger); border-color: rgba(220, 38, 38, 0.36); }
     .badge.wait { color: var(--warning); border-color: rgba(180, 83, 9, 0.36); }
+    .badge.img { color: var(--navy); border-color: rgba(26, 43, 74, 0.36); }
     .prompt {
       margin: 0;
       padding: 12px 14px;
@@ -572,6 +585,7 @@ _DASHBOARD_HTML = """<!doctype html>
             <div class="request-title">
               <span>#${esc(request.index)}</span>
               <span class="badge">${request.enable_thinking ? '생각 켬' : '생각 끔'}</span>
+              ${request.has_image ? '<span class="badge img">🖼 이미지</span>' : ''}
             </div>
             <div>
               <span class="badge ${badgeClass(status)}">${esc(status)}</span>
@@ -810,6 +824,47 @@ def _prompt_for_index(index: int) -> dict[str, Any]:
     return PROMPTS[index % len(PROMPTS)]
 
 
+def _build_image_pool(size: int, edge: int) -> list[str]:
+    """서로 다른 이미지 size개를 data URL로 만든다.
+
+    같은 이미지를 재사용하면 encoder/prefix 캐시에 히트해 프리필이 사라지므로
+    멀티모달 부하가 재현되지 않는다. 픽셀을 바꿔 mm_hash를 서로 다르게 만든다.
+    edge는 한 변 픽셀 수 — Qwen3-VL 계열은 실효 패치가 32x32라 4096이면 이미지
+    1장이 약 16,400 tok로 이미지 프로세서 상한(16,777,216 px)에 해당한다.
+    """
+    try:
+        from PIL import Image
+    except ImportError:
+        raise SystemExit("이미지 부하에는 Pillow가 필요합니다 "
+                         "(pip install pillow, 또는 --image-ratio 0으로 텍스트만 테스트)")
+
+    base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "image.png")
+    if not os.path.exists(base_path):
+        raise SystemExit(f"이미지 원본이 없습니다: {base_path}")
+
+    pool: list[str] = []
+    for i in range(size):
+        img = Image.open(base_path).convert("RGB").resize((edge, edge), Image.BICUBIC)
+        px = img.load()
+        for k in range((i + 1) * 64):
+            x, y = k % img.width, (k // img.width) % img.height
+            r, g, b = px[x, y]
+            px[x, y] = ((r + 37 * (i + 1)) % 256, (g + 11 * (i + 1)) % 256, (b + 7 * k) % 256)
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=92)   # PNG는 수십 MB — 전송량 때문에 JPEG
+        pool.append("data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode())
+    return pool
+
+
+def _wants_image(index: int) -> bool:
+    """이 요청에 이미지를 실을지. --image-ratio 비율만큼 요청 순서에 고르게 섞는다."""
+    if not _IMAGE_POOL or _IMAGE_RATIO <= 0:
+        return False
+    # 누적 개수가 한 장 넘어가는 지점에서만 참 — 0.5면 한 건 걸러 한 건이 된다.
+    # 앞쪽 N개를 먼저 채우는 방식은 요청 수가 적으면 전부 이미지가 되어 비율이 무시된다.
+    return math.floor((index + 1) * _IMAGE_RATIO) > math.floor(index * _IMAGE_RATIO)
+
+
 def _coerce_text(value: Any) -> str:
     if value is None:
         return ""
@@ -851,9 +906,16 @@ def _chat_once(
     prompt_config = _prompt_for_index(index)
     prompt = str(prompt_config["content"])
     enable_thinking = bool(prompt_config["enable_thinking"])
+    content: Any = prompt
+    if _wants_image(index):
+        content = [
+            {"type": "image_url",
+             "image_url": {"url": _IMAGE_POOL[index % len(_IMAGE_POOL)]}},
+            {"type": "text", "text": prompt},
+        ]
     body = {
         "model": model,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": [{"role": "user", "content": content}],
         "max_tokens": max_tokens,
         "temperature": 0,
         "chat_template_kwargs": {"enable_thinking": enable_thinking},
@@ -1047,7 +1109,7 @@ def _run_traffic(
             except queue.Empty:
                 return
             if dashboard:
-                dashboard.start_request(idx, _prompt_for_index(idx))
+                dashboard.start_request(idx, _prompt_for_index(idx), _wants_image(idx))
             result = _chat_once(
                 base_url=args.base_url,
                 model=model,
@@ -1200,6 +1262,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--max-tokens", type=int, default=None, help="요청당 최대 생성 토큰")
     p.add_argument("--timeout", type=float, default=None, help="요청 타임아웃 초")
     p.add_argument("--stream", action="store_true", help="SSE 스트리밍으로 테스트")
+    p.add_argument("--image-ratio", type=float, default=None,
+                   help="이미지를 포함할 요청 비율 0~1 (기본 0.5 = 절반, 0이면 텍스트만). "
+                        "요청마다 다른 이미지를 실어 encoder/prefix 캐시를 우회한다")
+    p.add_argument("--image-edge", type=int, default=None,
+                   help="이미지 한 변 픽셀 (기본 4096 ≈ 16,400 tok/장)")
     p.add_argument("--ramp-up-seconds", type=float, default=None, help="워커 시작 분산 시간")
     p.add_argument("--sleep-seconds", type=float, default=None, help="워커별 요청 사이 휴식")
     p.add_argument("--max-error-rate", type=float, default=None, help="초과 시 조기 중단")
@@ -1240,13 +1307,25 @@ def parse_args() -> argparse.Namespace:
         args.concurrency = args.requests
     if args.ui_port < 0:
         raise SystemExit("--ui-port는 0 이상이어야 합니다")
+    if not 0.0 <= args.image_ratio <= 1.0:
+        raise SystemExit("--image-ratio는 0~1 사이여야 합니다")
+    if args.image_edge < 64:
+        raise SystemExit("--image-edge는 64 이상이어야 합니다")
     return args
 
 
 def main() -> None:
+    global _IMAGE_POOL, _IMAGE_RATIO
+
     args = parse_args()
     if args.ui and not args.stream:
         args.stream = True
+
+    if args.image_ratio > 0:
+        # 동시에 도는 요청끼리 이미지가 겹치지 않도록 풀 크기를 동시성에 맞춘다.
+        _IMAGE_RATIO = args.image_ratio
+        print(f"이미지 풀 생성 중 ({args.concurrency}장, {args.image_edge}px)...")
+        _IMAGE_POOL = _build_image_pool(args.concurrency, args.image_edge)
 
     dashboard = DashboardState() if args.ui else None
     dashboard_server: ThreadingHTTPServer | None = None
@@ -1275,6 +1354,8 @@ def main() -> None:
     print(f"  서버: {args.base_url}")
     print(f"  모델: {model}")
     print(f"  요청: {args.requests}, 동시성: {args.concurrency}, stream={args.stream}")
+    if args.image_ratio > 0:
+        print(f"  이미지: 비율 {args.image_ratio:.0%}, {args.image_edge}px, 풀 {len(_IMAGE_POOL)}장")
 
     before = _snapshot(args.base_url, args.timeout)
     if dashboard:
@@ -1302,6 +1383,8 @@ def main() -> None:
             "max_consecutive_errors": args.max_consecutive_errors,
             "require_200": args.require_200,
             "require_429": args.require_429,
+            "image_ratio": args.image_ratio,
+            "image_edge": args.image_edge,
             "ui": args.ui,
         },
         "effective_defaults": args.effective_defaults,

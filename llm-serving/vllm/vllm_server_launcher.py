@@ -37,7 +37,9 @@ import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
+import urllib.request
 
 import yaml
 
@@ -68,7 +70,19 @@ PORT_ALLOC_LOCK = os.path.join(RUNTIME_DIR, ".port_alloc.lock")
 #   STT yaml(whisper_v3 / qwen3_asr / voxtral)의 task 키는 PoC 비교 메타로만 보존하고
 #   vllm serve에는 전달하지 않는다. 자동 감지가 부정확한 모델이 나오면 그때 vLLM 새 인자
 #   (--runner 등)로 매핑하는 launcher 분기를 추가한다.
-_LAUNCHER_KEYS = {"gpus", "download_dir", "gateway_port", "port", "env", "task"}
+_LAUNCHER_KEYS = {"gpus", "download_dir", "gateway_port", "port", "env", "task",
+                  "auto_restart_max", "watchdog_unhealthy_seconds"}
+
+# 자동 재기동 backoff. 연속 실패마다 순서대로 적용하고 끝에 도달하면 마지막 값을 유지.
+_RESTART_BACKOFFS = [10, 30, 60]
+# 이 시간 이상 가동한 뒤 죽었으면 새로운 장애로 보고 연속 실패 카운터를 초기화한다
+# (간헐적 장애가 누적 집계되어 재기동이 영구 차단되는 것을 막는다).
+_RESTART_STABLE_SECONDS = 300
+
+# health 무응답 감시. EngineCore가 죽어도 API 서버가 워커를 기다리며 수 분간 잔존해
+# proc.wait()가 반환되지 않는 경우가 있어, 워치독 없이는 자동 재기동이 발동하지 못한다.
+_WATCHDOG_INTERVAL_SECONDS = 10
+_WATCHDOG_UNHEALTHY_SECONDS = 90
 
 
 def parse_args():
@@ -388,6 +402,171 @@ def _cleanup_stale_runtime_files() -> None:
             pass
 
 
+def _gpu_compute_pids(gpus_csv):
+    """nvidia-smi로 지정 GPU를 점유 중인 프로세스 PID 목록을 얻는다.
+
+    gpus_csv는 yaml의 gpus(물리 인덱스)로, nvidia-smi -i와 같은 체계라 그대로 넘긴다.
+    """
+    try:
+        out = subprocess.run(
+            ["nvidia-smi", "-i", gpus_csv,
+             "--query-compute-apps=pid", "--format=csv,noheader"],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError) as e:
+        logger.warning("nvidia-smi 조회 실패 (고아 워커 검사 생략): %s", e)
+        return []
+    if out.returncode != 0:
+        logger.warning("nvidia-smi 조회 실패 rc=%s (고아 워커 검사 생략): %s",
+                       out.returncode, out.stderr.strip())
+        return []
+    pids = []
+    for line in out.stdout.splitlines():
+        line = line.strip()
+        if line.isdigit():
+            pids.append(int(line))
+    return pids
+
+
+def _find_stale_workers(gpus_csv):
+    """지정 GPU에서 회수해야 할 vLLM 워커 PID 목록.
+
+    엔진이 죽어도 VLLM::Worker_TP*는 CUDA 컨텍스트를 쥔 채 남아 GPU 메모리를 반환하지 않고,
+    그대로 재기동하면 메모리 부족으로 실패한다.
+
+    판정은 프로세스 그룹으로 한다 (launcher / vllm serve / 워커가 PGID를 공유).
+      · 내 그룹             → 내가 띄운 워커. 회수.
+      · 남의 그룹·리더 사망 → 이전 실행이 남긴 고아. 회수.
+      · 남의 그룹·리더 생존 → 다른 인스턴스의 정상 워커. 건드리지 않는다.
+
+    주의: vllm serve가 살아있는 동안 호출하면 정상 워커를 죽인다. 기동 전이나 proc 종료를
+    확인한 뒤에만 호출할 것.
+    """
+    stale = []
+    my_pgid = os.getpgid(0)
+    for pid in _gpu_compute_pids(gpus_csv):
+        try:
+            with open(f"/proc/{pid}/comm", encoding="utf-8") as f:
+                comm = f.read().strip()
+        except OSError:
+            continue                       # 이미 사라졌거나 조회 권한 없음
+        if not comm.startswith("VLLM::Worker"):
+            continue                       # vLLM 워커가 아니면 대상 아님
+        try:
+            pgid = os.getpgid(pid)
+        except OSError:
+            continue
+        if pgid == my_pgid:
+            stale.append(pid)              # 내가 띄운 워커 → 회수 대상
+            continue
+        try:
+            os.kill(pgid, 0)
+        except ProcessLookupError:
+            stale.append(pid)              # 그룹 리더 사망 → 이전 실행의 고아
+        except OSError:
+            continue                       # 권한 등으로 판정 불가 → 건드리지 않음
+    return stale
+
+
+def _cleanup_stale_workers(gpus_csv, context):
+    """남은 워커를 SIGTERM → (무응답 시) SIGKILL로 정리한다.
+
+    OOM 등으로 죽은 워커는 CUDA 커널 안에서 멈춰 SIGTERM에 반응하지 않는 경우가 많아
+    SIGKILL 단계가 반드시 필요하다.
+    """
+    orphans = _find_stale_workers(gpus_csv)
+    if not orphans:
+        return
+    logger.warning("[%s] 잔여 vLLM 워커 %d개 발견 (GPU %s): %s — 정리",
+                   context, len(orphans), gpus_csv, orphans)
+    for pid in orphans:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except OSError:
+            pass
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        if not any(_pid_alive(pid) for pid in orphans):
+            logger.info("[%s] 잔여 워커 정리 완료 (SIGTERM)", context)
+            return
+        time.sleep(0.5)
+    for pid in orphans:
+        if _pid_alive(pid):
+            logger.warning("[%s] PID %s SIGTERM 무응답 10s → SIGKILL", context, pid)
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except OSError:
+                pass
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        if not any(_pid_alive(pid) for pid in orphans):
+            break
+        time.sleep(0.5)
+    remaining = [pid for pid in orphans if _pid_alive(pid)]
+    if remaining:
+        logger.error("[%s] 잔여 워커 정리 실패 — 수동 확인 필요: %s", context, remaining)
+    else:
+        logger.info("[%s] 잔여 워커 정리 완료", context)
+
+
+def _pid_alive(pid):
+    """PID 생존 확인. 좀비(exit 후 미회수)는 죽은 것으로 본다."""
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    try:
+        with open(f"/proc/{pid}/stat", encoding="utf-8") as f:
+            state = f.read().rsplit(")", 1)[1].split()[0]
+        return state != "Z"
+    except (OSError, IndexError):
+        return False
+
+
+def _health_ok(port, timeout=3):
+    """vLLM /health가 200을 주는지 확인."""
+    try:
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/health", timeout=timeout
+        ) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+
+def _watchdog(proc, port, stop_event, unhealthy_seconds):
+    """health 무응답이 이어지면 vllm serve를 강제 종료해 재기동 경로로 넘긴다.
+
+    감시는 **한 번이라도 healthy가 된 뒤부터** 시작한다. 모델 로딩에 수 분이 걸리는데
+    그 구간을 장애로 오판하면 기동 자체가 불가능해지기 때문이다.
+    """
+    became_healthy = False
+    unhealthy_for = 0
+    while not stop_event.wait(_WATCHDOG_INTERVAL_SECONDS):
+        if proc.poll() is not None:
+            return                          # 이미 종료됨 — 재기동 로직이 처리
+        if _health_ok(port):
+            if not became_healthy:
+                logger.info("워치독: health 확인 — 이후 무응답 %d초면 강제 종료",
+                            unhealthy_seconds)
+            became_healthy = True
+            unhealthy_for = 0
+            continue
+        if not became_healthy:
+            continue                        # 기동(모델 로딩) 중 — 감시 대상 아님
+        unhealthy_for += _WATCHDOG_INTERVAL_SECONDS
+        logger.warning("워치독: health 무응답 %d초 / 한계 %d초",
+                       unhealthy_for, unhealthy_seconds)
+        if unhealthy_for >= unhealthy_seconds:
+            logger.error("워치독: health 무응답 %d초 — vllm serve(PID %s) 강제 종료",
+                         unhealthy_for, proc.pid)
+            try:
+                proc.kill()
+            except OSError:
+                pass
+            return
+
+
 def _raise_keyboard_interrupt(signum, frame):
     """SIGTERM을 KeyboardInterrupt로 승격하여 main의 finally cleanup이 실행되게 한다."""
     raise KeyboardInterrupt()
@@ -521,19 +700,64 @@ def main():
     cmd.extend(passthrough)
     logger.info("실행: %s", " ".join(cmd))
 
-    # ── 프로세스 실행 ──
+    # ── 프로세스 실행 (비정상 종료 시 자동 재기동) ──
+    # 엔진이 OOM 등으로 죽으면 vllm serve는 종료되지만 VLLM::Worker_TP*가 GPU 메모리를
+    # 쥔 채 남는다. 잔재를 정리하지 않고 재기동하면 메모리 부족으로 기동 자체가 실패한다.
+    # 기동 전에도 한 번 정리한다 — 이전 실행이 SIGKILL로 끊겨 finally를 못 탄 경우 대비.
+    restart_max = int(config.get("auto_restart_max", 3))
+    watchdog_seconds = int(config.get("watchdog_unhealthy_seconds",
+                                      _WATCHDOG_UNHEALTHY_SECONDS))
+    if args.gpu:
+        _cleanup_stale_workers(args.gpu, "기동 전")
+
     proc = None
+    attempt = 0
+    stop_watchdog = threading.Event()
     try:
-        proc = subprocess.Popen(cmd, env=env)
-        proc.wait()
+        while True:
+            started = time.time()
+            proc = subprocess.Popen(cmd, env=env)
+            stop_watchdog = threading.Event()
+            if watchdog_seconds > 0:
+                threading.Thread(
+                    target=_watchdog,
+                    args=(proc, actual_port, stop_watchdog, watchdog_seconds),
+                    daemon=True,
+                ).start()
+            proc.wait()
+            stop_watchdog.set()
+            uptime = time.time() - started
+
+            if proc.returncode == 0:
+                break
+            if restart_max <= 0:
+                logger.error("vLLM 비정상 종료 rc=%s — 자동 재기동 비활성화됨 "
+                             "(auto_restart_max=0)", proc.returncode)
+                break
+            if uptime >= _RESTART_STABLE_SECONDS:
+                attempt = 0
+            if attempt >= restart_max:
+                logger.error("vLLM 비정상 종료 rc=%s — 연속 %d회 실패로 자동 재기동 중단. "
+                             "로그에서 원인 확인 후 수동 기동 필요", proc.returncode, attempt)
+                break
+
+            if args.gpu:
+                _cleanup_stale_workers(args.gpu, "재기동 전")
+            delay = _RESTART_BACKOFFS[min(attempt, len(_RESTART_BACKOFFS) - 1)]
+            attempt += 1
+            logger.warning("vLLM 비정상 종료 rc=%s (가동 %.0fs) — %d초 후 자동 재기동 (%d/%d)",
+                           proc.returncode, uptime, delay, attempt, restart_max)
+            time.sleep(delay)
     except KeyboardInterrupt:
         logger.info("서버 종료 중...")
-        proc.terminate()
-        try:
-            proc.wait(timeout=10)
-        except subprocess.TimeoutExpired:
-            logger.warning("정상 종료 실패, 강제 종료")
-            proc.kill()
+        stop_watchdog.set()          # 정상 종료 경로에서 워치독이 개입하지 않도록
+        if proc is not None and proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                logger.warning("정상 종료 실패, 강제 종료")
+                proc.kill()
     except FileNotFoundError:
         logger.error(
             "'vllm' 명령어를 찾을 수 없습니다. "
@@ -547,6 +771,10 @@ def main():
             pass
         # runtime 파일은 종료 시 정리 (게이트웨이가 더는 이 인스턴스를 보지 않게)
         _remove_runtime_file(instance_name)
+        # vllm serve가 내려가도 워커가 GPU를 쥔 채 남을 수 있다. `./start.sh down`이
+        # "완료"를 찍고도 GPU가 안 비는 원인이므로 종료 경로에서 반드시 확인한다.
+        if args.gpu:
+            _cleanup_stale_workers(args.gpu, "종료 시")
     sys.exit(proc.returncode if proc else 1)
 
 

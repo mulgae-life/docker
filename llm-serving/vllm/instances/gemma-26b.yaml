@@ -9,7 +9,7 @@ gateway_port: 5015
 # 모델
 model: google/gemma-4-26B-A4B-it # HF 모델 ID (런처가 download_dir과 조합해 경로 해석)
 download_dir: /models/LLM        # 모델 로컬 저장 루트 ({download_dir}/{model})
-quantization: fp8                # 온더플라이 FP8 양자화 (사전 양자화 모델은 생략)
+quantization: fp8                # 온더플라이 FP8 양자화 (사전 양자화 모델은 주석 유지 — 자동 감지)
 dtype: auto                      # 활성화 dtype (auto=config.json 따름)
 # served_model_name: [<별칭>]    # API 모델 별칭 (미설정 시 model에서 자동 추출)
 # trust_remote_code: true        # 네이티브 미지원 모델만
@@ -23,6 +23,14 @@ uvicorn_log_level: info          # HTTP 서버 로그 레벨
 gpus: [0, 1]                     # 사용 GPU 번호 목록
 tensor_parallel_size: 2          # 텐서 병렬 크기 (gpus 개수와 일치)
 gpu_memory_utilization: 0.9      # GPU 메모리 비율 (0.85 멀티모달~0.92 가중치 큼)
+                                 # ⚠️ 이 비율 안에 가중치+활성화+KV가 모두 들어간다. 올리면
+                                 #    KV만 늘고 활성화 여유가 줄어 대형 배치에서 OOM
+
+# 환경변수 (launcher가 vllm serve 서브프로세스 환경에 머지)
+env:
+  PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+                                 # 할당자 단편화 방지 (프리필/디코드 크기 편차가 커 조각이 쌓임)
+                                 # ⚠️ KV connector(Nixl/Mooncake) 쓰면 vLLM이 기동 거부
 
 # 추론
 max_model_len: 65536             # 컨텍스트 길이 (프롬프트+출력 합산)
@@ -33,6 +41,10 @@ seed: 42                         # 재현용 전역 시드
 # Thinking 모드 (reasoning 토큰 생성 제어)
 default_chat_template_kwargs:
   enable_thinking: false         # 챗봇 기본: thinking 비활성 (지연 감소)
+  # reasoning_effort: medium     # 사고 길이. ⚠️ Qwen3.8 전용 — 미지원 모델은 주석 유지
+                                 #    thinking 켠 호출에만 실효 (OFF면 값 자체를 무시)
+                                 #    xhigh/medium/low만 허용 — 그 외는 템플릿이 raise → HTTP 400
+                                 #    기본값 xhigh는 사고 지시문을 최대 주입해 생성량이 는다
 
 # 성능 최적화
 enable_prefix_caching: true      # 시스템 프롬프트 KV 재사용 (TTFT 감소)
@@ -41,13 +53,16 @@ language_model_only: false       # true면 멀티모달 비활성 (메모리 절
 
 # Speculative Decoding — 모델별 설정, 상세 ./_SCHEMA.txt
 speculative_config:
-  model: ${model}-assistant               # 본체 model 자동 추종 (런처 치환). ⚠️ method 키 명시 금지 (자동감지, 명시 시 NotImplementedError)
-  num_speculative_tokens: 4               # 26B-A4B 권장 4 (⚠️ MoE — 동시성 4 미만은 이득 제한)
+  model: ${model}-assistant      # 드래프트 모델. ${model}은 런처가 본체 값으로 치환 — Gemma4만 사용
+  # method: mtp                  # ⚠️ Qwen: mtp 명시 필수 (qwen3_next_mtp는 0.20.2에서 deprecated)
+                                 #    Gemma4: 자동 감지 — 명시하면 NotImplementedError
+  num_speculative_tokens: 4      # Qwen 2 (⚠️ >1은 acceptance rate 저하 가능 — 모니터링 후 상향)
+                                 #    Gemma4 26B-A4B 4 (MoE — 동시성 4 미만은 이득 제한) / 31B 4~8
 
 # 멀티모달
-mm_encoder_tp_mode: data         # vision encoder DP 처리 (Qwen3.5/3.6 레시피)
+mm_encoder_tp_mode: data         # vision encoder DP 처리 (Qwen 공식 레시피 — 미지원 모델은 weights 자동 폴백)
 mm_processor_cache_type: shm     # 멀티모달 입력 shared memory 공유 (IPC 절감)
-mm_processor_kwargs: { max_soft_tokens: 1120 }  # ⚠️ Gemma4: 70/140/280/560/1120 외 값은 기동 실패(sys.exit)
+mm_processor_kwargs: { max_soft_tokens: 1120 } # Gemma4: 70/140/280/560/1120만 허용(외 값 기동 실패) / Qwen3-VL: 빈 dict
 limit_mm_per_prompt:
   image: 5                       # 프롬프트당 이미지 상한
 

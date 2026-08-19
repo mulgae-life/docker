@@ -32,7 +32,7 @@
 #   ./start.sh test <대상> --category infra   # 대상 뒤 인자는 tests/의 해당 스크립트로 그대로 전달
 #   ./start.sh test http://host:5015          # 원격 서버 대상
 #   ./start.sh speed <대상>      # 속도 매트릭스 측정 (tests/results/speed_results.md에 누적)
-#   ./start.sh traffic 5015      # 하드 부하 테스트 — 게이트웨이만, 대상 명시 필수(전체 순회 불가)
+#   ./start.sh traffic 5015      # 하드 부하 테스트(텍스트+이미지 반반) — 게이트웨이만, 대상 명시 필수
 #
 # 안전 정책: 무인자 호출은 [y/N] 기본 No로 묻는다 (사고 방지).
 # 비대화 환경(파이프/cron)에서는 'all' 또는 이름 명시 필수 (prompt 띄울 곳이 없으므로 거부).
@@ -176,6 +176,17 @@ list_gateway_yamls() {
     ls "$GATEWAYS_DIR"/*.yaml 2>/dev/null | sort
 }
 
+# 기존 로그를 타임스탬프 파일로 보존한 뒤 자리를 비운다. 기동이 `> logs/<name>.log`로
+# 덮어쓰므로, 이 호출이 없으면 크래시 직후 재기동 시 원인 로그를 잃는다.
+# 백업 파일은 자동 삭제하지 않는다 — 정리는 운영자 판단.
+rotate_log() {
+    local log_path="$1"
+    [ -s "$log_path" ] || return 0
+    local backup="${log_path%.log}.$(date +%Y%m%d_%H%M%S).log"
+    mv "$log_path" "$backup" 2>/dev/null || return 0
+    echo "        이전 로그 보존: $(basename "$backup")"
+}
+
 # [name]을 instances/ 또는 gateways/로 라우팅. 결과: "all" | "instance" | "gateway"
 # 매칭 실패 시 stderr 에러 메시지 + return 1.
 detect_target_kind() {
@@ -258,6 +269,7 @@ start_instance() {
     fi
 
     echo "[START] vLLM $INST_NAME (GPU $INST_GPUS_CSV, port hint :$INST_PORT_HINT, → gateway :$INST_GATEWAY_PORT)"
+    rotate_log "$LOG_DIR/vllm_${INST_NAME}.log"
     nohup python "$SCRIPT_DIR/vllm_server_launcher.py" \
         -c "$yaml_path" \
         -g "$INST_GPUS_CSV" \
@@ -324,6 +336,7 @@ start_gateway() {
     fi
 
     echo "[START] Gateway $GW_NAME (:$GW_PORT)"
+    rotate_log "$LOG_DIR/gateway_${GW_NAME}.log"
     nohup python "$SCRIPT_DIR/vllm_gateway.py" -c "$yaml_path" \
         > "$LOG_DIR/gateway_${GW_NAME}.log" 2>&1 &
     echo "        PID $!, 로그: logs/gateway_${GW_NAME}.log"
@@ -817,9 +830,10 @@ cmd_help() {
 "
     fi
     if [ -n "$TRAFFIC_SCRIPT" ]; then
-        traffic_cmd="  traffic <포트|URL>   하드 부하 테스트 (기본 동시 20) — 게이트웨이만, 대상 명시 필수
+        traffic_cmd="  traffic <포트|URL>   하드 부하 테스트 (동시 20, 절반은 이미지) — 게이트웨이만, 대상 명시 필수
 "
         traffic_ex="  ./start.sh traffic ${first_gw:-<포트>} --concurrency 50   # 부하 강도 지정
+  ./start.sh traffic ${first_gw:-<포트>} --image-ratio 0     # 텍스트만 (기본은 절반이 이미지)
 "
         traffic_policy="           traffic은 부하가 크므로 무인자/all 호출을 아예 거부한다.
 "

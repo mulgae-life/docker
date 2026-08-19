@@ -64,10 +64,24 @@ backends로 등록한다(vllm_server_launcher.py:_LAUNCHER_KEYS가 vllm serve
       텐서 병렬 크기(gpus 개수와 일치). 멀티 인스턴스 LB는 같은
       gateway_port yaml 추가로 확장.
   gpu_memory_utilization
-      GPU 메모리 비율(0~1). 나머지는 PyTorch/CUDA 오버헤드 + 멀티모달
-      vision encoder transient 활성화((1-util) 외부 영역 동적 할당)용 예약.
-      가중치 클수록 ↑(KV 여유), vision encoder 사용 클수록 ↓.
-      권장 0.85(멀티모달 큼) ~ 0.92(가중치 큼).
+      GPU 메모리 비율(0~1) = vLLM이 쓸 총 예산. 이 예산 "안에" 가중치 +
+      활성화 피크 + CUDA graph + KV 캐시가 모두 들어간다.
+        KV = (total × util) − 가중치 − 활성화 피크 − CUDA graph
+      활성화 피크는 기동 시 max_num_batched_tokens 크기로 forward를 1회
+      돌려 실측한다(v1/worker/gpu_worker.py:442, v1/worker/utils.py:408).
+      KV가 남는 전부를 가져가므로 util을 올리면 KV만 늘고 활성화 여유는
+      그대로다 — 오히려 (1-util) 완충이 줄어 OOM에 취약해진다.
+      ▸ (1-util)은 "활성화용 예약"이 아니다. CUDA 컨텍스트·드라이버 몫이며,
+        프로파일 추정을 넘어선 활성화가 흘러넘치는 완충으로 쓰인다. 이
+        완충까지 소진되면 torch.OutOfMemoryError로 워커가 죽는다.
+      ▸ 여유 점검:
+          ① 기동 직후 사용량 = nvidia-smi
+          ② 활성화 가용     = 물리가용 − ①
+          ③ 필요 활성화     = 부하 중 관측 or OOM 로그의 in-use − ①
+        ② < ③ 이면 터진다. 이론 추정은
+          max_num_batched_tokens × intermediate_size × 2B × 4~5.
+      권장 0.85(멀티모달 큼) ~ 0.92(가중치 큼). 멀티모달 대형 배치가 들어
+      오는 인스턴스는 0.9 이하로 둔다.
 
 
 ── 추론 ─────────────────────────────────────────────────────────────
@@ -223,6 +237,39 @@ Qwen 3.6 — native MTP (drafter 불필요)
       true면 INFO에 요청 ID/파라미터, DEBUG에 프롬프트. 운영 false.
   disable_log_stats
       false=처리 통계(TPS/큐/지연) 출력. 병목 분석 시 false 유지.
+
+
+── 런처 전용 키 (vllm serve에 전달되지 않음) ────────────────────────
+
+  env
+      dict. launcher가 vllm serve 서브프로세스 환경에 머지한다. 모델별
+      권장 환경변수를 yaml 한 곳에서 관리하기 위한 키.
+      ▸ PYTORCH_CUDA_ALLOC_CONF: "expandable_segments:True"
+        기본 할당자는 고정 크기 세그먼트를 쓰므로, 프리필(수천~수만 tok)과
+        디코드(수 tok)가 번갈아 오면 자투리가 쌓여 총량이 남아도 큰 연속
+        블록을 못 잡는다. 이 옵션은 CUDA VMM으로 세그먼트를 확장 가능하게
+        만들어 단편화를 없앤다. 연산 커널은 그대로라 속도 영향 없음.
+        ⚠️ KV connector(Nixl/Mooncake) 사용 시 vLLM이 기동을 거부한다
+           (config/vllm.py:730-768) — RDMA 등록 주소가 재매핑되므로.
+      ▸ VLLM_DISABLE_COMPILE_CACHE: "1"  (Voxtral 등)
+  auto_restart_max
+      vllm serve가 비정상 종료(rc≠0)했을 때 launcher가 자동 재기동할 최대
+      연속 횟수. 기본 3, 0이면 비활성.
+      ▸ 재기동 전에 해당 GPU의 잔여 VLLM::Worker_TP*를 정리한다. 엔진이
+        죽어도 워커는 CUDA 컨텍스트를 쥔 채 남아 GPU 메모리를 반환하지
+        않으므로, 정리 없이 재기동하면 메모리 부족으로 실패한다.
+      ▸ backoff 10s → 30s → 60s(이후 60s 유지). 300초 이상 가동한 뒤 죽었
+        으면 새로운 장애로 보고 연속 실패 카운터를 초기화한다.
+      ▸ SIGTERM(`./start.sh down`)으로 내린 경우는 재기동하지 않는다.
+  watchdog_unhealthy_seconds
+      /health 무응답이 이 시간만큼 이어지면 launcher가 vllm serve를 강제
+      종료해 재기동 경로로 넘긴다. 기본 90, 0이면 비활성.
+      ▸ 필요한 이유: EngineCore가 죽으면 API 서버가 "Finished server
+        process" 로그까지 찍고도 워커를 기다리며 수 분간 잔존하는 경우가
+        있다. 이때 proc.wait()가 반환되지 않아 auto_restart_max만으로는
+        재기동이 발동하지 못한다.
+      ▸ 감시는 한 번이라도 health 200을 받은 뒤에 시작한다. 모델 로딩(수
+        분)을 장애로 오판하면 기동 자체가 불가능해지기 때문.
 
 
 ── Tool Calling / Reasoning Parser ──────────────────────────────────
