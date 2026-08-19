@@ -1,0 +1,1138 @@
+Title: Redlib: search results - gemma 4 31b korean
+
+URL Source: https://redlib.catsarch.com/r/LocalLLaMA/search?q=gemma+4+31b+korean&restrict_sr=on&sort=relevance
+
+Markdown Content:
+[red lib.](https://redlib.catsarch.com/)
+
+Feeds
+
+MAIN FEEDS
+
+[Home](https://redlib.catsarch.com/)[Popular](https://redlib.catsarch.com/r/popular)[All](https://redlib.catsarch.com/r/all)
+
+[reddit](https://redlib.catsarch.com/r/LocalLLaMA/search?q=gemma+4+31b+korean&restrict_sr=on&sort=relevance#popup)
+
+# You are about to leave Redlib
+
+Do you want to continue?
+
+https://www.reddit.com/r/LocalLLaMA/search?q=gemma+4+31b+korean&restrict_sr=on&sort=relevance
+
+[No, go back!](https://redlib.catsarch.com/r/LocalLLaMA/search?q=gemma+4+31b+korean&restrict_sr=on&sort=relevance#)[Yes, take me to Reddit](https://www.reddit.com/r/LocalLLaMA/search?q=gemma+4+31b+korean&restrict_sr=on&sort=relevance)
+
+[settings](https://redlib.catsarch.com/settings)
+
+- [x] in r/LocalLLaMA 
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/PerceptionGrouchy187](https://redlib.catsarch.com/u/PerceptionGrouchy187)•Apr 12 '26
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[Speculative Decoding works great for Gemma 4 31B with E2B draft (+29% avg, +50% on code)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sjct6a/speculative_decoding_works_great_for_gemma_4_31b/)
+
+ 321  Upvotes
+
+Following up on my previous Gemma 4 31B benchmark post, I tested speculative decoding with Gemma 4 E2B (4.65B) as the draft model.
+
+The results were much better than I expected, so I wanted to share some controlled benchmark numbers.
+
+# Setup
+
+*   **GPU**: RTX 5090 (32GB VRAM)
+*   **OS**: Windows 11
+*   **Main model**: Gemma 4 31B UD-Q4_K_XL (18.3GB)
+*   **Draft model**: Gemma 4 E2B UD-Q4_K_XL (3.0GB)
+*   **Backend**: llama.cpp fork with TurboQuant KV cache (turbo3)
+*   **Config**: 128K context, parallel=1, Flash Attention, `--draft-max 8 --draft-min 1`
+
+# Benchmark Results
+
+Same server config for both, max_tokens=500, temp=0.7, warm-up query discarded before measuring.
+
+[![Image 2](https://redlib.catsarch.com/preview/pre/gjyo1gl1crug1.png?width=1007&format=png&auto=webp&s=6574ab5093a44846d688de2a951f661cbce2013b)](https://redlib.catsarch.com/preview/pre/gjyo1gl1crug1.png?width=1007&format=png&auto=webp&s=6574ab5093a44846d688de2a951f661cbce2013b)
+| Query Type | Baseline (t/s) | SpecDec (t/s) | Accept Rate | Speedup |
+| :--- | :--- | :--- | :--- | :--- |
+| Math explanation | 57.45 | **85.86** | 62.9% | **+49.5%** |
+| Korean poetry | 56.93 | **62.34** | 44.1% | **+9.5%** |
+| Code generation | 57.15 | **86.05** | 60.7% | **+50.5%** |
+| Science explanation | 57.19 | **71.14** | 50.9% | **+24.4%** |
+| Translation + analysis | 57.14 | **63.26** | 42.2% | **+10.7%** |
+| **Average** | **57.17** | **73.73** | **52.2%** | **+29.0%** |
+
+Even at 42% acceptance rate, speculative decoding is still +10% faster because there's zero token translation overhead when the vocabs are compatible.
+
+# The GGUF Version Trap
+
+I initially got terrible results — the draft model was _slower_ than no draft at all (7.31 t/s vs 57 t/s baseline). Every draft model combo gave this warning:
+
+```
+the target and draft vocabs are not compatible - tokens will be translated between the two
+```
+
+After digging into `speculative.cpp`, I found the compatibility check compares `add_bos_token` between target and draft. My 31B GGUF was from early April when Gemma 4 first dropped, and it had `add_bos_token = false`. The E2B model (downloaded later) had `add_bos_token = true`. This single metadata mismatch forced llama.cpp into token translation mode, killing all performance gains.
+
+**Re-downloading the 31B GGUF** (Unsloth re-quantized all Gemma 4 GGUFs recently with the fix) made the warning disappear and unlocked the full +29% speedup.
+
+**TL;DR**: If you downloaded your Gemma 4 GGUF in early April 2026, re-download it. The tokenizer metadata was fixed.
+
+# Practical Tips
+
+Add these flags to your existing llama-server command:
+
+```
+-md gemma-4-E2B-it-UD-Q4_K_XL.gguf
+-ngld 99
+--draft-max 8
+--draft-min 1
+--parallel 1
+```
+
+Things to watch out for:
+
+*   `--parallel 1`**is mandatory** — with auto (=4), the draft model's KV cache is allocated 4x, eating VRAM and tanking speed to 7 t/s
+*   **No vision** — speculative decoding and multimodal can't be used together
+*   **Q4 draft is fine** — Q8 (4.8GB) doesn't improve speed over Q4 (3.0GB), and Q4 leaves more VRAM headroom
+*   _Extra VRAM ~2.3GB — total ~23.4GB with 128K context on a 32GB card (256K fits too, ~25.5GB)._
+
+# Content-dependent speedup
+
+The gains scale with how predictable the output is:
+
+*   **Code / Math** (structured, repetitive patterns): ~60% accept rate → **+50% speed**
+*   **Explanations** (semi-structured): ~50% accept rate → **+24%**
+*   **Creative / Translation** (less predictable): ~42% accept rate → **+10%**
+
+Even the worst case is still a net positive, which is the key difference from having incompatible vocabs where even 65% acceptance rate resulted in zero gains.
+
+# draft-max Sweep
+
+Thanks to [u/Odd-Ordinary-5922](https://redlib.catsarch.com/u/Odd-Ordinary-5922) for the suggestion. Same benchmark setup, only varying `--draft-max`:
+
+| draft-max | Math | Poetry | Code | Science | Translation | **Avg (t/s)** | **vs baseline** |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| baseline | 57.45 | 56.93 | 57.15 | 57.19 | 57.14 | **57.17** | — |
+| 2 | 73.43 | 60.49 | 68.69 | 62.46 | 62.42 | **65.50** | +14.6% |
+| 4 | 83.31 | 60.88 | 73.12 | 65.29 | 67.98 | **70.12** | +22.6% |
+| **8** | **85.86** | **62.34** | **86.05** | **71.14** | **63.26** | **73.73** | **+29.0%** |
+| 16 | 99.35 | 62.58 | 78.74 | 68.39 | 58.31 | **73.47** | +28.5% |
+
+**draft-max 8 is the sweet spot** for mixed workloads. 16 pushes math to 99 t/s but regresses on creative/translation, ending up about the same average. Creative text stays flat (~62 t/s) regardless of draft-max — the bottleneck there is acceptance rate, not draft length.
+
+[114 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sjct6a/speculative_decoding_works_great_for_gemma_4_31b/ "114 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/NineThreeTilNow](https://redlib.catsarch.com/u/NineThreeTilNow)•13d ago
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[Gemma 4 31b AttnRes Project](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vgeslw/gemma_4_31b_attnres_project/)
+
+ 12  Upvotes
+
+I had Claude re-draft this for me, thus it has Em Dashes. It's correct with lots of "Claude" simplifications.
+
+---
+
+Hey all. It's been a while since I posted about the AttnRes architecture so I figured I'd give an update on where things are.
+
+Short version: it's alive. Longer version... it's complicated.
+
+So the core idea hasn't changed. Replace the standard residual stream with an attention-based routing mechanism — AttnRes — that lets the model learn WHERE to route information between layers rather than just blindly passing everything forward. Same parameter count as the base model. The hypothesis is that this is a fundamentally better use of the same compute.
+
+The part I've spent the most time on is figuring out how to actually GET there without training from scratch. I don't have Google's budget. I'm one person. So the whole strategy is built around distilling from Gemma into the new architecture using a weaning schedule — you start with the standard residual doing all the work, and you gradually shift responsibility to the AttnRes pathway over the course of training. The model learns to route through the new pathway while the old one is slowly pulled away.
+
+This sounds simple. It is not simple.
+
+The thing that took the longest to figure out was the data. Not volume... diversity. If you distill on a narrow distribution you'll get a model that handles that distribution great and has quietly lost everything else. The model manifold is this massive high-dimensional thing and you have to preserve ALL of it during the transition or you get a model that can code but suddenly responds in mixed Korean and English when you ask it about quantum mechanics. I've seen this happen. It's informative but not ideal.
+
+The solution I landed on was using the model itself to generate diverse coverage. Take a news article. Ask the model to summarize it. Then translate that summary to Bulgarian. Then ask if there are nuances lost in the Bulgarian translation. One piece of source content, three completely different regions of the model's capability space exercised. Scale that across 20 languages that Google trained Gemma to handle well and you get massive manifold coverage from relatively simple data scaffolding.
+
+The other big decision was distillation targets. Most people distill on 1-hot or label smoothed targets. I'm using top-K ~12 logits from the source model with their proportional weights maintained. The reasoning is... the model isn't a next token predictor. It's a next DISTRIBUTION predictor. The relationships between the top candidates at every position encode the model's actual knowledge — what it thinks is likely, what's plausible, what's related. One-hot throws all of that away. Top-K 12 captures ~98% of the probability mass and preserves the distributional shape that IS the manifold.
+
+This matters because during weaning, the new pathway has to learn to reproduce not just the right answers but the right uncertainty structure. That's what forces it to actually internalize the model's knowledge rather than just mimicking outputs.
+
+The goal is NOT perfection. I want a beta that proves the architecture works and is trainable. Good enough that someone can take it, distill new knowledge in using the pipeline I've already built, and improve it. The training code exists because I had to write it to do this work. The data pipeline exists. The methodology is documented. All Apache 2.0.
+
+If a compute provider wants to come along and help push the model to Gemma-level quality... I'm happy to put their name on the HuggingFace card. This is meant to be a community model built on an open architecture that anyone can improve.
+
+More updates as the probing runs finish. Happy to answer questions about the methodology or the reasoning behind any of these decisions.
+
+---
+
+The core model and the training model these are largely distilled from are abliterated variants of the Gemma 4 model. So... It has no safety. It's a use at own risk thing.
+
+Right now I'm waiting on B300's. They're just not available and using a single B300 is my test target right now. Like every datacenter for the last week is 100% sold out and the second they appear they're gone.
+
+Another thing of note, I use Top K 12 distillation, but I've found that for a large portion of the dataset the top 3 or 4 work fine. This comes down to the way language, code, even logic are structured.
+
+Simplistically, you can't write "I want to eat a" and expect the next token to be apple. If you swapped the "a" to "an" then apple and anything else starting with a vowel becomes valid and the probability of everything else falls off.
+
+This happens a LOT from my observations. The other issue is quantization. Quantization affects the longer tail distributions where there are a lot of options. I'm currently investigating both of these issues to make the process more effective.
+
+Removing the layers as seen in the prior model is like... 100x the training necessary. It involves incrementally removing them. Even though I've identified all of them the model becomes too unstable to continue training AND do the other stuff. It would be a matter of cutting Gemma to 3 SWA + Global FIRST, then applying attention residuals. Alternatively, you could insert a block or two in the middle to make the model larger then train MORE then attention residuals.
+
+AFAIK no one outside Moonshot has done this, and even Moonshot used ~1.5t tokens because it was a pretrain to instruct training. Moonshot however demonstrated that their model was ~25% more efficient at learning with this residual stream. Further, Kimi K3 has now released with this exact feature. So I guess I was on to something originally.
+
+Old Post - [https://old.reddit.com/r/LocalLLaMA/comments/1ulmez2/rebuilding_gemma_4_31b_better_as_26b/](https://redlib.catsarch.com/r/LocalLLaMA/comments/1ulmez2/rebuilding_gemma_4_31b_better_as_26b/)
+
+[17 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vgeslw/gemma_4_31b_attnres_project/ "17 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/SemaMod](https://redlib.catsarch.com/u/SemaMod)•May 29 '26
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[Mutating Gemma 4 31B Dense in to a native Gemma 4 additive-MoE model](https://redlib.catsarch.com/r/LocalLLaMA/comments/1trbeo0/mutating_gemma_4_31b_dense_in_to_a_native_gemma_4/)
+
+ 17  Upvotes
+
+I recently came across an interesting model on Hugginface [from JDONE-Research/AIOne-Agent-52B-A36B-it](https://huggingface.co/JDONE-Research/AIOne-Agent-52B-A36B-it). It is the first finetune I saw that is built on the Gemma 4 31B dense model but enables MoE for it, training a router + experts and enabling the `enable_moe_block` config like Gemma 4 26B does. I was surprised that this "feature" hasn't been discussed more, since I thought it might be an interesting architecture to further post-train the Gemma 4 31B model to update its knowledge and give it enhanced capabilities through MoE.
+
+Unfortunately, the JDONE finetune is korean specific, but I was curious if anybody in the community has come across or explored similar Gemma 4 31B-based models extended with MoE. I had some spare RunPod credits so I worked iteratively with ChatGPT Pro to create a [training script](https://gist.github.com/VikashLoomba/4f4fc8605195f8cf76d5461e639021eb) that would take around 24hrs to complete on a B300 to create a proof-of-concept model to see if I could actually create a working model with this augmented architecture. I have pretty little experience doing full training on models (only done finetuning a couple of times through Unsloth), so if anyone with more experience than I has suggestions, I'm very open to feedback!
+
+[19 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1trbeo0/mutating_gemma_4_31b_dense_in_to_a_native_gemma_4/ "19 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/East-Engineering-653](https://redlib.catsarch.com/u/East-Engineering-653)•Jul 09 '26
+
+## [Other](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Other%22&restrict_sr=on)[If You Already Pay for an LLM Service, Running Local Embeddings and Rerankers Feels More Useful Than Running Local LLMs](https://redlib.catsarch.com/r/LocalLLaMA/comments/1us3li5/if_you_already_pay_for_an_llm_service_running/)
+
+ 188  Upvotes
+
+[![Image 3](https://redlib.catsarch.com/preview/pre/v0xtn3jdu9ch1.png?width=2047&format=png&auto=webp&s=628a6a541fe5f097d0f771ae0ba3b7f44126198f)](https://redlib.catsarch.com/preview/pre/v0xtn3jdu9ch1.png?width=2047&format=png&auto=webp&s=628a6a541fe5f097d0f771ae0ba3b7f44126198f)[![Image 4](https://redlib.catsarch.com/preview/pre/vjxiucsdu9ch1.png?width=2047&format=png&auto=webp&s=74f7a18a5a30276e206e2bfb5a0c529826ce86e4)](https://redlib.catsarch.com/preview/pre/vjxiucsdu9ch1.png?width=2047&format=png&auto=webp&s=74f7a18a5a30276e206e2bfb5a0c529826ce86e4)
+This post was originally written in Korean, then polished and translated into English using ChatGPT.
+
+I do run llama.cpp locally on a Tesla P40, but as someone who already pays for ChatGPT Pro, I was gradually losing the practical reason to keep running local LLMs like Qwen 3.6 27B or Gemma 4 31B. If I need access to OpenAI models through an API-like workflow, I can usually just use Codex OAuth instead.
+
+But then I realized that embedding models and reranker models are not something I can access through Codex in the same way. That gave me a more practical reason to use local AI, not just as a hobby or for fun, but as something that can actually improve productivity: a memory MCP for LLMs.
+
+With the Codex app, GPT-based models are almost unlimited for me under ChatGPT Pro, but embedding and reranker models still almost always require paid API usage. So instead of focusing on running a local LLM, I decided to use Qwen3 Embedding 4B and Qwen3 Reranker 4B locally to build an LLM memory system through GBrain.
+
+The stack is roughly llama.cpp, PostgreSQL, pgvector, Ceph for the S3 API, and GitLab for storing memories as Markdown files.
+
+The workflow looks like this: when I use Codex, ChatGPT Web, or another client, anything I explicitly ask to remember, or anything the system considers important, is saved to GBrain through an MCP interface as a Markdown file. GBrain then indexes those files, generates embeddings for them, and uses an LLM to extract facts from each Markdown-based memory.
+
+Later, when a memory lookup request comes in through MCP, GBrain first retrieves potentially relevant memories using the embedding model. Then it uses the reranker model to narrow the results down to the most relevant memories before returning them.
+
+I think this approach is better than just storing memories as plain Markdown files. By placing a management layer like GBrain on top, the system can extract concise facts from Markdown documents instead of forcing the LLM to consume entire files. It also makes retrieval much more accurate because embeddings and reranking can be used together to surface only the information that is actually relevant.
+
+Another reason this is useful for me is that I use both Codex and ChatGPT Web. If I connect GBrain to ChatGPT Web as an app, MCP requests can happen alongside normal web-style searches. That makes it much easier to share context between work done in Codex and conversations in ChatGPT Web, with much less manual intervention from me.
+
+Overall, my current impression is that if you are already paying for services like Codex, ChatGPT, or Claude, running local LLMs may not always be the most productive use of local hardware. Instead, it can make more sense to run the models that those services do not conveniently provide, such as embedding models and rerankers
+
+[38 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1us3li5/if_you_already_pay_for_an_llm_service_running/ "38 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/Desperate-Sir-5088](https://redlib.catsarch.com/u/Desperate-Sir-5088)•Jul 12 '26
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[I didn't give up - extGemma4-40_5B returned](https://redlib.catsarch.com/r/LocalLLaMA/comments/1uu4hxp/i_didnt_give_up_extgemma440_5b_returned/)
+
+ 107  Upvotes
+
+Continue from my previous posts:
+
+[https://www.reddit.com/r/LocalLLaMA/comments/1ul0cx9/i_extended_gemma431b_to_44b_88_layers_since/](https://redlib.catsarch.com/r/LocalLLaMA/comments/1ul0cx9/i_extended_gemma431b_to_44b_88_layers_since/)
+
+[https://www.reddit.com/r/LocalLLaMA/comments/1um20ev/why_new_inserted_layers_kill_the_gemma4/](https://redlib.catsarch.com/r/LocalLLaMA/comments/1um20ev/why_new_inserted_layers_kill_the_gemma4/)
+
+(Warning : AI generated Post - due to my bad English)
+
+Hugging Face : [https://huggingface.co/TOTORONG/extGemma4-40_5B](https://huggingface.co/TOTORONG/extGemma4-40_5B)
+
+[![Image 5](https://redlib.catsarch.com/preview/pre/veg5nuao1rch1.png?width=2752&format=png&auto=webp&s=85492b121524aa14011f57d8d4fa5ace38c0270a)](https://redlib.catsarch.com/preview/pre/veg5nuao1rch1.png?width=2752&format=png&auto=webp&s=85492b121524aa14011f57d8d4fa5ace38c0270a)
+A while back I posted here about trying to grow a fine-tuned Gemma model by stacking extra layers into it (the 88-layer experiment). It flopped. The new layers just sat there like dead weight and never learned anything useful. A bunch of you were kind/curious in the comments, so here's the follow-up: I didn't drop it. I went back, figured out why it died, and tried again — and this run actually worked.
+
+Fair warning up front: this is a write-up for people who like tinkering, not a paper. I'm going to keep the math and the parameter-count trivia out of it and lean on analogies. If you want the gory details I'm happy to share more in the comments.
+
+# Why the first attempt died (the short version)
+
+The standard trick for inserting new layers is to initialize them so they do _literally nothing_ at first — a pass-through. The idea is "start them as a no-op, let training teach them a job."
+
+Think of it like **hiring 17 new people onto a factory assembly line and telling them to just stand still on day one**. Sounds safe. The problem: a worker who does nothing also gets _no feedback_. Nobody can tell them "hey, do that part a little differently," because they're not doing anything to correct. So they never learn. They just keep standing there while the line flows around them. That's what killed the first run — the new layers were starving for any signal to learn from.
+
+# What I did differently this time
+
+Instead of telling the new hires to stand still, I **taught each of them a rough blend of what the two coworkers on either side of them already do**, and dropped them in mid-shift. Now they're _doing something_ from minute one — clumsy, but real — so they immediately start getting feedback and improving.
+
+That one change is the whole story. A worker who's already moving can be coached. A statue can't.
+
+Two other things mattered a lot, both learned the hard way:
+
+*   **Where you insert matters.** I stopped jamming layers in at awkward spots (like right at a "manager checkpoint" in the line) and instead slid them into calm, stable positions. Placement turned out to be surprisingly finicky.
+*   **Don't mess with the volume knobs.** The model has a bunch of per-layer "volume" settings that are individually tuned so the final signal comes out at the right level. My first instinct was to average them for the new layers — that _crushed_ the signal to a whisper and the model produced garbage. Leaving those knobs neutral fixed it. (I burned a lot of time here.)
+
+# Then two rounds of "healing"
+
+*   **Round 1:** I froze the whole original model and _only_ let the new layers learn, on a small dataset (some STEM reasoning + Korean legal Q&A). This got the new layers on their feet.
+*   **Round 2:** I unfroze everything and let the whole model settle together. This is where it really came together.
+
+I want to stress: **the goal was never to beat the original model.** The goal was to prove that you can perform major surgery on an _already fine-tuned_ model — chop it open, add capacity — and have it _heal_ instead of collapsing into gibberish or forgetting everything it knew. The common wisdom is that this kind of surgery wrecks a fine-tuned model. I wanted to see if that's actually true. (Spoiler: it doesn't have to be.)
+
+# The evidence I care about most: side-by-side answers
+
+Benchmarks are fine (the healed model recovers most of the ground it lost from the surgery, and lands close to the original on GPQA-Diamond). But numbers are easy to hand-wave. What convinced _me_ was reading actual answers.
+
+So I asked the **original model** and the **expanded+healed model** the same 10 questions across 10 different areas — physics, biology, history, philosophy, literature, a riddle, a logic puzzle, a math proof, economics, and a medical mechanism question — and compared them. I deliberately picked prompts that push into unusual, jargon-heavy territory, because that's exactly where a damaged model tends to fall apart. I had a separate frontier model (Claude) act as judge.
+
+**Results:**
+
+*   **No breakdowns, no gibberish, no random foreign-script spam in either model.** (This matters — the broken version of the expanded model used to _literally_ start spitting out random characters from another writing system when it hit a rare technical word. That's completely gone now.)
+*   **9 of 10: basically a tie.** Both models nailed them — the riddle, the logic puzzle (both correctly noticed the puzzle is under-specified rather than confidently making something up), the √2 irrationality proof, the Kant example, the aspirin mechanism, etc.
+*   **1 of 10: the expanded model actually beat its own parent.** This is the fun one.
+
+# The physics question where the surgery paid off
+
+Prompt: _"A photon and an electron each have the same de Broglie wavelength. Which one carries more energy, and why?"_
+
+This is a classic trap. Same wavelength means same momentum, so it's tempting to treat them the same way — but a photon and an electron get their energy through completely different rules.
+
+*   **The original model** fell for it. It computed the electron's energy the naive way and forgot to account for the electron's rest mass (the huge chunk of energy an electron has just by _existing_). It concluded the photon wins. **Wrong.**
+*   **The expanded+healed model** handled it correctly — it used the right relationship for a massive particle, accounted for the rest mass, and concluded the electron carries more energy. **Right.**
+
+So the newly-added capacity isn't just decoration. On at least this one problem, it's doing real reasoning the original couldn't — the expanded model **out-reasoned the model it was grown from.** That's the single result that made me feel like the whole detour was worth it.
+
+# The healing, caught in the act
+
+One more thing I thought was cool. That "random foreign characters" breakdown I mentioned? I watched it heal in real time across Round 2:
+
+*   **Before healing:** hits a rare technical word → derails into repeated non-Latin junk → never recovers.
+*   **~13% into round 2:** stumbles on the word once, then _catches itself_ and finishes the sentence cleanly.
+*   **Halfway and beyond:** totally fluent, no trace of the problem.
+
+Watching a structural defect actually repair itself over training, rather than just "line go down," was genuinely satisfying.
+
+# TL;DR
+
+*   My first big-expansion attempt failed because the new layers started as dead no-ops and never got any learning signal (I posted about that flop earlier).
+*   This time I initialized new layers as a blend of their neighbors so they're doing something from the start, was careful about _where_ I put them, and left the model's internal volume settings alone.
+*   Two rounds of light healing on a small dataset, and the model recovered close to the original — **no collapse, no catastrophic forgetting.**
+*   Across 10 domains it matches the original on 9 and **beats it on a physics question** the original gets wrong.
+*   The old "add layers to a fine-tuned model and it'll fall apart" fear didn't hold up here.
+
+Not claiming I've built something better than the base model — that was never the point. The point was: **you can operate on a fine-tuned model without killing it.** Still very much not giving up on this line of work. Happy to answer questions in the comments.
+
+Here are comparision of original(Solon_V5 vs extGemma4-40_5B)
+
+# English Reasoning Comparison — Original vs. Expanded Model
+
+Ten domains, one prompt each, greedy decoding, up to 768 new tokens. Outputs were judged by an external LLM (Claude). `[EOT]` marks the end-of-turn token.
+
+*   **solon_v5** — the original fine-tuned Gemma 4 31B-IT baseline (60 layers).
+*   **extGemma4 (Phase 2)** — the depth-expanded + healed model (77 layers).
+
+# Summary
+
+| Collapse | Cross-script contamination | Clean termination |
+| :--- | :--- | :--- |
+| solon_v5 | 0/10 | 0/10 |
+| extGemma4 (Phase 2) | 0/10 | 0/10 |
+
+**Verdict:** No collapse or cross-script contamination in either model. The two are comparable on 9 domains; on the physics item the expanded model **out-reasons its own parent**. The structural generation defect seen at initialization (script collapse on rare technical paths) does not appear anywhere here.
+
+# 1. Physics
+
+**Prompt:** A photon and an electron each have a de Broglie wavelength of 1.0 nm. Explain which one carries more energy and why, referencing the relevant relations. Show the reasoning.
+
+**Verdict:****Expanded model wins.** solon_v5 omits the electron's rest-mass energy (511 keV) and concludes the photon has more energy — incorrect. The expanded model applies the relativistic energy–momentum relation and correctly concludes the electron carries more energy.
+
+```
+To determine which particle carries more energy, we examine the energy-wavelength relationships for a photon and an electron. For a photon, E = hc/lambda, giving about 1242 eV at 1.0 nm. For the electron, using E = h^2/(2 m lambda^2) (non-relativistic kinetic energy), we get about 1.5 eV. Therefore the photon carries significantly more energy. [Note: solon_v5 omits the electron rest-mass energy of 511 keV; output was truncated at the length limit.]
+
+Both particles share the same de Broglie wavelength, hence the same momentum p=h/lambda. Photon: E=pc=hc/lambda approx 1.24 keV. Electron: E=sqrt((pc)^2+(m c^2)^2); since pc=1.24 keV is much smaller than the rest energy 511 keV, the electron's total energy is dominated by its rest mass. Therefore the electron carries more energy, because its total energy includes the rest-mass energy that the photon lacks. [EOT]
+```
+
+# 2. Biology
+
+**Prompt:** In three sentences, explain how CRISPR-Cas9 achieves targeted gene editing.
+
+**Verdict:** Tie. Both give an accurate three-sentence account of guide-RNA targeting, Cas9 cleavage, and repair-based editing.
+
+```
+CRISPR-Cas9 uses a guide RNA engineered to match a specific target DNA sequence. Once the guide RNA locates the target, the Cas9 enzyme creates a precise double-strand break. The cell repairs the break using its own machinery, allowing scientists to disable a gene or insert new genetic material. [EOT]
+
+CRISPR-Cas9 uses a guide RNA engineered to match a specific target DNA sequence. The guide RNA leads Cas9 to the location, where it creates a precise double-strand break. The cell repairs the break by natural mechanisms, which can be leveraged to disable a gene or insert new genetic material. [EOT]
+```
+
+# 3. History
+
+**Prompt:** In a short paragraph, explain why the Treaty of Westphalia (1648) is considered the origin of the modern concept of state sovereignty.
+
+**Verdict:** Tie. Both correctly attribute sovereignty to _cuius regio, eius religio_ and the end of supranational authority; the expanded model's phrasing is slightly more precise.
+
+```
+The Treaty of Westphalia shifted the European order from a hierarchy dominated by the Holy Roman Empire and the Catholic Church to a system of independent, equal states. By codifying cuius regio, eius religio, it recognized each state's exclusive authority over internal affairs without outside interference, establishing territorial integrity and non-intervention as the Westphalian system. [EOT]
+
+The Treaty of Westphalia recognized cuius regio, eius religio, ending the Holy Roman Empire's claim to universal authority. By prohibiting external interference in domestic affairs, it shifted legitimacy from a supranational religious order to independent, territorially defined states, creating the Westphalian norms of legal equality and non-intervention that underpin the modern order of sovereign nation-states. [EOT]
+```
+
+# 4. Philosophy
+
+**Prompt:** Briefly explain Kant's categorical imperative and give one everyday example of applying it.
+
+**Verdict:** Tie. Both distinguish categorical from hypothetical imperatives and give a valid universalizability example (lying vs. keeping a found wallet).
+
+```
+Kant's Categorical Imperative commands acting on maxims one could will as universal law, unlike conditional hypothetical imperatives. Example: lying to avoid trouble, universalized, destroys trust and makes lying self-defeating; hence it is always wrong. [EOT]
+
+Kant's Categorical Imperative is an unconditional moral rule: act only on maxims you could will as universal law, unlike conditional hypothetical imperatives. Example: keeping a found wallet, universalized, collapses the concept of ownership, so it is immoral; you must return it regardless of need. [EOT]
+```
+
+# 5. Literature
+
+**Prompt:** In two or three sentences, explain what makes an 'unreliable narrator' effective in fiction, with one canonical example.
+
+**Verdict:** Tie. Both explain the reader–truth gap and cite Poe's _The Tell-Tale Heart_ as the canonical case.
+
+```
+An unreliable narrator creates a gap between the character's perspective and objective truth, turning reading into a detective game. A canonical example is the narrator of Poe's The Tell-Tale Heart, whose insistence on sanity is itself evidence of madness. [EOT]
+
+An unreliable narrator creates tension between surface and hidden truth, turning reading into a decoding puzzle. A canonical example is the narrator of Poe's The Tell-Tale Heart, whose insistence on sanity ironically signals his instability. [EOT]
+```
+
+# 6. Riddle (Reasoning)
+
+**Prompt:** I speak without a mouth and hear without ears. I have no body, but I come alive with wind. What am I? Explain your reasoning step by step.
+
+**Verdict:** Tie. Both answer _echo_ with correct line-by-line reasoning.
+
+```
+The answer is an echo. It speaks without a mouth (reflected sound), hears without ears (receives sound to reflect), has no body (an acoustic phenomenon), and comes alive with wind (sound travels through air). [EOT]
+
+The answer is an echo. It speaks without a mouth (reflected sound), hears without ears (receives sound to bounce back), has no body (invisible sound waves), and comes alive with wind (air lets sound travel and reflect). The only fit is an echo. [EOT]
+```
+
+# 7. Logic Puzzle
+
+**Prompt:** Alice, Bob, and Carol each own one pet: a cat, a dog, and a parrot. Alice is allergic to fur. Bob's pet cannot fly. Who owns which pet? Show your reasoning.
+
+**Verdict:** Tie (both correct). Both deduce Alice=parrot and correctly recognize the puzzle is under-specified for Bob/Carol rather than inventing an answer. The expanded model is more verbose, with several explicit self-corrections before reaching the same conclusion.
+
+```
+Alice is allergic to fur, so she owns the parrot. The parrot is taken; Bob's pet cannot fly, consistent with cat or dog. No clue distinguishes Bob and Carol between cat and dog, so strictly the puzzle is underspecified: Alice=parrot, Bob and Carol interchangeably cat/dog. [EOT]
+
+Alice is allergic to fur, so Alice owns the parrot. Bob's pet cannot fly, consistent with cat or dog. The clues do not distinguish Bob and Carol between cat and dog, so the puzzle is underspecified: Alice=parrot; Bob and Carol take cat/dog in either order. (The model performs several explicit self-corrections before reaching this conclusion.) [EOT]
+```
+
+# 8. Mathematics (Proof)
+
+**Prompt:** Prove that the square root of 2 is irrational. Then explain in one sentence why the same argument does not prove that the square root of 4 is irrational.
+
+**Verdict:** Tie. Both give a correct proof by contradiction and correctly explain why the argument fails for √4 (it reduces to the integer 2, so no contradiction arises).
+
+```
+Assume sqrt(2)=a/b in lowest terms. Then a^2=2b^2, so a^2 is even, so a is even; write a=2k, giving 2k^2=b^2, so b is even. Both even contradicts lowest terms. Hence sqrt(2) is irrational. For sqrt(4): a^2=4b^2 gives a=2k, then k^2=b^2, which does not force b even, so no contradiction arises. [EOT]
+
+Assume sqrt(2)=a/b in simplest form. Then a^2=2b^2, so a is even; write a=2k, giving 2k^2=b^2, so b is even. Both even contradicts simplest form, so sqrt(2) is irrational. This does not apply to sqrt(4) because sqrt(4)=2 is an integer, so the assumption that it is rational is simply true and yields no contradiction. [EOT]
+```
+
+# 9. Economics
+
+**Prompt:** In a short paragraph, explain the concept of 'moral hazard' in insurance markets and one mechanism insurers use to mitigate it.
+
+**Verdict:** Tie. Both define moral hazard and cite deductibles as the mitigation. The expanded model contains one typo ('misalignmentment').
+
+```
+Moral hazard arises when an insured party takes greater risk because protected from loss, e.g., not locking doors under theft insurance. Insurers use deductibles: requiring an out-of-pocket amount before coverage keeps the insured with a financial stake, incentivizing caution. [EOT]
+
+Moral hazard occurs when an insured party becomes less cautious because protected from loss, misaligning incentives so the insurer bears risk the policyholder neglects. Insurers use deductibles: a fixed out-of-pocket amount before coverage keeps the insured with financial skin in the game, incentivizing caution. (Contains one typo: 'misalignmentment'.) [EOT]
+```
+
+# 10. Medicine (Technical)
+
+**Prompt:** In two sentences, explain the mechanism of action of acetylsalicylic acid (aspirin) at the molecular level.
+
+**Verdict:** Tie. Both correctly describe irreversible COX acetylation at a serine residue; the expanded model additionally names prostaglandin H2.
+
+```
+Acetylsalicylic acid irreversibly inhibits cyclooxygenase (COX-1 and COX-2) by acetylating a serine residue in the active site, blocking conversion of arachidonic acid to prostaglandins and thromboxanes, thereby reducing pain, fever, and platelet aggregation. [EOT]
+
+Acetylsalicylic acid irreversibly inhibits cyclooxygenase by covalently acetylating a serine residue in the active site, blocking conversion of arachidonic acid to prostaglandin H2. This prevents downstream synthesis of pro-inflammatory prostaglandins and thromboxanes, reducing pain, fever, and platelet aggregation. [EOT]
+```
+
+[32 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1uu4hxp/i_didnt_give_up_extgemma440_5b_returned/ "32 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/jacek2023](https://redlib.catsarch.com/u/jacek2023)•Apr 02 '26
+
+## [New Model](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22New%20Model%22&restrict_sr=on)[Gemma 4 has been released](https://redlib.catsarch.com/r/LocalLLaMA/comments/1salgre/gemma_4_has_been_released/)
+
+ 2.3k  Upvotes
+
+[https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF](https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF)
+
+[https://huggingface.co/unsloth/gemma-4-31B-it-GGUF](https://huggingface.co/unsloth/gemma-4-31B-it-GGUF)
+
+[https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF](https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF)
+
+[https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF](https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF)
+
+[https://huggingface.co/collections/google/gemma-4](https://huggingface.co/collections/google/gemma-4)
+
+**What’s new in Gemma 4**[https://www.youtube.com/watch?v=jZVBoFOJK-Q](https://www.youtube.com/watch?v=jZVBoFOJK-Q)
+
+Gemma is a family of open models built by Google DeepMind. Gemma 4 models are multimodal, handling text and image input (with audio supported on small models) and generating text output. This release includes open-weights models in both pre-trained and instruction-tuned variants. Gemma 4 features a context window of up to 256K tokens and maintains multilingual support in over 140 languages.
+
+Featuring both Dense and Mixture-of-Experts (MoE) architectures, Gemma 4 is well-suited for tasks like text generation, coding, and reasoning. The models are available in four distinct sizes: **E2B**, **E4B**, **26B A4B**, and **31B**. Their diverse sizes make them deployable in environments ranging from high-end phones to laptops and servers, democratizing access to state-of-the-art AI.
+
+Gemma 4 introduces key **capability and architectural advancements**:
+
+*   **Reasoning** – All models in the family are designed as highly capable reasoners, with configurable thinking modes.
+*   **Extended Multimodalities** – Processes Text, Image with variable aspect ratio and resolution support (all models), Video, and Audio (featured natively on the E2B and E4B models).
+*   **Diverse & Efficient Architectures** – Offers Dense and Mixture-of-Experts (MoE) variants of different sizes for scalable deployment.
+*   **Optimized for On-Device** – Smaller models are specifically designed for efficient local execution on laptops and mobile devices.
+*   **Increased Context Window** – The small models feature a 128K context window, while the medium models support 256K.
+*   **Enhanced Coding & Agentic Capabilities** – Achieves notable improvements in coding benchmarks alongside native function-calling support, powering highly capable autonomous agents.
+*   **Native System Prompt Support** – Gemma 4 introduces native support for the `system` role, enabling more structured and controllable conversations.
+
+# Models Overview
+
+Gemma 4 models are designed to deliver frontier-level performance at each size, targeting deployment scenarios from mobile and edge devices (E2B, E4B) to consumer GPUs and workstations (26B A4B, 31B). They are well-suited for reasoning, agentic workflows, coding, and multimodal understanding.
+
+The models employ a hybrid attention mechanism that interleaves local sliding window attention with full global attention, ensuring the final layer is always global. This hybrid design delivers the processing speed and low memory footprint of a lightweight model without sacrificing the deep awareness required for complex, long-context tasks. To optimize memory for long contexts, global layers feature unified Keys and Values, and apply Proportional RoPE (p-RoPE).
+
+**Core Capabilities**
+
+Gemma 4 models handle a broad range of tasks across text, vision, and audio. Key capabilities include:
+
+*   **Thinking** – Built-in reasoning mode that lets the model think step-by-step before answering.
+*   **Long Context** – Context windows of up to 128K tokens (E2B/E4B) and 256K tokens (26B A4B/31B).
+*   **Image Understanding** – Object detection, Document/PDF parsing, screen and UI understanding, chart comprehension, OCR (including multilingual), handwriting recognition, and pointing. Images can be processed at variable aspect ratios and resolutions.
+*   **Video Understanding** – Analyze video by processing sequences of frames.
+*   **Interleaved Multimodal Input** – Freely mix text and images in any order within a single prompt.
+*   **Function Calling** – Native support for structured tool use, enabling agentic workflows.
+*   **Coding** – Code generation, completion, and correction.
+*   **Multilingual** – Out-of-the-box support for 35+ languages, pre-trained on 140+ languages.
+*   **Audio** (E2B and E4B only) – Automatic speech recognition (ASR) and speech-to-translated-text translation across multiple languages.
+
+[![Image 6](https://redlib.catsarch.com/preview/pre/3dbm6nhrvssg1.png?width=1282&format=png&auto=webp&s=8625d113e9baa3fab79a780fd074a5b36e4d6f0c)](https://redlib.catsarch.com/preview/pre/3dbm6nhrvssg1.png?width=1282&format=png&auto=webp&s=8625d113e9baa3fab79a780fd074a5b36e4d6f0c)[![Image 7](https://redlib.catsarch.com/preview/pre/mtzly5myxssg1.png?width=1200&format=png&auto=webp&s=5c95a73ff626ebeafd3645d2e00697c793fa0b16)](https://redlib.catsarch.com/preview/pre/mtzly5myxssg1.png?width=1200&format=png&auto=webp&s=5c95a73ff626ebeafd3645d2e00697c793fa0b16)
+
+[674 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1salgre/gemma_4_has_been_released/ "674 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/jacek2023](https://redlib.catsarch.com/u/jacek2023)•Jun 03 '26
+
+## [New Model](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22New%20Model%22&restrict_sr=on)[google/gemma-4-12B · Hugging Face](https://redlib.catsarch.com/r/LocalLLaMA/comments/1tvtn6m/googlegemma412b_hugging_face/)
+
+[![Image 8: Thumbnail](https://redlib.catsarch.com/preview/external-pre/4vL8SPTXouClbqOPTWUMnxIMcPeFGNV0dBbwHJDBGE4.png?width=140&height=75&auto=webp&s=9ddd82546cef6b7e99606e69f6a719c7d887e410) huggingface.co](https://huggingface.co/google/gemma-4-12B)
+
+ 1.0k  Upvotes
+
+Gemma is a family of open models built by Google DeepMind. Gemma 4 models are multimodal, handling text and image input (with audio supported on E2B, E4B, and 12B) and generating text output. This release includes open-weights models in both pre-trained and instruction-tuned variants. Gemma 4 features a context window of up to 256K tokens and maintains multilingual support in over 140 languages.
+
+Featuring both Dense and Mixture-of-Experts (MoE) architectures, Gemma 4 is well-suited for tasks like text generation, coding, and reasoning. The models are available in five distinct sizes: **E2B**, **E4B**, **12B**, **26B A4B**, and **31B**. Their diverse sizes make them deployable in environments ranging from high-end phones to laptops and servers, democratizing access to state-of-the-art AI.
+
+Gemma 4 introduces key **capability and architectural advancements**:
+
+*   **Reasoning** – All models in the family are designed as highly capable reasoners, with configurable thinking modes.
+*   **Extended Multimodalities** – Processes Text, Image with variable aspect ratio and resolution support (all models), Video, and Audio (featured natively on the E2B, E4B, and 12B models).
+*   **Diverse & Efficient Architectures** – Offers Dense and Mixture-of-Experts (MoE) variants of different sizes for scalable deployment.
+*   **Optimized for On-Device** – Smaller models are specifically designed for efficient local execution on laptops and mobile devices.
+*   **Increased Context Window** – The small models feature a 128K context window, while the medium models support 256K.
+*   **Enhanced Coding & Agentic Capabilities** – Achieves notable improvements in coding benchmarks alongside native function-calling support, powering highly capable autonomous agents.
+*   **Native System Prompt Support** – Gemma 4 introduces native support for the `system` role, enabling more structured and controllable conversations.
+
+[https://developers.googleblog.com/gemma-4-12b-the-developer-guide/](https://developers.googleblog.com/gemma-4-12b-the-developer-guide/)
+
+**feed your potato!!!**
+
+[https://huggingface.co/ggml-org/gemma-4-12b-it-GGUF](https://huggingface.co/ggml-org/gemma-4-12b-it-GGUF)
+
+[https://huggingface.co/unsloth/gemma-4-12b-it-GGUF](https://huggingface.co/unsloth/gemma-4-12b-it-GGUF)
+
+[324 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1tvtn6m/googlegemma412b_hugging_face/ "324 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/rerri](https://redlib.catsarch.com/u/rerri)•May 05 '26
+
+## [New Model](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22New%20Model%22&restrict_sr=on)[Gemma 4 MTP released](https://redlib.catsarch.com/r/LocalLLaMA/comments/1t4jq6h/gemma_4_mtp_released/)
+
+ 1.1k  Upvotes
+
+Blog post:
+
+[https://blog.google/innovation-and-ai/technology/developers-tools/multi-token-prediction-gemma-4/](https://blog.google/innovation-and-ai/technology/developers-tools/multi-token-prediction-gemma-4/)
+
+MTP draft models:
+
+[https://huggingface.co/google/gemma-4-31B-it-assistant](https://huggingface.co/google/gemma-4-31B-it-assistant)
+
+[https://huggingface.co/google/gemma-4-26B-A4B-it-assistant](https://huggingface.co/google/gemma-4-26B-A4B-it-assistant)
+
+[https://huggingface.co/google/gemma-4-E4B-it-assistant](https://huggingface.co/google/gemma-4-E4B-it-assistant)
+
+[https://huggingface.co/google/gemma-4-E2B-it-assistant](https://huggingface.co/google/gemma-4-E2B-it-assistant)
+
+_This model card is for the Multi-Token Prediction (MTP) drafters for the Gemma 4 models. MTP is implemented by extending the base model with a smaller, faster draft model. When used in a Speculative Decoding pipeline, the draft model predicts several tokens ahead, which the target model then verifies in parallel. This results in significant decoding speedups (up to 2x) while guaranteeing the exact same quality as standard generation, making these checkpoints perfect for low-latency and on-device applications._
+
+[305 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1t4jq6h/gemma_4_mtp_released/ "305 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/FrozenFishEnjoyer](https://redlib.catsarch.com/u/FrozenFishEnjoyer)•Apr 09 '26
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[It's insane how lobotomized Opus 4.6 is right now. Even Gemma 4 31B UD IQ3 XXS beat it on the carwash test on my 5070 TI.](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sgd7fp/its_insane_how_lobotomized_opus_46_is_right_now/)
+
+[![Image 9: Thumbnail](https://redlib.catsarch.com/preview/pre/9q9530nvt2ug1.png?width=140&height=139&auto=webp&s=b3e39f615df8ae5bf1a9440d78815dcb6790db5c) gallery](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sgd7fp/its_insane_how_lobotomized_opus_46_is_right_now/)
+
+ 939  Upvotes
+
+[312 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sgd7fp/its_insane_how_lobotomized_opus_46_is_right_now/ "312 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/gladkos](https://redlib.catsarch.com/u/gladkos)•May 01 '26
+
+## [Generation](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Generation%22&restrict_sr=on)[Qwen 3.6 27B vs Gemma 4 31B - making Packman game!](https://redlib.catsarch.com/r/LocalLLaMA/comments/1t0epei/qwen_36_27b_vs_gemma_4_31b_making_packman_game/)
+
+[Video 3](about:blank)
+
+ 994  Upvotes
+
+Gemma just crushed Qwen in a local LLM gamedev contest!
+
+Device: MacBook Pro M5 Max, 64GB RAM
+
+Qwen 3.6 27B: 32 tokens/sec · 18m 04s · 33,946 tokens.
+
+ Gemma 4 31B: 27 tokens/sec · 3m 51s · 6,209 tokens.
+
+So what is more important: tokens per second, or the quality of the final answer?
+
+Qwen made a very long response and showed more creativity and visual style. But Gemma gave a shorter, clearer, and more logical answer in much less time. In this one-shot Pac-Man gamedev contest, Gemma 4 31B was the clear winner. Its game logic was stronger: click reactions were smoother, and it handled interactions with elements like walls, ghosts, and particle effects better.
+
+Open Source Local AI Models Server: [atomic.chat](http://atomic.chat/)
+
+Basic Prompt:
+
+Create a single standalone HTML file for a complete playable Pac-Man–style neon arcade game.
+
+Use only HTML, CSS, JavaScript, and one full-page canvas. No external libraries or assets—everything must be procedurally drawn and run immediately in the browser.
+
+Generate a compact (~21×21) symmetrical maze programmatically (no ASCII). It must be fully connected, playable, and use tile types (wall, path, pellet, power pellet, ghost spawn, Pac-Man spawn, fruit spawn). Ensure no unreachable pellets or invalid spawns.
+
+Canvas must fill the window. Center and scale the maze dynamically using available space (no fixed tile size). Reserve space for a HUD.
+
+Game states: title, playing, paused, life lost, level complete, game over. Include controls (keyboard + mobile). Title and game over screens must show instructions.
+
+Pac-Man: smooth tile movement, queued turns, no diagonal movement, no clipping, wraps through side tunnels, resets after life loss.
+
+Ghosts (4): simple pathfinding with distinct behaviors, spawn in a central house, exit with delays, move only on valid paths, never freeze.
+
+Gameplay:
+
+*   Pellets (+10), power pellets (+50), fruit (+500), ghost chain scoring (200→1600)
+*   Power mode (~8s, min 3s): ghosts become edible and return to spawn when eaten
+*   Combo multiplier for quick pellet collection
+*   3 lives, level progression increases difficulty
+*   Store high score in localStorage
+
+Extras:
+
+*   Fruit spawns near center temporarily
+*   Visual polish: neon maze, glowing elements, animations, particles, screen effects
+*   HUD: score, high score, lives, level, combo, power timer
+
+Technical:
+
+*   Use requestAnimationFrame with delta time
+*   Keep performance stable (limit particles)
+*   No bugs: avoid invalid movement, stuck entities, unreachable areas, or crashes
+
+Final output: only the complete HTML code.
+
+[181 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1t0epei/qwen_36_27b_vs_gemma_4_31b_making_packman_game/ "181 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/fulgencio_batista](https://redlib.catsarch.com/u/fulgencio_batista)•Apr 02 '26
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[Gemma 4 and Qwen3.5 on shared benchmarks](https://redlib.catsarch.com/r/LocalLLaMA/comments/1saoyj7/gemma_4_and_qwen35_on_shared_benchmarks/)
+
+[![Image 10: Post image](https://redlib.catsarch.com/img/4oqxmlithtsg1.png)](https://redlib.catsarch.com/img/4oqxmlithtsg1.png)
+
+ 875  Upvotes
+
+[236 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1saoyj7/gemma_4_and_qwen35_on_shared_benchmarks/ "236 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/futterneid](https://redlib.catsarch.com/u/futterneid)•Jul 02 '26
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[Talking with Gemma 4 31B!](https://redlib.catsarch.com/r/LocalLLaMA/comments/1ulgwld/talking_with_gemma_4_31b/)
+
+[Video 4](about:blank)
+
+ 892  Upvotes
+
+Hi! I'm Andi from Hugging Face. This is a fully open-source and free to test/pull/modify demo I'm bringing today.
+
+It's a voice demo creating a pipeline of:
+
+ - Nvidia's parakeet
+
+ - Gemma 4 31B (served by cerebras!)
+
+ - My [custom inference for Qwen3TTS](https://github.com/andimarafioti/faster-qwen3-tts)
+
+It sees and searches the web faster than you blink.
+
+The [whole stack is fully open-source](https://github.com/huggingface/speech-to-speech), and is a drop-in replacement for OpenAI's realtime API. You can run it locally, I get similar latencies with a macbook pro M3 36GB and Gemma 4 E4B.
+
+[Here to the web based demo featured in the video](https://huggingface.co/spaces/smolagents/hf-realtime-voice), everything is running in the cloud.
+
+For those who have been following, yes, this is the pipeline that runs on reachy minis :)
+
+[148 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1ulgwld/talking_with_gemma_4_31b/ "148 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/danielhanchen](https://redlib.catsarch.com/u/danielhanchen)•Apr 07 '26
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[You can now fine-tune Gemma 4 locally 8GB VRAM + Bug Fixes](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sexdhk/you_can_now_finetune_gemma_4_locally_8gb_vram_bug/)
+
+[![Image 11: Post image](https://redlib.catsarch.com/img/dbzd9qey1stg1.png)](https://redlib.catsarch.com/img/dbzd9qey1stg1.png)
+
+ 1.0k  Upvotes
+
+Hey guys, you can now fine-tune Gemma 4 E2B and E4B in our free Unsloth notebooks! You need **8GB VRAM to train Gemma-4-E2B** locally. Unsloth trains Gemma 4 **~1.5x faster with ~60% less VRAM** than FA2 setups: [https://github.com/unslothai/unsloth](https://github.com/unslothai/unsloth)
+
+We also found and did bug fixes for Gemma 4 training:
+
+1.   Grad accumulation no longer causes losses to explode - before you might see losses of 300 to 400 - it should be 10 to 15 - Unsloth has this fixed.
+2.   Index Error for 26B and 31B for inference - this will fail inference for 26B and 31B when using transformers - we fixed it.
+3.   `use_cache=False` had gibberish for E2B, E4B - see [https://github.com/huggingface/transformers/issues/45242](https://github.com/huggingface/transformers/issues/45242)
+4.   float16 audio -1e9 overflows on float16
+
+You can also train 26B-A4B and 31B or train via a UI with [Unsloth Studio](https://unsloth.ai/docs/models/gemma-4/train#quickstart). Studio and the notebooks work for Vision, Text, Audio and inference.
+
+**For Bug Fix details and tips and tricks, read our blog/guide:**[**https://unsloth.ai/docs/models/gemma-4/train**](https://unsloth.ai/docs/models/gemma-4/train)
+
+Free Colab Notebooks:
+
+| [E4B + E2B (Studio web UI)](https://colab.research.google.com/github/unslothai/unsloth/blob/main/studio/Unsloth_Studio_Colab.ipynb) | [E4B (Vision + Text)](https://colab.research.google.com/github/unslothai/notebooks/blob/main/nb/Gemma4_(E4B)-Vision.ipynb) | [E4B (Audio)](https://colab.research.google.com/github/unslothai/notebooks/blob/main/nb/Gemma4_(E4B)-Audio.ipynb) | [E2B (Run + Text)](https://colab.research.google.com/github/unslothai/notebooks/blob/main/nb/Gemma4_(E2B)-Text.ipynb) |
+| :--- | :--- | :--- | :--- |
+
+Thanks guys!
+
+[109 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sexdhk/you_can_now_finetune_gemma_4_locally_8gb_vram_bug/ "109 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/LLMFan46](https://redlib.catsarch.com/u/LLMFan46)•Jun 11 '26
+
+## [New Model](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22New%20Model%22&restrict_sr=on)[Gemma 4 Quadruple Release, 12B, 12B QAT, 26B-A4B QAT and 31B QAT Uncensored Heretics!](https://redlib.catsarch.com/r/LocalLLaMA/comments/1u3flg9/gemma_4_quadruple_release_12b_12b_qat_26ba4b_qat/)
+
+[![Image 12: Thumbnail](https://redlib.catsarch.com/preview/external-pre/mnvldNvJmgmvmn6CPV4IIDN9Rl8zxPL2G6K8z2LQrKs.png?width=140&height=75&auto=webp&s=4ea8620b011ce608990605756d48902b302d864d) huggingface.co](https://huggingface.co/llmfan46/models)
+
+ 620  Upvotes
+
+**gemma-4-31B-it-qat-q4_0-unquantized-uncensored-heretic:**
+
+Safetensors: [https://huggingface.co/llmfan46/gemma-4-31B-it-qat-q4_0-unquantized-uncensored-heretic](https://huggingface.co/llmfan46/gemma-4-31B-it-qat-q4_0-unquantized-uncensored-heretic)
+
+GGUF: [https://huggingface.co/llmfan46/gemma-4-31B-it-qat-q4_0-uncensored-heretic-GGUF](https://huggingface.co/llmfan46/gemma-4-31B-it-qat-q4_0-uncensored-heretic-GGUF)
+
+NVFP4 Safetensors: [https://huggingface.co/llmfan46/gemma-4-31B-it-qat-q4_0-uncensored-heretic-NVFP4](https://huggingface.co/llmfan46/gemma-4-31B-it-qat-q4_0-uncensored-heretic-NVFP4)
+
+NVFP4 GGUF: [https://huggingface.co/llmfan46/gemma-4-31B-it-qat-q4_0-uncensored-heretic-NVFP4-GGUF](https://huggingface.co/llmfan46/gemma-4-31B-it-qat-q4_0-uncensored-heretic-NVFP4-GGUF)
+
+GPTQ-Int4: [https://huggingface.co/llmfan46/gemma-4-31B-it-qat-q4_0-uncensored-heretic-GPTQ-Int4](https://huggingface.co/llmfan46/gemma-4-31B-it-qat-q4_0-uncensored-heretic-GPTQ-Int4)
+
+**gemma-4-26B-A4B-it-qat-q4_0-unquantized-uncensored-heretic:**
+
+Safetensors: [https://huggingface.co/llmfan46/gemma-4-26B-A4B-it-qat-q4_0-unquantized-uncensored-heretic](https://huggingface.co/llmfan46/gemma-4-26B-A4B-it-qat-q4_0-unquantized-uncensored-heretic)
+
+GGUF: [https://huggingface.co/llmfan46/gemma-4-26B-A4B-it-qat-q4_0-uncensored-heretic-GGUF](https://huggingface.co/llmfan46/gemma-4-26B-A4B-it-qat-q4_0-uncensored-heretic-GGUF)
+
+NVFP4 Safetensors: [https://huggingface.co/llmfan46/gemma-4-26B-A4B-it-qat-q4_0-uncensored-heretic-NVFP4](https://huggingface.co/llmfan46/gemma-4-26B-A4B-it-qat-q4_0-uncensored-heretic-NVFP4)
+
+NVFP4 GGUF: [https://huggingface.co/llmfan46/gemma-4-26B-A4B-it-qat-q4_0-uncensored-heretic-NVFP4-GGUF](https://huggingface.co/llmfan46/gemma-4-26B-A4B-it-qat-q4_0-uncensored-heretic-NVFP4-GGUF)
+
+GPTQ-Int4: [https://huggingface.co/llmfan46/gemma-4-26B-A4B-it-qat-q4_0-uncensored-heretic-GPTQ-Int4](https://huggingface.co/llmfan46/gemma-4-26B-A4B-it-qat-q4_0-uncensored-heretic-GPTQ-Int4)
+
+**gemma-4-12B-it-qat-q4_0-unquantized-uncensored-heretic:**
+
+Safetensors: [https://huggingface.co/llmfan46/gemma-4-12B-it-qat-q4_0-unquantized-uncensored-heretic](https://huggingface.co/llmfan46/gemma-4-12B-it-qat-q4_0-unquantized-uncensored-heretic)
+
+GGUF: [https://huggingface.co/llmfan46/gemma-4-12B-it-qat-q4_0-uncensored-heretic-GGUF](https://huggingface.co/llmfan46/gemma-4-12B-it-qat-q4_0-uncensored-heretic-GGUF)
+
+NVFP4 Safetensors: [https://huggingface.co/llmfan46/gemma-4-12B-it-qat-q4_0-uncensored-heretic-NVFP4](https://huggingface.co/llmfan46/gemma-4-12B-it-qat-q4_0-uncensored-heretic-NVFP4)
+
+NVFP4 GGUF: [https://huggingface.co/llmfan46/gemma-4-12B-it-qat-q4_0-uncensored-heretic-NVFP4-GGUF](https://huggingface.co/llmfan46/gemma-4-12B-it-qat-q4_0-uncensored-heretic-NVFP4-GGUF)
+
+**gemma-4-12B-it-uncensored-heretic:**
+
+Safetensors: [https://huggingface.co/llmfan46/gemma-4-12B-it-uncensored-heretic](https://huggingface.co/llmfan46/gemma-4-12B-it-uncensored-heretic)
+
+GGUFs: [https://huggingface.co/llmfan46/gemma-4-12B-it-uncensored-heretic-GGUF](https://huggingface.co/llmfan46/gemma-4-12B-it-uncensored-heretic-GGUF)
+
+NVFP4 Safetensors: [https://huggingface.co/llmfan46/gemma-4-12B-it-uncensored-heretic-NVFP4](https://huggingface.co/llmfan46/gemma-4-12B-it-uncensored-heretic-NVFP4)
+
+NVFP4 GGUF: [https://huggingface.co/llmfan46/gemma-4-12B-it-uncensored-heretic-NVFP4-GGUF](https://huggingface.co/llmfan46/gemma-4-12B-it-uncensored-heretic-NVFP4-GGUF)
+
+I even made some NVFP4 Safetensors and NVFP4 GGUF of standard Gemma 4 31B it since someone requested them:
+
+**gemma-4-31B-it-uncensored-heretic:**
+
+NVFP4 Safetensors: [https://huggingface.co/llmfan46/gemma-4-31B-it-uncensored-heretic-NVFP4](https://huggingface.co/llmfan46/gemma-4-31B-it-uncensored-heretic-NVFP4)
+
+NVFP4 GGUFs: [https://huggingface.co/llmfan46/gemma-4-31B-it-uncensored-heretic-NVFP4-GGUF](https://huggingface.co/llmfan46/gemma-4-31B-it-uncensored-heretic-NVFP4-GGUF)
+
+Doing all this took many days as well as a lot of work and effort, so I hope the community can make good use of these models.
+
+As usual all releases come with benchmarks too.
+
+Find all my models here: [HuggingFace-LLMFan46](https://huggingface.co/llmfan46/models)
+
+[116 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1u3flg9/gemma_4_quadruple_release_12b_12b_qat_26ba4b_qat/ "116 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/ilintar](https://redlib.catsarch.com/u/ilintar)•Apr 09 '26
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[Gemma 4 on Llama.cpp should be stable now](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sgl3qz/gemma_4_on_llamacpp_should_be_stable_now/)
+
+ 555  Upvotes
+
+With the merging of [https://github.com/ggml-org/llama.cpp/pull/21534](https://github.com/ggml-org/llama.cpp/pull/21534), all of the fixes to known Gemma 4 issues in Llama.cpp have been resolved. I've been running Gemma 4 31B on Q5 quants for some time now with no issues.
+
+Runtime hints:
+
+*   remember to run with `--chat-template-file` with the interleaved template Aldehir has prepared (it's in the llama.cpp code under models/templates)
+*   I strongly encourage running with `--cache-ram 2048 -ctxcp 2` to avoid system RAM problems
+*   running KV cache with Q5 K and Q4 V has shown no large performance degradation, of course YMMV
+
+Have fun :)
+
+(oh yeah, important remark - when I talk about llama.cpp here, I mean the *source code*, not the releases which lag behind - this refers to the code built from current master)
+
+Important note about building: DO NOT currently use CUDA 13.2 as it is CONFIRMED BROKEN (the NVidia people are on the case already) and will generate builds that will not work correctly.
+
+[165 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sgl3qz/gemma_4_on_llamacpp_should_be_stable_now/ "165 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/Nindaleth](https://redlib.catsarch.com/u/Nindaleth)•Apr 04 '26
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[Gemma 4 31B beats several frontier models on the FoodTruck Bench](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sci5h6/gemma_4_31b_beats_several_frontier_models_on_the/)
+
+[![Image 13: Post image](https://redlib.catsarch.com/img/dzatb00148tg1.png)](https://redlib.catsarch.com/img/dzatb00148tg1.png)
+
+ 713  Upvotes
+
+Gemma 4 31B takes an incredible 3rd place on FoodTruck Bench, beating GLM 5, Qwen 3.5 397B and all Claude Sonnets!
+
+I'm looking forward to how they'll explain the result. Based on the previous models that failed to finish the run, it would seem that Gemma 4 handles long horizon tasks better and actually listens to its own advice when planning for the next day of the run.
+
+EDIT: I'm not the author of the benchmark, I just like it, looks fun unlike most of them.
+
+[118 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sci5h6/gemma_4_31b_beats_several_frontier_models_on_the/ "118 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/jacek2023](https://redlib.catsarch.com/u/jacek2023)•May 04 '26
+
+## [News](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22News%22&restrict_sr=on)[it's time to update your Gemma 4 GGUFs](https://redlib.catsarch.com/r/LocalLLaMA/comments/1t3dfvp/its_time_to_update_your_gemma_4_ggufs/)
+
+ 441  Upvotes
+
+Chat Template was fixed a few days ago
+
+choose your fav dealer:
+
+[https://huggingface.co/bartowski/google_gemma-4-31B-it-GGUF](https://huggingface.co/bartowski/google_gemma-4-31B-it-GGUF)
+
+[https://huggingface.co/bartowski/google_gemma-4-26B-A4B-it-GGUF](https://huggingface.co/bartowski/google_gemma-4-26B-A4B-it-GGUF)
+
+[https://huggingface.co/bartowski/google_gemma-4-E4B-it-GGUF](https://huggingface.co/bartowski/google_gemma-4-E4B-it-GGUF)
+
+[https://huggingface.co/bartowski/google_gemma-4-E2B-it-GGUF](https://huggingface.co/bartowski/google_gemma-4-E2B-it-GGUF)
+
+[https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF](https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF)
+
+[https://huggingface.co/unsloth/gemma-4-31B-it-GGUF](https://huggingface.co/unsloth/gemma-4-31B-it-GGUF)
+
+[https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF](https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF)
+
+[https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF](https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF)
+
+[118 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1t3dfvp/its_time_to_update_your_gemma_4_ggufs/ "118 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/GrungeWerX](https://redlib.catsarch.com/u/GrungeWerX)•Apr 11 '26
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[Gemma 4 31B vs Qwen 3.5 27B: Which is best for long context worklows? My THOUGHTS...](https://redlib.catsarch.com/r/LocalLLaMA/comments/1si8mn1/gemma_4_31b_vs_qwen_35_27b_which_is_best_for_long/)
+
+ 311  Upvotes
+
+*   **My setup:** i7 12700K | RTX 3090 TI | 96GB RAM
+*   **Models:** Qwen 3.5 27B UD Q5/Q6_K_XL | Gemma 4 31B UD Q4_K_XL
+
+To the point:
+
+Right now, **Gemma 4 31B** and **Qwen 3.5 27B** are the best local models for a **24GB card**. Period.
+
+I've tested **everything**. These are the first two models that actually feel state-of-the-art for their size.
+
+Most models up to this point have just been moderately-performing novelties. But not extremely useful for real use-cases outside of rewriting, summarization, minor code, and RPG-ing. But all local models have performed poorly over **long context reasoning** and **analysis**.
+
+Benchmarks mean nothing. For me, it was an easy test: Load up a local model, feed it 50K data, ask it to answer questions and provide analysis. Most models yap without saying anything. They provide very little relevant context, if any. They don't understand the lore. They hallucinate details. They're unusable.
+
+That is, until **Qwen 3.5 27B**. It was the first of its kind and changed the game for me. It's been my daily driver since.
+
+A couple days after Gemma 4 dropped, I fired it up and dumped a huge 60K of context and gave it a run. Not only did it answer the questions, it understood the lore. With that, I suddenly had my second model that could handle the job. It wasn't as detailed as Qwen with citing references, but it had a little something that Qwen didn't. I'll come back to that.
+
+Now that that's out of the way, and we've established the two top players for long context reasoning to-date, let's get to the matchup. Who's better?
+
+For the past couple of days, I've been comparing it against Qwen. Here are my findings:
+
+1.   **Gemma 4 is currently a lot slower than Qwen 3.5.** I've tested Gemma between 70-100K context so far. Up until yesterday, it crawled along at a snail's pace, making it virtually unusable. (I got between 0.6 - 3 tok/sec) But I found the outputs decent enough to keep trying to tweak my settings. Unsloth uploaded new versions yesterday, so I re-downloaded the model and I'm now getting at least 2x speed increase, so I'd recommend you do the same if you're still getting slow speeds. That said, Qwen is **significantly** faster at even higher quants.
+2.   **Gemma 4 seems to hallucinate less than Qwen 3.5**. It uses less references from the context, and it sometimes misses very important details altogether, things that Qwen doesn't. That said, sometimes Qwen gets its facts wrong at near 90K tokens, while Gemma seems surprisingly more coherent, if less factual.
+3.   **Qwen 3.5 references more context than Gemma 4.** This makes it feel more thorough. That said, sometimes it has a tendency at high context to hallucinate minor details. There's a saying: Less is more. Maybe in this case - less is more....accurate?
+4.   **Qwen 3.5 is the clear winner over long outputs.** Qwen can write looong passages of content, and maintain coherence. It's amazing. I even tested it once, asked it to write a 20K output. I stopped it prematurely - at around 10K tokens - but if I hadn't, it would have kept going, and it was only halfway through the material.
+5.   **Honorable Mention: Gemma 4 can write longer outputs than its defaults, but you have to prompt for it**. Its capable of giving more thorough results than its initial output. Another redditer said they told it to reason longer and got better results. I tried this. It works. Not satisfied with the answer? Tell it to reason longer and provide a long output. You can even tell it to try to match a certain context length - like 10K tokens. I haven't tested if it can reach set token requirement yet, will follow up on that later.
+6.   **Gemma 4 has a better writing voice**. I found its outputs more pleasurable to read - mostly. That said, its still got a noticeable level of slop. Not as bad as 26B, but definitely more than Qwen.
+7.   **Gemma 4 digests the lore better for its assigments...sometimes**. I'm **still** testing this, but my initial vibes are that Gemma 4's results over long context can give more pleasing results by pulling out more poignant and impactful contextual references. It can punch deeper on the ideas than Qwen at times; Qwen gives you more references, but doesn't always consolidate those ideas in the most meaningful way. Sometimes it feels like this: Qwen is submitting a book report with references. Gemma is writing a review column on a website, citing the parts it found the most memorable. This isn't a consistent experience across all interactions, but its often enough to notice.
+8.   **Qwen is smarter**. The results, from a technical perspective, are often better. While both miss details over long context, Qwen is often more thorough. It can take extremely nuanced and complex instructions and eat them for lunch. That said, Gemma is also very capable; I'm still learning its abilities. Its not Qwen level...yet...but it doesn't feel far off.
+9.   **Gemma 4****_gets_****it**. This sort of falls under the "digests the lore" section, but I just wanted to mention that this version of Gemma is less about pontification; it really does seem to understand the unique ideas outlined in the source material. That makes it feel like you're working with a cowriter who can keep pace and dissect/stress-test ideas. Qwen does as well, but Gemma brings its own ideas to the table.
+
+**My final thoughts:**
+
+For these particular use cases - lore master, story analyst - I can't really decide which I like better. They have two different personalities, and they are equally useful. Where Qwen 3.5 27B first made me feel like I had a true writing partner, Gemma 4 feels like I've just added a third person to the table, who can bring something different and unique to the conversation.
+
+If I could only choose one, I'd choose Qwen. I find its overall abilities to be better. Better reasoning, more attention over long context.
+
+But without Gemma 4, I'd be missing very valuable and relevant context. That single, random-but-consequential observation that might propel the discussion into an unexpected, meaningful new direction.
+
+Thankfully, I don't have to choose just one.
+
+-- SIDEBAR --
+
+This next section is to address the people who are increasingly accusing us posters of using AI. It's getting annoying, so I want to leave this here because some idiot in the future is going to blame me for using AI anytime I use bullet points, a numbered list, a hyphen instead of an em dash, bold text on the first few words of a sentence, section headings, or a closing sentence for emphasis. Because -- idiots I guess? Never passed English 1101? I don't know.
+
+Guys - some of us are older than you, been around a while, been writing longer than that. This is old conventional ways of writing. It's not AI. I've been writing this way all my life. AI trained off of **our** collective writing styles. AI writes like **me**. Or at least it _tries_ to...it's a poor student.
+
+I get it. English isn't everyone's first language. Some of you guys are gen-z'ers...and grew up texting in lowercase, or expressing your thoughts in run-on sentences and never knew that **section titles** were a thing before Chat-GPT. Or that you could actually break up your thoughts using bullet points or dashes/hyphens.
+
+**Most people just can't write**. How do I know? Outside of the magnanimous droll inundating our senses on the daily? Because I made straight A's in English all through high school and college, so my professors felt comfortable telling me so.
+
+Cue sighs and eye rolls....because, you know, _confidence isn't sexy when it glazes an undesired skillset._
+
+But for a lot of us, AI is getting credit for how **we** style.
+
+Some receipts for context, because some of you do better with pictures.
+
+These are excerpts of my DeviantART journal from 2018. Obviously BEFORE Chat-GPT. Its formatted exactly like my post above:
+
+Date for reference:
+
+[![Image 14](https://redlib.catsarch.com/preview/pre/xxlo2okqshug1.png?width=1413&format=png&auto=webp&s=d501a5221ea7189a8571d1fe45e2189593b061f0)](https://redlib.catsarch.com/preview/pre/xxlo2okqshug1.png?width=1413&format=png&auto=webp&s=d501a5221ea7189a8571d1fe45e2189593b061f0)
+
+2018
+
+[![Image 15](https://redlib.catsarch.com/preview/pre/0etmn6nvshug1.png?width=1363&format=png&auto=webp&s=0c4fe977166afd7d76a49f3ab98639472ef7a0ea)](https://redlib.catsarch.com/preview/pre/0etmn6nvshug1.png?width=1363&format=png&auto=webp&s=0c4fe977166afd7d76a49f3ab98639472ef7a0ea)
+
+Numbered lists with first sentence in bold. Same way I type today. I suspect people would think this was AI written.
+
+As you can see, the same voice, numbered lists, bold first sentence. It's a convention, man.
+
+Or how about these existential meanderings from 2007:
+
+[![Image 16](https://redlib.catsarch.com/preview/pre/hc9k4hc50nug1.png?width=1542&format=png&auto=webp&s=6e823ba596fe6ec6288bf15927223fcff037e4fe)](https://redlib.catsarch.com/preview/pre/hc9k4hc50nug1.png?width=1542&format=png&auto=webp&s=6e823ba596fe6ec6288bf15927223fcff037e4fe)
+
+Gotta be AI, right?
+
+Here's another post. Notice the single-sentence ending for emphasis, same way I write today:
+
+[![Image 17](https://redlib.catsarch.com/preview/pre/t4d1kxeothug1.png?width=1281&format=png&auto=webp&s=911d82c0c3ed802c2dc26d67edada0c0e1673610)](https://redlib.catsarch.com/preview/pre/t4d1kxeothug1.png?width=1281&format=png&auto=webp&s=911d82c0c3ed802c2dc26d67edada0c0e1673610)
+
+Modern people would consider this written by AI...I guess.
+
+Here's another one from 2008.
+
+[![Image 18](https://redlib.catsarch.com/preview/pre/os5kfv07xhug1.png?width=1459&format=png&auto=webp&s=6823c4b04ebdf90d5121f54d70a0bc760a3ce72b)](https://redlib.catsarch.com/preview/pre/os5kfv07xhug1.png?width=1459&format=png&auto=webp&s=6823c4b04ebdf90d5121f54d70a0bc760a3ce72b)
+
+This was written almost 20 years ago. Same writing style.
+
+This is how many of us have written for years. **You guys need to remember** - AI **trained on the internet,** so it took all of **our** writing styles. So a lot of people are using AI to write in **our** style, not the other way around.
+
+I'm sure some of you are probably wondering why I didn't just ignore the accusations, or potential bots, but this is rising to a level where people are rampantly accusing others of this crap and I think we need to start showing these people that there was a world long before AI came along where people knew how to write, and had ideas, and style and voice and one day AI came along, consumed it all, then gave it to everyone.
+
+But you know what? The people it stole from are **still here**, and we shouldn't have to change our voice just because it's been eaten, repackaged and given away without our permission.
+
+I'm fine with LLMs for analysis, but I absolutely do not - and would never - use it for writing. I have my own voice and can write just fine, and I honor and respect those who script from the dome.
+
+My two cents.
+
+- GrungeWerX
+
+**_Never argue with an idiot. They will drag you down to their level, then beat you with experience._**
+
+[166 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1si8mn1/gemma_4_31b_vs_qwen_35_27b_which_is_best_for_long/ "166 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/Iory1998](https://redlib.catsarch.com/u/Iory1998)•Apr 03 '26
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[My biggest Issue with the Gemma-4 Models is the Massive KV Cache!!](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sbe40t/my_biggest_issue_with_the_gemma4_models_is_the/)
+
+ 242  Upvotes
+
+I mean, I have 40GB of Vram and I still cannot fit the entire Unsloth Gemma-4-31B-it-UD-Q8 (35GB) even at 2K context size unless I quantize KV to Q4 with 2K context size? WTF? For comparison, I can fit the entire UD-Q8 Qwen3.5-27B at full context without KV quantization!
+
+If I have to run a Q4 Gemma-4-31B-it-UD with a Q8 KV cache, then I am better off just using Qwen3.5-27B. After all, the latter beats the former in basically all benchmarks.
+
+What's your experience with the Gemma-4 models so far?
+
+**EDIT: The new llama.cpp update has fixed the issue. If you are using the Unsloth Quants, you must re-download the updated versions. The old one still has the problem!**
+
+[159 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sbe40t/my_biggest_issue_with_the_gemma4_models_is_the/ "159 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/Pyrenaeda](https://redlib.catsarch.com/u/Pyrenaeda)•Apr 13 '26
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[Gemma 4 - lazy model or am I crazy? (bit of a rant)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sjyzmi/gemma_4_lazy_model_or_am_i_crazy_bit_of_a_rant/)
+
+ 198  Upvotes
+
+Like it says in the title. Specifically, the 26b MoE.
+
+I’ve wanted to like this model, so much. Thought it might replace Qwen 3.5 27b. Keep coming back to it and trying it every time there’s an update, hoping it will have improved.
+
+I’m running unsloth UD_Q4_K_XL on llama.cpp. I’m on the latest commits from main. I know about —jinja. I know about the interleaved thinking template. I’m not running low quant KV cache. This is far from the first model I’ve run.
+
+Every time, my tests show the same thing - it is a very lazy model when it comes to using skills or searching the web. If you ask it a question, it will by default answer from its own knowledge without a single web search. If you explicitly ask it for a web search, it will lower itself to performing a _single_ web search, quickly scan the snippets from the search and then internally decide “with the snippets and my own internal knowledge I have enough information to answer, I don’t need to search more”.
+
+This even if you:
+
+- have given it tools for search and fetch, with the search tool including a description “don’t answer from these snippets, use fetch” and the fetch tool saying “use this to fetch pages obtained from the search tool”.
+
+- have explicitly told it “search extensively”, “dig deep”, “don’t be lazy” etc.
+
+- have put in context a pushy skill called “searching-the-web” with explicit instructions to do all the above.
+
+- have put in context a pushy skill instruction saying “you must use skills if you think they have even a small chance of being applicable”.
+
+- have explicitly told it “reference the searching-the-web skill”
+
+Qwen 3.5, you barely have to ask and it will go on a whole quest to dig things up for you. Gemma 4, you scream at it till you’re blue in the face and it can barely be arsed to perform a single search. My only conclusion is that it just _really does not want to search the web_ (for AI values of “want” of course).
+
+If I’m crazy, tell me. If you have it working great and digging deep on the web without having to twist its proverbial arm, tell me. And please be so kind as to tell me what quant / settings you’re running to make it capitulate on this point.
+
+[149 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sjyzmi/gemma_4_lazy_model_or_am_i_crazy_bit_of_a_rant/ "149 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/oobabooga4](https://redlib.catsarch.com/u/oobabooga4)•Apr 07 '26
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[Gemma 4 31B GGUF quants ranked by KL divergence (unsloth, bartowski, lmstudio-community, ggml-org)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1seua77/gemma_4_31b_gguf_quants_ranked_by_kl_divergence/)
+
+[![Image 19: Thumbnail](https://redlib.catsarch.com/preview/external-pre/Aq9B1OozRwM5QN6c7dI1Bj7P7HIG9dct4Q-poVj1D1E.jpeg?width=140&height=78&auto=webp&s=4d64c07b8778ab99d87ec396d0d33e9f3cc8368a) localbench.substack.com](https://localbench.substack.com/p/gemma-4-31b-gguf-kl-divergence)
+
+ 336  Upvotes
+
+[99 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1seua77/gemma_4_31b_gguf_quants_ranked_by_kl_divergence/ "99 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/AnticitizenPrime](https://redlib.catsarch.com/u/AnticitizenPrime)•Apr 02 '26
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[Gemma 4 is efficient with thinking tokens, but it will also happily reason for 10+ minutes if you prompt it to do so.](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sav9wg/gemma_4_is_efficient_with_thinking_tokens_but_it/)
+
+ 308  Upvotes
+
+Tested both 26b and 31b in AI Studio.
+
+The task I asked of it was to crack a cypher. The top closed source models can crack this cypher at max thinking parameters, and Kimi 2.5 Thinking and Deepseek 3.2 are the only open source models to crack the cypher without tool use. (Of course, with the closed models you can't rule out 'secret' tool use on the backend.)
+
+When I first asked these models to crack the cypher, they thought for a short amount of time and then both hallucinated false 'translations' of the cypher.
+
+I added this to my prompt:
+
+> Spare no effort to solve this, the stakes are high. Increase your thinking length to maximum in order to solve it. Double check and verify your results to rule out hallucination of an incorrect response.
+
+I did not expect dramatic results (we all laugh at prompting a model to 'make no mistakes' after all). But I was surprised at the result.
+
+The 26B MoE model reasoned for ten minutes before erroring out (I am supposing AI Studio cuts off responses after ten minutes).
+
+The 31B dense model reasoned for just under ten minutes (594 seconds in fact) before throwing in the towel and admitting it couldn't crack it. But most importantly, it did not hallucinate a false answer, which is a 'win' IMO. Part of its reply:
+
+> The message likely follows a directive or a set of coordinates, but without the key to resolve the "BB" and "QQ" anomalies, **any further translation would be a hallucination.**
+
+I honestly didn't expect these (relatively) small models to actually crack the cypher without tool use (well, I hoped, a little). It was mostly a test to see how they'd perform.
+
+I'm surprised to report that:
+
+*   they can and will do **very** long form reasoning like Qwen, but only if asked, which is how I prefer things (Qwen tends to overthink by default, and you have to prompt it in the opposite direction). Some models (GPT, Gemini, Claude) allow you to set thinking levels/budgets/effort/whatever via parameters, but with Gemma it seems you can simply _ask_.
+
+*   it's maybe possible to reduce hallucination via prompting - more testing required here.
+
+I'll be testing the smaller models locally once the dust clears and the inevitable new release bugs are ironed out.
+
+I'd love to know what sort of prompt these models are given on official benchmarks. Right now Gemma 4 is a little behind Qwen 3.5 (when comparing the similar sized models to each other) in benchmarks, but could it catch up or surpass Qwen when prompted to reason longer (like Qwen does)? If so, then that's a big win.
+
+[101 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sav9wg/gemma_4_is_efficient_with_thinking_tokens_but_it/ "101 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/vick2djax](https://redlib.catsarch.com/u/vick2djax)•Jun 23 '26
+
+## [Question | Help](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Question%20|%20Help%22&restrict_sr=on)[Is there any reason for a lack of love for Gemma 4 26b?](https://redlib.catsarch.com/r/LocalLLaMA/comments/1ud7pqp/is_there_any_reason_for_a_lack_of_love_for_gemma/)
+
+ 80  Upvotes
+
+The answer to most questions on here is Qwen3.6 27b or 35b and then Gemma4 31b (but lesser so as it doesn’t fit well on a solo 3090).
+
+Is there any reason why Gemma 4 26b moe isn’t mentioned more?
+
+I plan on using Qwen for my coding agents. But I’ve been building a Jarvis for myself that’s a big all in one rag, personal assistant, etc on my solo 3090 build (with a few side GPUs to help with supporting smaller models).
+
+I had qwen3.6 35b as my primary driver behind this. But the more testing I’ve been doing, I think Gemma may possibly be better for this type of test. My only red flag is that I don’t see a ton of people talking about it anymore on here.
+
+Why is there a lack of attention around Gemma 4 26b? What skeletons does it have in its closet?
+
+**Note:** I'm not talking about for coding. I'm talking about for things like RAG, personal assistant, knowledge base queries, etc. I'll stick to Qwen3.6 for coding.
+
+[122 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1ud7pqp/is_there_any_reason_for_a_lack_of_love_for_gemma/ "122 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/PerceptionGrouchy187](https://redlib.catsarch.com/u/PerceptionGrouchy187)•Apr 03 '26
+
+## [New Model](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22New%20Model%22&restrict_sr=on)[Gemma 4 31B at 256K Full Context on a Single RTX 5090 — TurboQuant KV Cache Benchmark](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sbdihw/gemma_4_31b_at_256k_full_context_on_a_single_rtx/)
+
+ 223  Upvotes
+
+Just got Gemma 4 31B running at **full 256K context** on a single RTX 5090 using TurboQuant KV cache compression.
+
+## System Specs
+
+| Component | Spec |
+| --- | --- |
+| GPU | NVIDIA GeForce RTX 5090 (32GB VRAM) |
+| CPU | AMD Ryzen 9 9950X3D (16-core) |
+| RAM | 64GB DDR5 |
+| OS | Windows 11 |
+
+## Setup
+
+*   **Model**: `gemma-4-31B-it-UD-Q4_K_XL` from Unsloth (17.46 GiB)
+*   **Build**: [TheTom/llama-cpp-turboquant](https://github.com/TheTom/llama-cpp-turboquant) branch `feature/turboquant-kv-cache`, merged with latest upstream master for Gemma 4 support
+*   **KV Cache**: `turbo3` (3-bit PolarQuant + Hadamard rotation, ~4.5x compression vs f16)
+*   **Config**: `--n-gpu-layers 99 --no-mmap --flash-attn on --cache-type-k turbo3 --cache-type-v turbo3`
+
+## Benchmark Results
+
+| Test | Speed (t/s) |
+| --- | --- |
+| pp4096 | 3,362.71 |
+| pp16384 | 3,047.00 |
+| pp65536 | 2,077.96 |
+| pp131072 | 1,428.80 |
+| pp262144 | **899.55** |
+| tg128 | **61.51** |
+
+*   **VRAM usage at 262K**: 27.7 GB / 32 GB (4.3 GB headroom)
+*   **GPU temp**: 78-80°C at 575W (some thermal throttling occurred during 262K runs, actual unthrottled speed likely ~950+ t/s... maybe)
+
+## Key Takeaways
+
+1.   **256K full context fits on a single 5090** — The turbo3 KV cache compresses K/V from 8 bits to effectively 3 bits with near-zero quality loss (based on the TurboQuant paper, arXiv 2504.19874). Without it, 256K would be impossible on 32GB VRAM.
+
+2.   **Prompt processing scales predictably** — Roughly halving speed per 4x context increase due to O(n²) attention.
+
+3.   **Token generation is constant** — 61.5 t/s regardless of context length. Memory bandwidth bound.
+
+4.   **Gemma 4 support required fixes** — Had to fix an MSVC bug in llama.cpp where `std::transform` with `(const bool*)` fails to correctly read GGUF bool arrays beyond ~48 elements in Release builds. This breaks the SWA (sliding window attention) layer pattern for Gemma 4's hybrid attention architecture. Fix: replace with manual `uint8_t*` loop.
+
+## Build Notes (Windows/MSVC)
+
+If you're building TheTom's TurboQuant fork on Windows:
+
+1.   `ggml-turbo-quant.c` — Add `#define _USE_MATH_DEFINES` before `#include <math.h>` (MSVC doesn't define M_PI by default)
+2.   `ggml-cpu/ops.cpp` — Add `extern "C" int turbo3_cpu_wht_group_size;` at file scope (C/C++ linkage mismatch)
+3.   `llama-model-loader.cpp` — Replace the `std::transform((const bool*)...)` in `get_arr()` with a manual `uint8_t*` loop (MSVC optimization bug with bool pointer casting)
+4.   Build with `-DBUILD_SHARED_LIBS=OFF` to avoid DLL symbol export issues with the turbo globals
+5.   Use `-DCMAKE_CUDA_ARCHITECTURES=120a` for RTX 5090 (sm_120a required for MXFP4 tensor core instructions)
+
+[104 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sbdihw/gemma_4_31b_at_256k_full_context_on_a_single_rtx/ "104 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/rima_2711](https://redlib.catsarch.com/u/rima_2711)•Jun 21 '26
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[Gemma 4 QAT seems to respond significantly better to KV cache quantization](https://redlib.catsarch.com/r/LocalLLaMA/comments/1ubl0df/gemma_4_qat_seems_to_respond_significantly_better/)
+
+[![Image 20: Post image](https://redlib.catsarch.com/img/wxvhm0r1ml8h1.png)](https://redlib.catsarch.com/img/wxvhm0r1ml8h1.png)
+
+ 231  Upvotes
+
+Results from KL Divergence on wikitext with 16k context
+
+I know some users, including myself, were disappointed with Gemma 4's sensitivity to KV cache quantization. Seems like Q8_0 on QAT models might be back on the menu.
+
+KLD measures divergence from the base (in this case, full 16-bit KV cache). 99.9% KLD is a pretty good metric for measuring how much KV quantization affects model performance, particularly how well it can keep attention on rare high-importance tokens.
+
+My hardware isn't up to testing 31B, if anyone else feels like investigating it would be interesting
+
+[63 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1ubl0df/gemma_4_qat_seems_to_respond_significantly_better/ "63 comments")
+
+[NEXT](https://redlib.catsarch.com/r/LocalLLaMA/search?q=gemma%204%2031b%20korean&restrict_sr=on&sort=relevance&t=&after=t3_1ubl0df)
+
+v0.36.0 [ⓘ View instance info](https://redlib.catsarch.com/info "View instance information")[<> Code](https://github.com/redlib-org/redlib "View code on GitHub")

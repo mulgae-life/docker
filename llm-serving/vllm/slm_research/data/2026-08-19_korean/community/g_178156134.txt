@@ -1,0 +1,643 @@
+Title: 한국어 소설 문체 임베딩 모델 개발했습니다. - Ai 언어모델 로컬 채널
+
+URL Source: https://arca.live/b/alpaca/178156134
+
+Markdown Content:
+[](https://arca.live/ "Arcalive")
+*   [Subscribe Channel](https://arca.live/b/alpaca/178156134# "Subscription Channel")[There are no channels you are subscribed to.](https://arca.live/b/alpaca/178156134#) 
+*   [Main Channel](https://arca.live/b/alpaca/178156134# "Channel")[Best live](https://arca.live/b/live)[Hot Deals](https://arca.live/b/hotdeal)[ideal article collection](https://arca.live/b/headline)[Comprehensive deliberation target](https://arca.live/b/replay)[Comprehensive breaking news](https://arca.live/b/breaking) [Notices](https://arca.live/b/notice)[Channel inquiry board](https://arca.live/b/whyiblocked) [Help](https://support.arca.live/)[Customer Service](https://arca.live/b/request) [주식 채널](https://arca.live/b/stock)[승리의 여신 니케 채널](https://arca.live/b/nikketgv)[KBO 채널](https://arca.live/b/baseball)[명조 채널](https://arca.live/b/wutheringwaves)[리그 오브 레전드 채널](https://arca.live/b/leagueoflegends)[붕괴 스타레일 채널](https://arca.live/b/hkstarrail)[블루 아카이브 채널](https://arca.live/b/bluearchive)[던전앤파이터 채널](https://arca.live/b/dunfa)[홀로라이브 채널](https://arca.live/b/holopro)[이환 채널](https://arca.live/b/nevernesstoeverness)[메이플스토리 채널](https://arca.live/b/maplestory)[로보토미 코퍼레이션 채널](https://arca.live/b/lobotomycoperation)[명일방주 엔드필드 채널](https://arca.live/b/akendfield)[원신 채널](https://arca.live/b/genshin)[소녀전선2: 망명 채널](https://arca.live/b/gilrsfrontline2exili)[트릭컬 RE:VIVE 채널](https://arca.live/b/trickcal)[이터널 리턴 채널](https://arca.live/b/bser)[로스트아크 채널](https://arca.live/b/lostark)[젠레스 존 제로 채널](https://arca.live/b/zenlesszonezero)[명일방주 채널](https://arca.live/b/arknights)[에픽세븐 채널](https://arca.live/b/epic7)[유희왕 채널](https://arca.live/b/yugioh)[에어소프트 채널](https://arca.live/b/airsoft2077)[장르소설 채널](https://arca.live/b/novelchannel)[브라운더스트2 채널](https://arca.live/b/browndust2)[마비노기 모바일 채널](https://arca.live/b/mabimobile)[AI 채팅 채널](https://arca.live/b/characterai)[메이플랜드 채널](https://arca.live/b/mapleland)[가이진 채널](https://arca.live/b/gaijin)[리버스 1999 채널](https://arca.live/b/arcalivebreverse)[포켓몬스터 채널](https://arca.live/b/pokemon)[컴퓨터 본체/견적 채널](https://arca.live/b/082tlqkfnomdeul)[헤드폰 채널](https://arca.live/b/headphones)[마비노기 블로니 채널](https://arca.live/b/mabi)[사이퍼즈 채널](https://arca.live/b/actioncyphers) [View More](https://arca.live/channels) 
+*    Loading...   Close  
+*   [Search](https://arca.live/b/alpaca/178156134)Loading...  Close  
+
+*   [](https://arca.live/u/login?goto=%2Fb%2Falpaca%2F178156134 "Login")
+
+[![Image 6: Channel icon](https://ac.arca.live/20230705sac/c94aac291344d182294637be53fa53aea42811326f4e139e8eb8906e0c852c23.png?expires=1787127267&key=0RkIsYavq-_xvILpCw5Qlg)](https://arca.live/b/alpaca)
+
+[Ai 언어모델 로컬 채널[](https://arca.live/b/alpaca/178156134#)](https://arca.live/b/alpaca)
+
+[알림 알림 중 알림 취소](https://arca.live/b/alpaca/notificate?value=1&_csrf=Pa5v7lLk-52wy0s6zF2rYfqqhrW3aJujRA1s)[Subscribe Subscribed Unsubscribe](https://arca.live/b/alpaca/subscribe?value=1&_csrf=Pa5v7lLk-52wy0s6zF2rYfqqhrW3aJujRA1s)
+
+7152 subscribers 알림수신 346명[@바바리맨](https://arca.live/u/@%EB%B0%94%EB%B0%94%EB%A6%AC%EB%A7%A8)
+
+ 제한없는 언어모델을 위한 채널 
+
+자작모델 한국어 소설 문체 임베딩 모델 개발했습니다. 
+
+[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 7: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+Like 92 Dislike 4 Comment 46 Views 7181 Uploaded date 2026-07-27 13:01:38 Updated date 2026-07-27 13:01:49
+
+[https://arca.live/b/alpaca/178156134](https://arca.live/b/alpaca/178156134 "게시물 주소")
+
+![Image 8](https://ac.arca.live/20260727sac/f1e2321091aa6c179782272b769e62d1c1972622593c9214180098a8382298a0.jpg?expires=1787127267&key=WRWKtza4nKBqHp1pdpLMDQ)
+
+EmbeddingGemma 300M 모델을 기반으로 학습한 특수 목적의 한국어 임베딩 모델입니다.
+
+일반적인 임베딩 모델은 주어진 글의 '내용'을 임베딩하도록 훈련되었습니다. 다른 언어, 다른 표현이라도 의미가 같으면 비슷한 값을 내도록 말이죠.
+
+저는 반대로 내용과는 관계 없이, 글의 '문체'를 구분하고 임베딩하는 모델을 만들고자 했습니다.
+
+![Image 9](https://ac.arca.live/20260727sac/cf3e853125ab669e04521f8bfba95f942b9f1c9603965cef8041fa53bbd3b736.jpg?expires=1787127267&key=7LZgzHSA6cLOYXaa6Vv8iQ)
+
+그래서 합성 데이터를 만들어, 같은 내용에서도 문체가 다르면 다른 위치에 임베딩되도록 모델을 구축했습니다.
+
+![Image 10](https://ac.arca.live/20260727sac/542dca4dc259b50bc712df6198136e31f7904859b2ccb75cc26db80b4ad899a0.jpg?expires=1787127267&key=2L0r_yh8_YE7I3_oKiC17Q)
+
+![Image 11](https://ac.arca.live/20260727sac/4d8d0e56e3bd86bdae7c37c84b8c7b8fd4b0f70963e18aa2af92416256c66e1e.jpg?expires=1787127267&key=L9fRX6rhvVTBQWadCknKew)
+
+이를 통해 실제로 약 3천자 분량의 텍스트를 통해 높은 확률로 동일 작품을 식별해낼 수 있었고, 동일 작가의 다른 작품도 식별하는 것이 가능해졌습니다.
+
+ 실제 모델은 아래 링크에서 확인해보실 수 있습니다.
+
+[https://huggingface.co/Baragi-AI/Munche-768](https://unsafelink.com/https://huggingface.co/Baragi-AI/Munche-768 "huggingface.co/Baragi-AI/Munche-768 (외부 사이트)")
+
+ 추가로 모델 훈련 과정에서 얻게 된 흥미로운 정보도 있습니다.
+
+![Image 12](https://ac.arca.live/20260727sac/e35cc4f5d6f04f683ab32a79a154e38ec3e6e8ac6ca1385bfccb1835e6fd891a.png?expires=1787127267&key=BHjlnlGcibjEXeuiw64m2A)
+
+바로 각 모델이 갖는 문체 공간이 굉장히 획일화되어 있다는 것입니다.
+
+ 작가마다 다른 위치를 갖는 인간과는 달리, LLM은 긴 프롬프트를 주어도, 장르가 달라도, 이야기가 달라도 거의 같은 공간에 위치했습니다.
+
+ 특히 GPT 5.6 시리즈는 다른 모델과는 굉장히 이질적인 공간에 위치했고, Gemini와 Gemma는 매우 유사한 특성을 가졌습니다.
+
+ 이 외에도 무협 작품은 집필 시대에 따라 다른 문체를 가진다거나, LLM이 그나마 사람과 유사한 문체를 갖는 장르는 현대 판타지라거나 하는 정보도 얻을 수 있었네요.
+
+ 단순히 강화학습에 쓸 평가자 모델을 만들고자 시작한 프로젝트지만, 예상 외로 얻어가는 것이 많았네요.
+
+ 자신과 유사한 문체를 갖는 LLM을 훈련하고 싶다거나, 모델간의 출력 유사성 분석을 하고자 하시는 분들께 도움이 되리라고 생각해 공유합니다.
+
+ 스크롤 바로 내리신 분들을 위한 링크
+
+[https://huggingface.co/Baragi-AI/Munche-768](https://unsafelink.com/https://huggingface.co/Baragi-AI/Munche-768 "huggingface.co/Baragi-AI/Munche-768 (외부 사이트)")
+
+ Like! 92
+
+(13) Dislike! 4
+
+(1)
+
+[Share](https://arca.live/b/alpaca/178156134# "Share")
+
+ Comment [46][Write Article](https://arca.live/b/alpaca/write "Write Article")
+
+[김첨지의럭키데이](https://arca.live/u/@%EA%B9%80%EC%B2%A8%EC%A7%80%EC%9D%98%EB%9F%AD%ED%82%A4%EB%8D%B0%EC%9D%B4)
+
+![Image 13: User gravatar image](https://ac.arca.live/20260417sac/ef3477b8e5fddad02099a60f640ed26c6b9bcce67f613675b7c6b9f01d7ea6fb.jpg?expires=1787127267&key=AetCCQxWWiNCK42SNSX5eg)
+
+2026-07-27 13:22:30[Reply](https://arca.live/b/alpaca/178156134#)
+
+![Image 14](https://ac.arca.live/20250518sac/fbb4291dcc10737f196596d4b84eaf25a57b144df010984c64c3c066f5c0b451.png?expires=1788224400&key=Q3t87tNEje_3BtEu5mvG2A)
+
+[파블로프의자명종](https://arca.live/u/@%ED%8C%8C%EB%B8%94%EB%A1%9C%ED%94%84%EC%9D%98%EC%9E%90%EB%AA%85%EC%A2%85)
+
+![Image 15: User gravatar image](https://ac.arca.live/20260406sac/df397e7550185a935dac3313c69346457c458d18768c252447d124aeccc0c1b2.png?expires=1787127267&key=UgoIcX5EU1RKPSZAR-DppQ)
+
+2026-07-27 13:29:58[Reply](https://arca.live/b/alpaca/178156134#)
+
+굉장히 흥미롭게 잘 봤습니다. 어떻게 한국어 논리판단 임베딩을 만들어야 하나 깝깝했는데, 덕분에 팁 하나 크게 얻어가네요. 좋은 글 감사드립니다.
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943161504)[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 16: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+2026-07-27 13:30:25[Reply](https://arca.live/b/alpaca/178156134#)
+
+도움이 됐다니 저도 기분이 좋네요. 멋진 연구 기대합니다!
+
+Unfold ▼
+
+[그냥고인물](https://arca.live/u/@%EA%B7%B8%EB%83%A5%EA%B3%A0%EC%9D%B8%EB%AC%BC)
+
+![Image 17: User gravatar image](https://secure.gravatar.com/avatar/3f9434a140502a65dd6f7b6b04535af2?d=retro&f=y)
+
+2026-07-27 15:53:46[Reply](https://arca.live/b/alpaca/178156134#)
+
+![Image 18](https://ac.arca.live/20221223sac2/10e36fdea4570656cfbefad57689fb58a444a4e58586bafa2a990e9b08d817ea.png?expires=1788224400&key=AYi_AmCxnBPxurDj3lWNug)
+
+[토큐레인보우](https://arca.live/u/@%ED%86%A0%ED%81%90%EB%A0%88%EC%9D%B8%EB%B3%B4%EC%9A%B0/56915594)
+
+![Image 19: User gravatar image](https://secure.gravatar.com/avatar/f4a93e7c3d81ccfd49bc1654a047687b?d=retro&f=y)
+
+2026-07-27 18:30:01[Reply](https://arca.live/b/alpaca/178156134#)
+
+알림으로 떠서 보게 됐는데요, 이게 정확히 뭐고, 어떻게사용하는 건지 여쭤봐도 될까요?
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943263063)[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 20: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+2026-07-27 18:42:11[Reply](https://arca.live/b/alpaca/178156134#)
+
+주어진 텍스트에 대해 768차원의 벡터를 만드는 모델입니다.
+이를 통해 글 A와 글 B가 얼마나 서로 문체가 가까운지 측정하거나, 글 X1, X2, X3...... 에 대해 어느 글의 문체가 서로 가까운지를 3차원으로 시각화하거나 하는 등으로 사용할 수 있습니다.
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943263063)[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 21: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+2026-07-27 18:42:51[Reply](https://arca.live/b/alpaca/178156134#)
+
+일반적인 단일 사용을 위해 만들어진 것은 아니고, 다른 모델의 기반으로서 사용하거나, 통계적으로 무언가를 측정하기 위한 기반에 가깝습니다.
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943264923)[토큐레인보우](https://arca.live/u/@%ED%86%A0%ED%81%90%EB%A0%88%EC%9D%B8%EB%B3%B4%EC%9A%B0/56915594)
+
+![Image 22: User gravatar image](https://secure.gravatar.com/avatar/f4a93e7c3d81ccfd49bc1654a047687b?d=retro&f=y)
+
+2026-07-28 01:34:56[Reply](https://arca.live/b/alpaca/178156134#)
+
+아하! 알려주셔서 감사합니다
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943264923)[ㅇㅇ](https://arca.live/u/@%E3%85%87%E3%85%87/50174160)
+
+![Image 23: User gravatar image](https://ac.arca.live/20230201sac2/a815f081ccc223da25656a48cfb3a000469b7909bbc9495f1541a11076326a58.jpg?expires=1787127267&key=NIrdLIGUzAqxJ7RBgfO-fQ)
+
+2026-07-28 01:48:44[Reply](https://arca.live/b/alpaca/178156134#)
+
+아무튼 개쩌는걸 만들었단거지? 알아들었어 개추
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943263063)[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 24: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+2026-07-28 03:42:43[Reply](https://arca.live/b/alpaca/178156134#)
+
+혹시 어디 알림에 뭐가 뜬 걸까요...?
+추천수가 이상한데
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943408140)[ㅇㅇ](https://arca.live/u/@%E3%85%87%E3%85%87/65597508)
+
+![Image 25: User gravatar image](https://secure.gravatar.com/avatar/33f9a3dc94a24f16fbcaf4a10f3bf0c2?d=retro&f=y)
+
+2026-07-29 03:55:01[Reply](https://arca.live/b/alpaca/178156134#)
+
+***Modified**
+
+크롬 추천글 뜨는 거 최상단에 뜨더라
+나도 그거 보고 들어옴
+
+개추도 물론 벅벅
+
+Unfold ▼
+
+[흔적](https://arca.live/u/@%ED%9D%94%EC%A0%81)
+
+![Image 26: User gravatar image](https://ac.arca.live/20231220sac/250b5008085db393be69088396294ddfeeca48c32fecf0d105f1be3639d52b00.jpg?expires=1787127267&key=Ei4bbyeQnqCzuwHK2SNkVQ)
+
+2026-07-27 23:47:43[Reply](https://arca.live/b/alpaca/178156134#)
+
+오....
+
+Unfold ▼
+
+[YeahEyahHaey](https://arca.live/u/@YeahEyahHaey/67646510)
+
+![Image 27: User gravatar image](https://secure.gravatar.com/avatar/4f1fd1b5a30f7e744c14b29585ae64ad?d=retro&f=y)
+
+2026-07-28 00:20:17[Reply](https://arca.live/b/alpaca/178156134#)
+
+오 문체 임베딩은 아이디어가 좋네요.
+혹시 훈련 데이터는 저작권 없는 책들을 쓴건가요?
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943316306)[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 28: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+2026-07-28 05:55:35[Reply](https://arca.live/b/alpaca/178156134#)
+
+인터넷에 누가 그냥 모음 올려둔거 + 허깅페이스 이상한 레포들 + 웹크롤 데이터 올라온거
+
+다 정제해서 집어넣은거라 저작권적으로는 깨끗하진 않습니다...
+다만 생성형 모델은 아니니까 괜찮지 않을까... 하는 생각입니다
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943481421)[YeahEyahHaey](https://arca.live/u/@YeahEyahHaey/67646510)
+
+![Image 29: User gravatar image](https://secure.gravatar.com/avatar/4f1fd1b5a30f7e744c14b29585ae64ad?d=retro&f=y)
+
+2026-07-28 05:56:43[Reply](https://arca.live/b/alpaca/178156134#)
+
+명확하게 모델 제작 금지라고 못박은거 아니면 회색지대긴 하죠
+모델 성능 끌어올리려면 일단 이거저거 다 넣어봐야하니
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943482057)[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 30: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+2026-07-28 05:59:53[Reply](https://arca.live/b/alpaca/178156134#)
+
+아는 변호사에게 짧게 물어보니 
+영리활동 아니고, 생성형 모델이 아닌 분류 모델 같은 거라면 회색지대라 일단은 괜찮을 거라고 하네요.
+그래도 떳떳하진 못하지만요 ㅎㅎ...
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943483834)[YeahEyahHaey](https://arca.live/u/@YeahEyahHaey/67646510)
+
+![Image 31: User gravatar image](https://secure.gravatar.com/avatar/4f1fd1b5a30f7e744c14b29585ae64ad?d=retro&f=y)
+
+2026-07-28 06:00:37[Reply](https://arca.live/b/alpaca/178156134#)
+
+팔아먹는건 못하고 학술논문도 애매해서....사실상 취미생활 영역으로써 남는게 젤 리스크 없긴 하죠 ㅠ
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943484270)[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 32: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+2026-07-28 06:02:32[Reply](https://arca.live/b/alpaca/178156134#)
+
+요즘은 논문에도 대규모 웹크롤 데이터 사용했다는걸 아무렇지 않다는 듯 말하는 걸 보면 뭐랄까 묘하긴 합니다
+
+Unfold ▼
+
+ㅇㅇ(121.66)
+
+![Image 33: User gravatar image](https://secure.gravatar.com/avatar/e2cd2c9f105deead1b944c2add6193b3?d=retro&f=y)
+
+2026-07-28 00:25:39[Delete](https://arca.live/b/alpaca/178156134/943318062/delete)[Edit](https://arca.live/b/alpaca/178156134#)[Reply](https://arca.live/b/alpaca/178156134#)
+
+결과가 재밌네요. 느낌적으로 모델마다 문체가 있다고 느끼는데, 정량적인 표현으로 나타낼 수 있다는게 인상깊네요.
+
+Unfold ▼
+
+[바르_야민](https://arca.live/u/@%EB%B0%94%EB%A5%B4_%EC%95%BC%EB%AF%BC)
+
+![Image 34: User gravatar image](https://ac.arca.live/20251206sac/1492fc40d6a65294d4f4f33d8b57c3b00affc8aa13a041f3822e72c22c6d6b5c.png?expires=1787127267&key=4hVt3kw0iLlXlhYPiLYsyQ)
+
+2026-07-28 01:07:14[Reply](https://arca.live/b/alpaca/178156134#)
+
+![Image 35](https://ac.arca.live/20230412sac/0dccc5dcf79c3b5accc6d9e3e5e91d6befce49299d0f0fef1c09851d29b26cd7.png?expires=1788224400&key=UzCYjfq8g4bc0R0xwCw1Pw)
+
+[네코즈카_히비키](https://arca.live/u/@%EB%84%A4%EC%BD%94%EC%A6%88%EC%B9%B4_%ED%9E%88%EB%B9%84%ED%82%A4)
+
+![Image 36: User gravatar image](https://ac.arca.live/20260730sac/3b7a2d927d233f4af92ce94817d571f93cecd9d51f8ae16d12cc58b744ab4a15.png?expires=1787127267&key=JBtIkVaNkxXBFHO3KGrx9w)
+
+2026-07-28 01:14:40[Reply](https://arca.live/b/alpaca/178156134#)
+
+![Image 37](https://ac.arca.live/20250331sac/05e725ea524a9a6df9b2aa1d9e2a2d6faf2339380bb1833b310c9424c922fa87.png?expires=1788224400&key=Y0I5h2cFeEV09XtH-0mhug)
+
+[이트](https://arca.live/u/@%EC%9D%B4%ED%8A%B8)
+
+![Image 38: User gravatar image](https://secure.gravatar.com/avatar/27461f72f193a15cf75772b5144725f0?d=retro&f=y)
+
+2026-07-28 05:57:37[Reply](https://arca.live/b/alpaca/178156134#)
+
+중간까진 (오 하나도 이해 못했어) 상태였는데, 마지막 그래프 이미지 하나가 엄청 짜릿하게 이해되네요.
+좋은 공유 감사합니다.
+
+Unfold ▼
+
+[이트](https://arca.live/u/@%EC%9D%B4%ED%8A%B8)
+
+![Image 39: User gravatar image](https://secure.gravatar.com/avatar/27461f72f193a15cf75772b5144725f0?d=retro&f=y)
+
+2026-07-28 05:59:52[Reply](https://arca.live/b/alpaca/178156134#)
+
+별개로, 각 LLM들에게 누구누구 문체로 글 작성해줘 하면 꽤 그럴싸하게 해주는데, 그럴때의 평가가 어떨지도 궁금해지네요. 혹시 해보신적 있으실까요? 11개 언어모델의 소설 330건은 어떤식으로 작성된 걸까요?
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943483824)[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 40: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+2026-07-28 06:01:46[Reply](https://arca.live/b/alpaca/178156134#)
+
+실제 인간 소설을 6개 장르로 나누고, 내용 gpt랑 제미니, 클로드 에게 알려준 다음에, 비슷한 소재로 장면을 n개 만들어보라고 시켰습니다.
+그리고 그 장면대로 글을 쓰도록 시켰고, 따로 추가적인 프롬프트 엔지니어링은 없었습니다.
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943484943)[이트](https://arca.live/u/@%EC%9D%B4%ED%8A%B8)
+
+![Image 41: User gravatar image](https://secure.gravatar.com/avatar/27461f72f193a15cf75772b5144725f0?d=retro&f=y)
+
+2026-07-28 06:02:19[Reply](https://arca.live/b/alpaca/178156134#)
+
+[Video 3](https://ac.arca.live/20260402sac/2d256402efb023d082a90a01da1a109ab093efc0406e19ef9c16b56ee8593d10.mp4?expires=1788224400&key=teWjB6Wa4fzKdKaX4xvtcA)
+
+[](https://arca.live/b/alpaca/178156134?#c_943484943)[이트](https://arca.live/u/@%EC%9D%B4%ED%8A%B8)
+
+![Image 42: User gravatar image](https://secure.gravatar.com/avatar/27461f72f193a15cf75772b5144725f0?d=retro&f=y)
+
+2026-07-28 06:02:51[Reply](https://arca.live/b/alpaca/178156134#)
+
+답변 감사합니다! 위에 궁금증은 제가 받아서 한번 시도해보고 공유해보겠습니다
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943485537)[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 43: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+2026-07-28 06:03:08[Reply](https://arca.live/b/alpaca/178156134#)
+
+멋져요!
+
+Unfold ▼
+
+[휴보](https://arca.live/u/@%ED%9C%B4%EB%B3%B4)
+
+![Image 44: User gravatar image](https://secure.gravatar.com/avatar/5b0d6ec98482806c63e4511d1054a1fb?d=retro&f=y)
+
+2026-07-28 06:14:49[Reply](https://arca.live/b/alpaca/178156134#)
+
+단순히 글의 작가를 찾아보는 용도로도 사용할 수 있겠고, 디지털 문체라고나 할까요. SNS 나 커뮤니티등 게시글의 작성자를 찾아내는등 경찰 쪽의 가능성도 생각이 드네요.
+제가 용도를 제대로 이해한 걸까요 ?
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943492966)[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 45: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+2026-07-28 06:16:18[Reply](https://arca.live/b/alpaca/178156134#)
+
+커뮤니티글 같은건 모델이 아는 지식 범위랑 좀 달라서 어렵겠네요
+다만 비슷한 방식으로 추가 튜닝하면 무작위보다 나은 결과가 나오긴 할 것으로 보입니다
+길이와 고유명사, 형식 제한같은걸 여러개 걸어봤는데 성능이 어느정도는 나왔거든요
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943492966)[안경이필요해](https://arca.live/u/@%EC%95%88%EA%B2%BD%EC%9D%B4%ED%95%84%EC%9A%94%ED%95%B4)
+
+![Image 46: User gravatar image](https://secure.gravatar.com/avatar/4ee1eaa4413f2416b32072136cc8266e?d=retro&f=y)
+
+2026-07-28 07:49:36[Reply](https://arca.live/b/alpaca/178156134#)
+
+오 저도 이쪽 가능성이 확 떠올랐었어요. 특정 문체를 중점적으로 학습하도록 하고 찾게시키면 인터넷상에서 특정인을 강하게 추적할 수 있을 것 같더라고요
+
+Unfold ▼
+
+[아카네](https://arca.live/u/@%EC%95%84%EC%B9%B4%EB%84%A4/52919534)
+
+![Image 47: User gravatar image](https://secure.gravatar.com/avatar/b4fe1a564655142759db96e908c531b9?d=retro&f=y)
+
+2026-07-28 09:02:42[Reply](https://arca.live/b/alpaca/178156134#)
+
+저도 마침 비슷한거 만들고있었는데 혹시 학습방법이 어떻게되는지 여쭤봐도 될까요?
+저는 문맥과 문체에 대해서 정리하고자 했는데 (문맥 -> 문체 번역모델) 문체를 토큰화해야했었어서 문체 임베딩 만들고있었거든요.
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943596586)[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 48: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+2026-07-28 09:55:15[Reply](https://arca.live/b/alpaca/178156134#)
+
+한 작품, 혹은 한 작가의 여러 작품 안에 '내용과 관계없이 특정할 수 있는 문체적 특징이 있을 것이다' 라는 러프한 가정에서 출발했습니다.
+이것만 가지고 임베딩 모델을 만들면 작품의 내용을 가지고 모델이 분류를 하게 되는데, 이걸 방지하기 위해 '텍스트를 ai한테 시켜서 요약하고 그걸 다른 모델이 다시 쓰게 한 다양한 데이터'를 함께 보여줘서, "내용이 같지만 문체가 다르다면 서로 멀리 떨어지게 하는 법"을 모델에게 가르쳤습니다.
+추가로 '내용어가 유사한 경우'를 단어 단위 유사도로 찾아서 이걸 hard negative로 배치하고, 
+모델 학습 초기에 "kiwi를 가지고 문장을 품사만 남긴 형태로 만든 것에서 문체를 구분할 수 있는 지표"를 찾아서 해당 지표를 기반으로 teacher로서 loss에 넣어주는 기법도 써봤습니다.
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943596586)[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 49: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+2026-07-28 09:56:06[Reply](https://arca.live/b/alpaca/178156134#)
+
+문체를 임베딩하는 것 자체가 한국어에선 적절한 인간 데이터셋이 없다 보니, 이 모델도 가정에 가정을 겹쳐서 허술하게 만들어졌죠...
+그래도 제가 쓰려는 Task에서는 정상작동합니다.
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943631272)[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 50: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+2026-07-28 09:57:32[Reply](https://arca.live/b/alpaca/178156134#)
+
+예시로 이 임베딩에 짧게 lora랑 분류 헤드 넣어서 ai랑 인간 분류하게도 해봤는데, '학습 데이터에서 쓰인 몇몇 모델의 출력'에 대해서는 95% 이상, 그 외의 모델에 대해서도 80% 가량의 정확도를 보였습니다.
+이 가정들이 허술하긴 해도 실제로 임베딩 공간을 만들 정도의 정보는 포함하는 모양입니다.
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943632254)[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 51: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+2026-07-28 09:58:25[Reply](https://arca.live/b/alpaca/178156134#)
+
+이 모델의 effective rank는 100이 채 안 되니, 그냥 애매한 성공의 한 예시로 봐주시면 감사하겠습니다 ㅎㅎ
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943632858)[아카네](https://arca.live/u/@%EC%95%84%EC%B9%B4%EB%84%A4/52919534)
+
+![Image 52: User gravatar image](https://secure.gravatar.com/avatar/b4fe1a564655142759db96e908c531b9?d=retro&f=y)
+
+2026-07-28 10:26:12[Reply](https://arca.live/b/alpaca/178156134#)
+
+ㅇㅎ 그래도 감사합니다
+잘 쓸께요
+
+Unfold ▼
+
+[억울이](https://arca.live/u/@%EC%96%B5%EC%9A%B8%EC%9D%B4)
+
+![Image 53: User gravatar image](https://secure.gravatar.com/avatar/f31fc47448baa3896a2fba1e86c1802d?d=retro&f=y)
+
+2026-07-28 10:46:03[Reply](https://arca.live/b/alpaca/178156134#)
+
+우와 멋지다
+
+Unfold ▼
+
+[발매기원](https://arca.live/u/@%EB%B0%9C%EB%A7%A4%EA%B8%B0%EC%9B%90)
+
+![Image 54: User gravatar image](https://ac.arca.live/20210821/2598175d381447543680ad4200b76cffbd4d029a13ff1e027bb96c30d9c6cd44.png?expires=1787127267&key=h1etys51V5EpnoxCDzghvw)
+
+2026-07-28 13:45:46[Reply](https://arca.live/b/alpaca/178156134#)
+
+혹시 학습하는데 쓴 장비 혹은 런팟비용은 어떻게 되나요? 이런걸 취미로 할 수 있다는게 너무 부럽습니다...
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943792967)[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 55: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+2026-07-28 16:03:10[Reply](https://arca.live/b/alpaca/178156134#)
+
+작은 모델이라 시행착오 포함해서 십몇만원이면 되더군요.
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/178156134?#c_943873648)[발매기원](https://arca.live/u/@%EB%B0%9C%EB%A7%A4%EA%B8%B0%EC%9B%90)
+
+![Image 56: User gravatar image](https://ac.arca.live/20210821/2598175d381447543680ad4200b76cffbd4d029a13ff1e027bb96c30d9c6cd44.png?expires=1787127267&key=h1etys51V5EpnoxCDzghvw)
+
+2026-07-29 09:21:54[Reply](https://arca.live/b/alpaca/178156134#)
+
+[Video 4](https://ac.arca.live/20260122sac/bd02a1ec70272ce55fdebab4f95b2e2a07330f887fa3d46aacef365c9413f01d.mp4?expires=1788224400&key=Bgds92L2xUHQYtJvD-26mg)
+
+[griffth](https://arca.live/u/@griffth)
+
+![Image 57: User gravatar image](https://secure.gravatar.com/avatar/16ac6551fb647e53ecb15ce248d1d289?d=retro&f=y)
+
+2026-07-28 16:02:36[Reply](https://arca.live/b/alpaca/178156134#)
+
+아이디어 좋네요! 감사합니다.
+
+Unfold ▼
+
+[maywell](https://arca.live/u/@maywell)
+
+![Image 58: User gravatar image](https://ac.arca.live/20240907sac/4da34c05738e053eaa450c4a3a5054412cfcfe73461c448a35e5eb123c073e64.png?expires=1787127267&key=iKbuIMqs0SJ9JAW586JiAw)
+
+2026-07-28 16:02:49[Reply](https://arca.live/b/alpaca/178156134#)
+
+![Image 59](https://ac.arca.live/20250110sac/070d602cf78fb02952c70402103733e59df932c2b9c632f4226e05de1aaa3e5f.png?expires=1788224400&key=vEWevDorb4HfOugBfFttOg)
+
+[](https://arca.live/b/alpaca/178156134?#c_943873483)[_비인_](https://arca.live/u/@_%EB%B9%84%EC%9D%B8_)
+
+![Image 60: User gravatar image](https://secure.gravatar.com/avatar/e3766a958efdfde09d28081d086f8217?d=retro&f=y)
+
+2026-07-28 16:03:16[Reply](https://arca.live/b/alpaca/178156134#)
+
+![Image 61](https://ac.arca.live/20260109sac/b73d52590c23bc747b01967da6247c77d9aa8db612f11032329e9772b08a4941.png?expires=1788224400&key=XVoeqKYtjylKKxp5a3pkJA)
+
+[눈팅하고싶다](https://arca.live/u/@%EB%88%88%ED%8C%85%ED%95%98%EA%B3%A0%EC%8B%B6%EB%8B%A4)
+
+![Image 62: User gravatar image](https://secure.gravatar.com/avatar/802dfd1a7d8b46fb1c30d67917474134?d=retro&f=y)
+
+2026-07-29 02:14:19[Reply](https://arca.live/b/alpaca/178156134#)
+
+크롬 추천 기사에 떠서 들어와봤네요
+재밌는 결과 공유 감사합니다
+만약 작가라면 해당 시대의 인기 있는 문체를 따라갈지, 독자적인 문체를 구축할지 고민해볼 수도 있겠네요
+자신의 문체에 대한 정량(?)적인 거리 지표를 보여주니 ㅋㅋㅋ
+
+Unfold ▼
+
+ㅇㅇ(128.134)
+
+![Image 63: User gravatar image](https://secure.gravatar.com/avatar/a16a04c935e463db856bc0b292d7aa49?d=retro&f=y)
+
+2026-07-29 18:34:07[Delete](https://arca.live/b/alpaca/178156134/944540372/delete)[Edit](https://arca.live/b/alpaca/178156134#)[Reply](https://arca.live/b/alpaca/178156134#)
+
+믿든지 말든지 걸러 들으시면 되긴하는데 임베딩시 언어 백터들 각 모델 별로 구현된 코드나 언어모델 수준에서 각각의 축이라 할만한 부분이나 프레임 등이 달라서, 말씀하신 gemma 시리즈랑 gpt 시리즈랑 문체 라는 일종의 언어패턴 지문이 서로 상반되게 나올 겁니다. 모델을 qwen이나 gpt2나 phyita(맞나?)등으로 바꿔서 했을때도 gpt 문체만 상반되게 나오는지 궁금하네요.
+
+Unfold ▼
+
+ㅇㅇ(203.245)
+
+![Image 64: User gravatar image](https://secure.gravatar.com/avatar/c4ece5e073f8d33262d6202dd25e323f?d=retro&f=y)
+
+2026-08-04 23:14:19[Delete](https://arca.live/b/alpaca/178156134/947978046/delete)[Edit](https://arca.live/b/alpaca/178156134#)[Reply](https://arca.live/b/alpaca/178156134#)
+
+오.. 멋진 결과 공유 감사합니다!!
+
+Unfold ▼
+
+[새로운 댓글이 달렸습니다!](https://arca.live/b/alpaca/178156134#comment)
+
+Write a Comment
+
+![Image 65](https://secure.gravatar.com/avatar/e60142593f3928a742f29e0e76a0632a?d=retro&f=y)
+
+Voice comment Arcacon
+
+Uploading
+
+0 Seconds 
+
+[Audio 2](https://arca.live/b/alpaca/178156134)
+
+[Record](https://arca.live/b/alpaca/178156134)[Stop](https://arca.live/b/alpaca/178156134)[Delete](https://arca.live/b/alpaca/178156134)업로드
+
+Write
+
+[Write Article](https://arca.live/b/alpaca/write "Write Article")
+
+[전체글](https://arca.live/b/alpaca)[개념글](https://arca.live/b/alpaca?mode=best)
+
+Recent Recently visited channel
+
+Recently visited channel
+
+ Clear All 
+
+[All](https://arca.live/b/alpaca)[일반](https://arca.live/b/alpaca?category=%EC%9D%BC%EB%B0%98)[질문](https://arca.live/b/alpaca?category=%EC%A7%88%EB%AC%B8)[정보](https://arca.live/b/alpaca?category=%EC%A0%95%EB%B3%B4)[학습](https://arca.live/b/alpaca?category=%ED%9B%88%EB%A0%A8)[자료](https://arca.live/b/alpaca?category=%EC%9E%90%EB%A3%8C)[자작모델](https://arca.live/b/alpaca?category=%EC%9E%90%EC%9E%91%EB%AA%A8%EB%8D%B8)[구동후기](https://arca.live/b/alpaca?category=%EA%B5%AC%EB%8F%99%ED%9B%84%EA%B8%B0)[스터디](https://arca.live/b/alpaca?category=%EC%8A%A4%ED%84%B0%EB%94%94)[공지](https://arca.live/b/alpaca?category=%EA%B3%B5%EC%A7%80)[운영](https://arca.live/b/alpaca?category=%EC%9A%B4%EC%98%81)[공모](https://arca.live/b/alpaca?category=%EA%B3%B5%EB%AA%A8)
+
+ Number  Title 
+
+Author Date created Views Like
+
+[일반 재미로 만든 간단한 harness ㅇㅇ 2026.07.28 1265 1](https://arca.live/b/alpaca/178285557)[일반 딥시크 내일은다르겠지 2026.07.28 527 3](https://arca.live/b/alpaca/178276105)[일반 하 AI MAX 395+ 128Gb 무지성으로 구매했는데 [11] 푸히히(211.177)2026.07.28 1882-1](https://arca.live/b/alpaca/178275860)[일반 스파크 이거 문외한이 쓰니깐 개불편하네;; [11] ㅇㅇ 2026.07.28 1263 1](https://arca.live/b/alpaca/178271043)[질문 cmp170hx로 kimi 3 ~ glm 5.2 서빙이 현실적으로 가능한가요? [3] haha 2026.07.28 1255 1](https://arca.live/b/alpaca/178246011)[정보 cmp 170 hx 구매시 주의점. [17] Wayz 2026.07.28 3431 9](https://arca.live/b/alpaca/178225234)[정보 Kimi K3 테크 리포트 훑어보기 [4] YeahEyahHaey 2026.07.28 2756 21](https://arca.live/b/alpaca/178199379)[일반 독파모 2차는 생각보다 재미 없을 수도 있을 것 같은데 [16] 디땁 2026.07.28 1786 5](https://arca.live/b/alpaca/178188559)[구동후기 solar open2에 moe expert cache 테스트 해 본 결과 [1] ㅇㅇ 2026.07.27 862 8](https://arca.live/b/alpaca/178174371)[일반 Framework에서 ai max 495+ 192gb 준비중이라니 기대중입니다. [8] Tttnew 2026.07.27 1129 2](https://arca.live/b/alpaca/178162717)[자작모델 한국어 소설 문체 임베딩 모델 개발했습니다. [46] _비인_ 2026.07.27 7181 88](https://arca.live/b/alpaca/178156134)[일반 매일 땅 팝니다. on-premise LLM 인프라/agent 구축하며 얻은 잡설 [11] ㅇㅇ(121.66)2026.07.27 1495 3](https://arca.live/b/alpaca/178146301)[일반 cmp170hx 젬마4 벤치 [46] Elkhartlake 2026.07.27 5116 13](https://arca.live/b/alpaca/178137245)[일반 cmp 170hx 언락 잘됨 [21] Elkhartlake 2026.07.27 2529 7](https://arca.live/b/alpaca/178115897)[일반 온디바이스 LLM 앱 1년 만들면서 삽질한 것들 (GPU init 실패, KV 재사용, 장기기억) [27] Inyeon 2026.07.27 2465-7](https://arca.live/b/alpaca/178101308)[구동후기 이 속도는 뭐지 [6] ㅇㅇ 2026.07.26 3554 10](https://arca.live/b/alpaca/178086791)[일반 한국 모델들도 MTP 신경 좀 써줬으면 하네요. [2] rlaflszld 2026.07.26 2434 6](https://arca.live/b/alpaca/178086560)[구동후기 llama cpp moe-ranked fork를 이용해서 GLM 5.2 돌려보기 ㅇㅇ 2026.07.26 565 2](https://arca.live/b/alpaca/178077889)[구동후기 deepseek-v4-flash-iq3-xxs 3090으로 돌려보기 [2] 포도나무 2026.07.26 1102 8](https://arca.live/b/alpaca/178051783)[일반 runpod 후기가 안좋은 글들도 보이길래 vessl ai 써보려고 함 YeahEyahHaey 2026.07.26 672 2](https://arca.live/b/alpaca/178051009)
+
+[Write Article](https://arca.live/b/alpaca/write "Write Article")
+
+[전체글](https://arca.live/b/alpaca)[개념글](https://arca.live/b/alpaca?mode=best)
+
+Keyword search form input Search
+
+*   [](https://arca.live/b/alpaca?p=1 "See Latest Post")
+*   [](https://arca.live/b/alpaca?after=2026-07-28T16%3A46%3A59.000Z)
+*   [26-07-28 16:46](https://arca.live/b/alpaca?before=2026-07-28T16%3A46%3A59.000Z)
+*   [](https://arca.live/b/alpaca?before=2026-07-26T12%3A20%3A04.000Z)
+*   [](https://arca.live/b/alpaca?after=0 "See First Post")
+
+[핫딜 채널](https://arca.live/b/hotdeal)
+
+[08-19 05:41 크라운 콘초 초코가나슈, 66g, 10개 (9,360원/무료)](https://arca.live/b/hotdeal/180335381)[08-19 06:11 대건명가 돼지국밥 630g 5팩 (20,920원/무료)](https://arca.live/b/hotdeal/180337875)[08-19 04:40 Z폴드 8 울트라 256GB (2,422,660원/무료)](https://arca.live/b/hotdeal/180330312)[08-19 01:10 비씨카드) 스페인/네덜란드산 대패 2kg (14,960원/무료)](https://arca.live/b/hotdeal/180313550)[08-19 05:07 삼탠바이미 M5 32인치 + 스탠드 (400,680원/무료)](https://arca.live/b/hotdeal/180332604)
+
+[이 채널의 개념글](https://arca.live/b/alpaca?mode=best)
+
+[08-18 12:52 엑사원 떨어질거라고 생각했던 이유](https://arca.live/b/alpaca/180277250?mode=best)[08-18 09:36 공개된 모티프 점수로 추론해보는 독파모 각 회사들 개별 점수](https://arca.live/b/alpaca/180254331?mode=best)[08-18 04:53 170hx 메모리 오류 당첨! dogㅅㅂ -> 해결됨](https://arca.live/b/alpaca/180231273?mode=best)[08-18 08:36 독파모 그냥 벤치맥싱, 치팅 안잡는거부터 답이 없다고 생각함](https://arca.live/b/alpaca/180248904?mode=best)[08-18 08:24 로컬 ai 한달정도 연구해본 초보의 소감...](https://arca.live/b/alpaca/180247842?mode=best)
+
+arca.live 1
+*   Live v2(da76ee2d)
+*   Operado por umanle S.R.L.
+*   Hecho con <3 en Asunción, República del Paraguay
+
+HELP
+*   [Ads](mailto:arcalive@safefra.me)
+*   [Contáctenos](mailto:support@arca.live)
+*   [POLÍTICA DE PRIVACIDAD Y REGLAS DE USO](https://arca.live/policy)
+
+Application
+
+[](https://play.google.com/store/apps/details?id=live.arca.android.playstore)[](https://apps.apple.com/app/arcalive/id1632140546)
+
+ This site is protected by reCAPTCHA and the Google [Privacy Policy](https://policies.google.com/privacy) and [Terms of Service](https://policies.google.com/terms) apply. 
+
+*   [](https://arca.live/b/alpaca/178156134#comment)
+*   [](https://arca.live/b/alpaca/178156134#boardBtns)
+*   [](https://arca.live/b/alpaca/178156134#top "Go to top")
+*   [](https://arca.live/b/alpaca/178156134#bottom "Go to the bottom")
+
+##### Shortcut help
+
+##### On site
+
+1 ~ 0 Go to subscription channel R Refresh?Shortcut help T Back to top W Write article B Move channel
+##### In the post
+
+A Previous post S Next post C Comment

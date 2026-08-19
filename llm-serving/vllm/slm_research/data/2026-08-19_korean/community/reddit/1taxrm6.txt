@@ -1,0 +1,29 @@
+Title: Follow-up to my TranslateGemma-12b benchmark post: human reviewers flagged 71% of the segments automated metrics rated clean - r/LocalLLaMA
+
+URL Source: https://redlib.catsarch.com/r/LocalLLaMA/comments/1taxrm6/
+
+Markdown Content:
+A couple of weeks ago I [shared the results](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sl5k6d/we_benchmarked_translategemma12b_against_5/) of a benchmark here showing TranslateGemma-12b beating frontier general models (Claude Sonnet, GPT-5.4, DeepSeek, Gemini Flash Lite) on subtitle translation across 6 languages. The result was strong enough that we wanted to verify it ourselves - was TranslateGemma really _that_ good, or were the metrics easy on it? So we added a layer of human review.
+
+Setup: 21 English subtitle segments from one tutorial video. TranslateGemma's translations into 4 languages (ES, JA, TH, ZH-CN - Korean and Traditional Chinese got dropped). 84 translations total, all chosen because they scored well on both automated metrics. Then we sent every translation to human MQM review.
+
+Under the dashboard's own red-flag threshold (`MX ≥ 5 OR CK < 0.70`):
+
+|  | auto-flagged | human-flagged (any) | human-flagged (Major) |
+| --- | --- | --- | --- |
+| ES | 0/21 | 11/21 | 2/21 |
+| JA | 0/21 | 17/21 | 3/21 |
+| TH | 0/21 | 17/21 | 5/21 |
+| ZH-CN | 1/21 | 15/21 | 3/21 |
+| **Total** | **1/84 (1.2%)** | **60/84 (71%)** | **13/84 (15%)** |
+
+Of 25 Accuracy-class errors humans found (mistranslation, omission, addition, untranslated), every single one was in the metric-blind quadrant. The metrics caught zero accuracy errors in this sample.
+
+Per-language failure modes look quite different:
+
+*   **Japanese** is the "fluent but wrong meaning" pattern - high COMETKiwi (0.86 mean), reasonable MetricX, but 10 of the 15 total mistranslations in the dataset are in JA. In the original report we'd already seen the same pattern in Claude Sonnet 4.6 on Japanese (TQI 0.5364, MetricX 3.90, COMETKiwi 0.79 - fluent-sounding but drifting from source). Looks like the failure mode generalises across model families on JA.
+*   **Thai** is over-production: 5 Accuracy/Addition errors where the model inserted content not in the source, plus a bunch of punctuation errors driven by English-style periods that Thai doesn't use.
+*   **Spanish** is mostly tone inconsistencies (formal/informal switches), genuinely the easiest of the four.
+*   **Chinese ZH-CN** had 4 Major errors total, including the one segment automated metrics flagged (Style - "unidiomatic collocation and inappropriate style"; humans agreed with the metric on that one). The other 3 Majors: another Style ("literal translation"), an Accuracy/Omission where "store" was dropped and the meaning changed, and a Fluency/Inconsistency where "ticket" was translated inconsistently across segments.
+
+Caveat: small audit on one model, one content set, so the numbers are directional rather than definitive.

@@ -1,0 +1,1598 @@
+Title: Redlib: search results - korean language model local
+
+URL Source: https://redlib.catsarch.com/r/LocalLLaMA/search?q=korean+language+model+local&restrict_sr=on&sort=relevance
+
+Markdown Content:
+[red lib.](https://redlib.catsarch.com/)
+
+Feeds
+
+MAIN FEEDS
+
+[Home](https://redlib.catsarch.com/)[Popular](https://redlib.catsarch.com/r/popular)[All](https://redlib.catsarch.com/r/all)
+
+[reddit](https://redlib.catsarch.com/r/LocalLLaMA/search?q=korean+language+model+local&restrict_sr=on&sort=relevance#popup)
+
+# You are about to leave Redlib
+
+Do you want to continue?
+
+https://www.reddit.com/r/LocalLLaMA/search?q=korean+language+model+local&restrict_sr=on&sort=relevance
+
+[No, go back!](https://redlib.catsarch.com/r/LocalLLaMA/search?q=korean+language+model+local&restrict_sr=on&sort=relevance#)[Yes, take me to Reddit](https://www.reddit.com/r/LocalLLaMA/search?q=korean+language+model+local&restrict_sr=on&sort=relevance)
+
+[settings](https://redlib.catsarch.com/settings)
+
+- [x] in r/LocalLLaMA 
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/Clean-Mention6543](https://redlib.catsarch.com/u/Clean-Mention6543)•24d ago
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[Got a 27B model running locally on a Jetson Orin NX 16GB (1-bit). still kind of amazed it works](https://redlib.catsarch.com/r/LocalLLaMA/comments/1v6evbe/got_a_27b_model_running_locally_on_a_jetson_orin/)
+
+[Video 2](https://redlib.catsarch.com/preview/pre/8ymdojzuxefh1.gif?format=mp4&s=0a25a4666ee7678d09b231050d094ef20371e301)
+
+ 18  Upvotes
+
+_Disclosure: this is my own repo — all numbers below are measured on my own board._
+
+I've had a Jetson Orin NX 16GB sitting on my desk for a while and finally got around to seeing how far I could push it. Ended up with PrismML's Bonsai 27B running fully offline on it, and honestly I'm still a little surprised it works at all — a 27B model on a board that peaks around 25W under load.
+
+**Setup**
+
+*   Jetson Orin NX 16GB, JetPack 6.2.1 (L4T r36.4.3), CUDA 12.6, MAXN SUPER power mode
+*   PrismML llama.cpp fork, built with CUDA for `sm_87`
+*   Bonsai 27B, `Q1_0_g128`, 3.53 GiB on disk / in VRAM, 26.9B params, 262k train context
+
+**Benchmarks**
+
+`llama-bench -m Bonsai-27B-Q1_0.gguf -p 512 -n 128 -ngl 99`
+
+| test | t/s |
+| --- | --- |
+| pp512 | 128.53 ± 1.51 |
+| tg128 | 6.75 ± 0.00 |
+
+Not fast, but for a single user it's completely usable. While it was running I logged the VDD_IN rail with tegrastats: ~20.7W average, 24.6W peak. A 27B model reasoning at ~25W still feels a bit unreal to me.
+
+**The part that tripped me up**
+
+You can't just `ollama run` this. Bonsai's 1-bit weights use a custom `Q1_0_g128` format, and Ollama ships its own bundled llama.cpp that has no kernel for it — so it silently refuses to load, with no useful error.
+
+You have to build PrismML's llama.cpp fork yourself with CUDA. Two things cost me time: nvcc not being on PATH on a stock JetPack image, and the build OOMing without swap. Both are written up in the repo, and there's a `setup.sh` that handles the whole thing end to end.
+
+**Quality, honestly**
+
+1-bit is brutal compression, so I want to be straight about this. English reasoning held up far better than I expected. But the moment I tried Korean it started leaking random tokens from other languages and mangling technical terms. I wouldn't use this for non-English output. For English reasoning and local tinkering it's genuinely fine. There's a ternary build if you want closer to full quality.
+
+**Repo**
+
+Full setup, benchmarks, and a real-time demo gif (not sped up — that's the actual token rate):
+
+[https://github.com/duddnr0719/bonsai-27b-jetson](https://github.com/duddnr0719/bonsai-27b-jetson)
+
+**What I'd like to know**
+
+*   Anyone else with an Orin board — do you get similar numbers? Same `llama-bench` flags above if you want a clean comparison.
+*   Has anyone run the ternary build on a 16GB board? Does it actually fit with room to spare?
+
+[32 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1v6evbe/got_a_27b_model_running_locally_on_a_jetson_orin/ "32 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/jacek2023](https://redlib.catsarch.com/u/jacek2023)•Jun 04 '26
+
+## [New Model](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22New%20Model%22&restrict_sr=on)[nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16 · Hugging Face](https://redlib.catsarch.com/r/LocalLLaMA/comments/1twla1k/nvidianvidianemotron3ultra550ba55bbf16_hugging/)
+
+[![Image 1: Thumbnail](https://redlib.catsarch.com/preview/external-pre/SYWPdNi10HCp2771NvLU21deO0yBffz9XcMeE5wwULI.png?width=140&height=75&auto=webp&s=8cfce0a9090d5f33c828e20605654adc851330ea) huggingface.co](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16)
+
+ 326  Upvotes
+
+# Model Summary
+
+| **Total Parameters** | 550B (55B active) |
+| :--- | :--- |
+| **Architecture** | LatentMoE - Mamba-2 + MoE + Attention hybrid with Multi-Token Prediction (MTP) |
+| **Context Length** | Up to 1M tokens |
+| **Minimum GPU Requirement** | 8x GB200/B200/GB300/B300, 16x H100, 8x H200 |
+| **Supported Languages** | English, French, Spanish, Italian, German, Japanese, Korean, Hindi, Korean, Brazilian Portuguese, and Chinese |
+| **Best For** | Frontier reasoning, complex agentic workflows, long-context analysis, tool use, multilingual reasoning, high-stakes RAG |
+| **Reasoning Mode** | Configurable on/off via chat template (`enable_thinking=True/False`) |
+| **License** | [OpenMDW License Agreement, version 1.1](https://raw.githubusercontent.com/OpenMDW/OpenMDW/refs/heads/main/1.1/LICENSE.OpenMDW-1.1) |
+| **Release Date** | June 4, 2026 |
+
+# What is Nemotron?
+
+NVIDIA Nemotron™ is a family of open models with open weights, training data, and recipes, delivering leading efficiency and accuracy for building specialized AI agents.
+
+# Description
+
+**Nemotron-3-Ultra-550B-A55B-BF16** is a frontier-scale large language model (LLM) trained by NVIDIA, designed to deliver strong agentic, reasoning, and conversational capabilities. It is optimized for the most demanding workloads, including complex multi-step agents, long-context analysis, and high-accuracy reasoning over code, math, and science. Like other models in the family, it responds to user queries and tasks by first generating a reasoning trace and then concluding with a final response. The model's reasoning capabilities can be configured through a flag in the chat template.
+
+The model employs a hybrid **Latent Mixture-of-Experts (LatentMoE)** architecture, utilizing interleaved Mamba-2 and MoE layers, along with select Attention layers. Like the Super model, the Ultra model incorporates **Multi-Token Prediction (MTP)** layers for faster text generation and improved quality, and it is trained using an **NVFP4** pre-training recipe to maximize compute efficiency. The model has **55B active parameters** and **550B parameters in total**.
+
+The supported languages include: English, French, Spanish, Italian, German, Japanese, Korean, Hindi, Korean, Brazilian Portuguese, and Chinese.
+
+This model is ready for commercial and non-commercial use.
+
+**Too big to run locally on my setup, 8xH200 anyone?**
+
+[156 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1twla1k/nvidianvidianemotron3ultra550ba55bbf16_hugging/ "156 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/Prashant_4200](https://redlib.catsarch.com/u/Prashant_4200)•Sep 01 '24
+
+## [Question | Help](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Question%20|%20Help%22&restrict_sr=on)[Local LLM model for text translation.](https://redlib.catsarch.com/r/LocalLLaMA/comments/1f66vxb/local_llm_model_for_text_translation/)
+
+ 13  Upvotes
+
+Does anyone know is there any local LLM model which helps me to convert text translation in various languages.
+
+Why?
+
+I'm on working on one of my desktop application where I need to translation text in various languages, initially I planning to use Google translation API or Google gemini API but the problem is that. Since users (no limit) need to translate lots of string it's increases the API cost also users need to connect with internet always.
+
+So I'm planning to use some model which I can integrate my application so users can easily performs translation without worries about their data (since all local) and I can only focus on my application rather than API costing.
+
+What I want?
+
+I just want only text translation model which translates my text english -> russian, franch, spanish, Korean, chinese, hindi vise versa etc.i doesn't care whether it giving me 2 +2 4 or 8
+
+[26 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1f66vxb/local_llm_model_for_text_translation/ "26 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/jacek2023](https://redlib.catsarch.com/u/jacek2023)•Sep 17 '25
+
+## [New Model](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22New%20Model%22&restrict_sr=on)[Magistral Small 2509 has been released](https://redlib.catsarch.com/r/LocalLLaMA/comments/1njgovj/magistral_small_2509_has_been_released/)
+
+ 623  Upvotes
+
+[https://huggingface.co/mistralai/Magistral-Small-2509-GGUF](https://huggingface.co/mistralai/Magistral-Small-2509-GGUF)
+
+[https://huggingface.co/mistralai/Magistral-Small-2509](https://huggingface.co/mistralai/Magistral-Small-2509)
+
+# Magistral Small 1.2
+
+Building upon [Mistral Small 3.2 (2506)](https://huggingface.co/mistralai/Mistral-Small-3.2-24B-Instruct-2506), **with added reasoning capabilities**, undergoing SFT from Magistral Medium traces and RL on top, it's a small, efficient reasoning model with 24B parameters.
+
+Magistral Small can be deployed locally, fitting within a single RTX 4090 or a 32GB RAM MacBook once quantized.
+
+Learn more about Magistral in our [blog post](https://mistral.ai/news/magistral/).
+
+The model was presented in the paper [Magistral](https://huggingface.co/papers/2506.10910).
+
+# Updates compared with [Magistral Small 1.1](https://huggingface.co/mistralai/Magistral-Small-2507)
+
+*   **Multimodality**: The model now has a vision encoder and can take multimodal inputs, extending its reasoning capabilities to vision.
+*   **Performance upgrade**: Magistral Small 1.2 should give you significatively better performance than Magistral Small 1.1 as seen in the [benchmark results](https://huggingface.co/mistralai/Magistral-Small-2509#benchmark-results).
+*   **Better tone and persona**: You should experiment better LaTeX and Markdown formatting, and shorter answers on easy general prompts.
+*   **Finite generation**: The model is less likely to enter infinite generation loops.
+*   **Special think tokens**: [THINK] and [/THINK] special tokens encapsulate the reasoning content in a thinking chunk. This makes it easier to parse the reasoning trace and prevents confusion when the '[THINK]' token is given as a string in the prompt.
+*   **Reasoning prompt**: The reasoning prompt is given in the system prompt.
+
+# Key Features
+
+*   **Reasoning:** Capable of long chains of reasoning traces before providing an answer.
+*   **Multilingual:** Supports dozens of languages, including English, French, German, Greek, Hindi, Indonesian, Italian, Japanese, Korean, Malay, Nepali, Polish, Portuguese, Romanian, Russian, Serbian, Spanish, Turkish, Ukrainian, Vietnamese, Arabic, Bengali, Chinese, and Farsi.
+*   **Vision**: Vision capabilities enable the model to analyze images and reason based on visual content in addition to text.
+*   **Apache 2.0 License:** Open license allowing usage and modification for both commercial and non-commercial purposes.
+*   **Context Window:** A 128k context window. Performance _might_ degrade past **40k** but Magistral should still give good results. Hence we recommend to leave the maximum model length to 128k and only lower if you encounter low performance.
+
+[![Image 2](https://redlib.catsarch.com/preview/pre/d0vo5ev3xqpf1.png?width=1342&format=png&auto=webp&s=f81d6fa64a262e991112d1c8011e18d1d75b2774)](https://redlib.catsarch.com/preview/pre/d0vo5ev3xqpf1.png?width=1342&format=png&auto=webp&s=f81d6fa64a262e991112d1c8011e18d1d75b2774)
+
+[150 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1njgovj/magistral_small_2509_has_been_released/ "150 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/yoracale](https://redlib.catsarch.com/u/yoracale)•Jun 10 '25
+
+## [New Model](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22New%20Model%22&restrict_sr=on)[mistralai/Magistral-Small-2506](https://redlib.catsarch.com/r/LocalLLaMA/comments/1l7zvph/mistralaimagistralsmall2506/)
+
+[huggingface.co](https://huggingface.co/mistralai/Magistral-Small-2506)
+
+ 498  Upvotes
+
+Building upon Mistral Small 3.1 (2503), **with added reasoning capabilities**, undergoing SFT from Magistral Medium traces and RL on top, it's a small, efficient reasoning model with 24B parameters.
+
+Magistral Small can be deployed locally, fitting within a single RTX 4090 or a 32GB RAM MacBook once quantized.
+
+Learn more about Magistral in Mistral's [blog post](https://mistral.ai/news/magistral/).
+
+# Key Features
+
+*   **Reasoning:** Capable of long chains of reasoning traces before providing an answer.
+*   **Multilingual:** Supports dozens of languages, including English, French, German, Greek, Hindi, Indonesian, Italian, Japanese, Korean, Malay, Nepali, Polish, Portuguese, Romanian, Russian, Serbian, Spanish, Swedish, Turkish, Ukrainian, Vietnamese, Arabic, Bengali, Chinese, and Farsi.
+*   **Apache 2.0 License:** Open license allowing usage and modification for both commercial and non-commercial purposes.
+*   **Context Window:** A 128k context window, **but** performance might degrade past **40k**. Hence we recommend setting the maximum model length to 40k.
+
+# Benchmark Results
+
+| Model | AIME24 pass@1 | AIME25 pass@1 | GPQA Diamond | Livecodebench (v5) |
+| :--- | :--- | :--- | :--- | :--- |
+| Magistral Medium | 73.59% | 64.95% | 70.83% | 59.36% |
+| Magistral Small | 70.68% | 62.76% | 68.18% | 55.84% |
+
+[146 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1l7zvph/mistralaimagistralsmall2506/ "146 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/samuelroy_](https://redlib.catsarch.com/u/samuelroy_)•Sep 12 '25
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[30 Days Testing Parakeet v3 vs Whisper](https://redlib.catsarch.com/r/LocalLLaMA/comments/1nf10ye/30_days_testing_parakeet_v3_vs_whisper/)
+
+ 161  Upvotes
+
+MacOS dev here who just went through integration with Parakeet v3, also known as parakeet-tdt-0.6b-v3 for dictation and meeting recordings purposes, including speaker identification. I was not alone, it was a team work.
+
+# Foreword
+
+Parakeet v3 supported languages are:
+
+Bulgarian (**bg**), Croatian (**hr**), Czech (**cs**), Danish (**da**), Dutch (**nl**), English (**en**), Estonian (**et**), Finnish (**fi**), French (**fr**), German (**de**), Greek (**el**), Hungarian (**hu**), Italian (**it**), Latvian (**lv**), Lithuanian (**lt**), Maltese (**mt**), Polish (**pl**), Portuguese (**pt**), Romanian (**ro**), Slovak (**sk**), Slovenian (**sl**), Spanish (**es**), Swedish (**sv**), Russian (**ru**), Ukrainian (**uk**)
+
+Long story short: very europe / latin-based languages focus so if you are looking for Chinese, Japanese, Korean, Arabic, Hindi, etc, you are out of luck sorry.
+
+([More details on HF](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3))
+
+# The Speed Thing Everyone's Talking About
+
+Holy s***, this thing is fast.
+
+We're talking an average of 10x faster than Whisper. Rule of thumb: 30 seconds per hour of audio to transcribe, allowing for real-time transcription and processing of hours-long files.
+
+# What Actually Works Well
+
+**A bit less accurate than Whisper but so fast**
+
+*   English and French (our main languages) work great
+*   Matches big Whisper models for general discussion in term of accuracy
+*   Perfect for meeting notes, podcast transcripts, that kind of stuff
+
+**Play well with Pyannote for diarization**
+
+*   Actually tells people apart in most scenarios
+*   Close to Deepgram Nova (our TTS cloud provider) in terms of accuracy
+*   Most of our work went here to get accuracy and speed at this level
+
+# Where It Falls Apart
+
+**No custom dictionary support**
+
+*   This one's a killer for specialized content
+*   Struggles with acronyms, company names, technical terms, french accents ;). The best example here is trying to dictate "Parakeet," which it usually writes down as "Parakit."
+*   Can't teach it your domain-specific vocabulary
+*   -> You need some LLM post-processing to clean up or improve it here.
+
+**Language support is... optimistic**
+
+*   Claims 25 languages, but quality is all over the map
+*   Tested Dutch with a colleague - results were pretty rough
+*   Feels like they trained some languages way better than others
+
+**Speaker detection is hard**
+
+*   Gets close to perfect with PYAnnote but...
+*   You'll have a very hard time with overlapping speakers and the number of speakers detected.
+*   Plus, fusing timings/segments to get a proper transcript, but overall results are better with Parakeet than Whisper.
+
+# Speech-to-text tech is now good enough on local
+
+Speech-to-text for normal use cases is solved now. Whether you use Parakeet or big Whisper models, you can get totally usable results in real-time with speaker ID.
+
+But we've also hit this plateau where having 95% accuracy feels impossible.
+
+This is especially true for having exact timecodes associated with speakers and clean diarization when two or more people speak at the same time.
+
+The good news: it will only get better, as shown with the new Precision-2 model from PYAnnote.
+
+# Our learnings so far:
+
+**If you need "good enough" transcripts** (meetings, content creation, pulling topics): Parakeet v3 is fantastic. Fast, local, gets the job done.
+
+**If you are processing long audio files and/or in batches**: Parakeet is really great too and as fast as cloud.
+
+**If you need every single word perfect** (legal, medical, compliance): You're probably still stuck with slower, more careful approaches using Whisper or closed cloud models. The plateau is real.
+
+For dictation, especially long text, you still need a LLM post process to clean out the content and do clean formatting
+
+# So Parakeet or Whisper? Actually both.
+
+Whisper's the Swiss Army knife: slower but handles edge cases (with dictionnary) and supports more languages.
+
+Parakeet is the race car: stupid fast when the conditions are right. (and you want to transcribe an european language)
+
+Most of us probably need both depending on the job.
+
+# Conclusion
+
+If you're building something where the transcript is just the starting point (topic extraction, summarization, content creation), Parakeet v3 is killer.
+
+If you're in a "every word matters" situation, you might be waiting a bit longer for the tech to catch up.
+
+Anyone else playing with that stack? What's your experience? Also if you want to get more technical, feel free to ask any questions in the comments.
+
+# Implementation Notes
+
+*   We used Argmax's WhisperKit, both open-source and proprietary versions: [https://github.com/argmaxinc/WhisperKit](https://github.com/argmaxinc/WhisperKit) They have an optimized version of the models, both in size and battery impact, and SpeakerKit, their diarization engine is fast.
+*   New kid on the block worth checking out: [https://github.com/FluidInference/FluidAudio](https://github.com/FluidInference/FluidAudio)
+*   This also looks promising: [https://github.com/Blaizzy/mlx-audio](https://github.com/Blaizzy/mlx-audio)
+
+# Benchmarks
+
+*   OpenASR Leaderboard (with multilingual benchmarks): [https://huggingface.co/spaces/hf-audio/open_asr_leaderboard](https://huggingface.co/spaces/hf-audio/open_asr_leaderboard)
+*   Argmax real-time transcription benchmarks: [https://github.com/argmaxinc/OpenBench/blob/main/BENCHMARKS.md#real-time-transcription](https://github.com/argmaxinc/OpenBench/blob/main/BENCHMARKS.md#real-time-transcription)
+*   Fluid Parakeet V3 benchmark: [https://github.com/FluidInference/FluidAudio/blob/main/Documentation/Benchmarks.md](https://github.com/FluidInference/FluidAudio/blob/main/Documentation/Benchmarks.md)
+
+[66 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1nf10ye/30_days_testing_parakeet_v3_vs_whisper/ "66 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/ylankgz](https://redlib.catsarch.com/u/ylankgz)•Sep 19 '25
+
+## [New Model](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22New%20Model%22&restrict_sr=on)[KaniTTS – Fast and high-fidelity TTS with just 450M params](https://redlib.catsarch.com/r/LocalLLaMA/comments/1nldom8/kanitts_fast_and_highfidelity_tts_with_just_450m/)
+
+[![Image 3: Thumbnail](https://redlib.catsarch.com/preview/external-pre/DHUhIc9SPOwzaKR_faGHZdzuKbPMt8UKVWBWJ3cSLrY.png?width=140&height=75&crop=140:75,smart&auto=webp&s=131ae484ed02007a4c8a9090cadf555adc6de4a1) huggingface.co](https://huggingface.co/nineninesix/kani-tts-450m-0.1-pt)
+
+ 178  Upvotes
+
+Hey [r/LocalLlama](https://redlib.catsarch.com/r/LocalLlama)!
+
+We've been tinkering with TTS models for a while, and I'm excited to share KaniTTS – an open-source text-to-speech model we built at NineNineSix.ai. It's designed for speed and quality, hitting real-time generation on consumer GPUs while sounding natural and expressive.
+
+# Quick overview:
+
+*   **Architecture**: Two-stage pipeline – a LiquidAI LFM2-350M backbone generates compact semantic/acoustic tokens from text (handling prosody, punctuation, etc.), then NVIDIA's NanoCodec synthesizes them into 22kHz waveforms. Trained on ~50k hours of data.
+*   **Performance**: On an RTX 5080, it generates 15s of audio in ~1s with only 2GB VRAM.
+*   **Languages**: English-focused, but tokenizer supports Arabic, Chinese, French, German, Japanese, Korean, Spanish (fine-tune for better non-English prosody).
+*   **Use cases**: Conversational AI, edge devices, accessibility, or research. Batch up to 16 texts for high throughput.
+
+It's Apache 2.0 licensed, so fork away. Check the audio comparisons on the [https://www.nineninesix.ai/n/kani-tts](https://www.nineninesix.ai/n/kani-tts) – it holds up well against ElevenLabs or Cartesia.
+
+Model: [https://huggingface.co/nineninesix/kani-tts-450m-0.1-pt](https://huggingface.co/nineninesix/kani-tts-450m-0.1-pt)
+
+Space: [https://huggingface.co/spaces/nineninesix/KaniTTS](https://huggingface.co/spaces/nineninesix/KaniTTS)
+
+ Page: [https://www.nineninesix.ai/n/kani-tts](https://www.nineninesix.ai/n/kani-tts)
+
+Repo: [https://github.com/nineninesix-ai/kani-tts](https://github.com/nineninesix-ai/kani-tts)
+
+Feedback welcome!
+
+[57 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1nldom8/kanitts_fast_and_highfidelity_tts_with_just_450m/ "57 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/NineThreeTilNow](https://redlib.catsarch.com/u/NineThreeTilNow)•13d ago
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[Gemma 4 31b AttnRes Project](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vgeslw/gemma_4_31b_attnres_project/)
+
+ 11  Upvotes
+
+I had Claude re-draft this for me, thus it has Em Dashes. It's correct with lots of "Claude" simplifications.
+
+---
+
+Hey all. It's been a while since I posted about the AttnRes architecture so I figured I'd give an update on where things are.
+
+Short version: it's alive. Longer version... it's complicated.
+
+So the core idea hasn't changed. Replace the standard residual stream with an attention-based routing mechanism — AttnRes — that lets the model learn WHERE to route information between layers rather than just blindly passing everything forward. Same parameter count as the base model. The hypothesis is that this is a fundamentally better use of the same compute.
+
+The part I've spent the most time on is figuring out how to actually GET there without training from scratch. I don't have Google's budget. I'm one person. So the whole strategy is built around distilling from Gemma into the new architecture using a weaning schedule — you start with the standard residual doing all the work, and you gradually shift responsibility to the AttnRes pathway over the course of training. The model learns to route through the new pathway while the old one is slowly pulled away.
+
+This sounds simple. It is not simple.
+
+The thing that took the longest to figure out was the data. Not volume... diversity. If you distill on a narrow distribution you'll get a model that handles that distribution great and has quietly lost everything else. The model manifold is this massive high-dimensional thing and you have to preserve ALL of it during the transition or you get a model that can code but suddenly responds in mixed Korean and English when you ask it about quantum mechanics. I've seen this happen. It's informative but not ideal.
+
+The solution I landed on was using the model itself to generate diverse coverage. Take a news article. Ask the model to summarize it. Then translate that summary to Bulgarian. Then ask if there are nuances lost in the Bulgarian translation. One piece of source content, three completely different regions of the model's capability space exercised. Scale that across 20 languages that Google trained Gemma to handle well and you get massive manifold coverage from relatively simple data scaffolding.
+
+The other big decision was distillation targets. Most people distill on 1-hot or label smoothed targets. I'm using top-K ~12 logits from the source model with their proportional weights maintained. The reasoning is... the model isn't a next token predictor. It's a next DISTRIBUTION predictor. The relationships between the top candidates at every position encode the model's actual knowledge — what it thinks is likely, what's plausible, what's related. One-hot throws all of that away. Top-K 12 captures ~98% of the probability mass and preserves the distributional shape that IS the manifold.
+
+This matters because during weaning, the new pathway has to learn to reproduce not just the right answers but the right uncertainty structure. That's what forces it to actually internalize the model's knowledge rather than just mimicking outputs.
+
+The goal is NOT perfection. I want a beta that proves the architecture works and is trainable. Good enough that someone can take it, distill new knowledge in using the pipeline I've already built, and improve it. The training code exists because I had to write it to do this work. The data pipeline exists. The methodology is documented. All Apache 2.0.
+
+If a compute provider wants to come along and help push the model to Gemma-level quality... I'm happy to put their name on the HuggingFace card. This is meant to be a community model built on an open architecture that anyone can improve.
+
+More updates as the probing runs finish. Happy to answer questions about the methodology or the reasoning behind any of these decisions.
+
+---
+
+The core model and the training model these are largely distilled from are abliterated variants of the Gemma 4 model. So... It has no safety. It's a use at own risk thing.
+
+Right now I'm waiting on B300's. They're just not available and using a single B300 is my test target right now. Like every datacenter for the last week is 100% sold out and the second they appear they're gone.
+
+Another thing of note, I use Top K 12 distillation, but I've found that for a large portion of the dataset the top 3 or 4 work fine. This comes down to the way language, code, even logic are structured.
+
+Simplistically, you can't write "I want to eat a" and expect the next token to be apple. If you swapped the "a" to "an" then apple and anything else starting with a vowel becomes valid and the probability of everything else falls off.
+
+This happens a LOT from my observations. The other issue is quantization. Quantization affects the longer tail distributions where there are a lot of options. I'm currently investigating both of these issues to make the process more effective.
+
+Removing the layers as seen in the prior model is like... 100x the training necessary. It involves incrementally removing them. Even though I've identified all of them the model becomes too unstable to continue training AND do the other stuff. It would be a matter of cutting Gemma to 3 SWA + Global FIRST, then applying attention residuals. Alternatively, you could insert a block or two in the middle to make the model larger then train MORE then attention residuals.
+
+AFAIK no one outside Moonshot has done this, and even Moonshot used ~1.5t tokens because it was a pretrain to instruct training. Moonshot however demonstrated that their model was ~25% more efficient at learning with this residual stream. Further, Kimi K3 has now released with this exact feature. So I guess I was on to something originally.
+
+Old Post - [https://old.reddit.com/r/LocalLLaMA/comments/1ulmez2/rebuilding_gemma_4_31b_better_as_26b/](https://redlib.catsarch.com/r/LocalLLaMA/comments/1ulmez2/rebuilding_gemma_4_31b_better_as_26b/)
+
+[17 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vgeslw/gemma_4_31b_attnres_project/ "17 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/ritis88](https://redlib.catsarch.com/u/ritis88)•May 12 '26
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[Follow-up to my TranslateGemma-12b benchmark post: human reviewers flagged 71% of the segments automated metrics rated clean](https://redlib.catsarch.com/r/LocalLLaMA/comments/1taxrm6/followup_to_my_translategemma12b_benchmark_post/)
+
+ 20  Upvotes
+
+A couple of weeks ago I [shared the results](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sl5k6d/we_benchmarked_translategemma12b_against_5/) of a benchmark here showing TranslateGemma-12b beating frontier general models (Claude Sonnet, GPT-5.4, DeepSeek, Gemini Flash Lite) on subtitle translation across 6 languages. The result was strong enough that we wanted to verify it ourselves - was TranslateGemma really _that_ good, or were the metrics easy on it? So we added a layer of human review.
+
+Setup: 21 English subtitle segments from one tutorial video. TranslateGemma's translations into 4 languages (ES, JA, TH, ZH-CN - Korean and Traditional Chinese got dropped). 84 translations total, all chosen because they scored well on both automated metrics. Then we sent every translation to human MQM review.
+
+Under the dashboard's own red-flag threshold (`MX ≥ 5 OR CK < 0.70`):
+
+|  | auto-flagged | human-flagged (any) | human-flagged (Major) |
+| :--- | :--- | :--- | :--- |
+| ES | 0/21 | 11/21 | 2/21 |
+| JA | 0/21 | 17/21 | 3/21 |
+| TH | 0/21 | 17/21 | 5/21 |
+| ZH-CN | 1/21 | 15/21 | 3/21 |
+| **Total** | **1/84 (1.2%)** | **60/84 (71%)** | **13/84 (15%)** |
+
+Of 25 Accuracy-class errors humans found (mistranslation, omission, addition, untranslated), every single one was in the metric-blind quadrant. The metrics caught zero accuracy errors in this sample.
+
+Per-language failure modes look quite different:
+
+*   **Japanese** is the "fluent but wrong meaning" pattern - high COMETKiwi (0.86 mean), reasonable MetricX, but 10 of the 15 total mistranslations in the dataset are in JA. In the original report we'd already seen the same pattern in Claude Sonnet 4.6 on Japanese (TQI 0.5364, MetricX 3.90, COMETKiwi 0.79 - fluent-sounding but drifting from source). Looks like the failure mode generalises across model families on JA.
+*   **Thai** is over-production: 5 Accuracy/Addition errors where the model inserted content not in the source, plus a bunch of punctuation errors driven by English-style periods that Thai doesn't use.
+*   **Spanish** is mostly tone inconsistencies (formal/informal switches), genuinely the easiest of the four.
+*   **Chinese ZH-CN** had 4 Major errors total, including the one segment automated metrics flagged (Style - "unidiomatic collocation and inappropriate style"; humans agreed with the metric on that one). The other 3 Majors: another Style ("literal translation"), an Accuracy/Omission where "store" was dropped and the meaning changed, and a Fluency/Inconsistency where "ticket" was translated inconsistently across segments.
+
+Caveat: small audit on one model, one content set, so the numbers are directional rather than definitive.
+
+[23 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1taxrm6/followup_to_my_translategemma12b_benchmark_post/ "23 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/Aromatic-Document638](https://redlib.catsarch.com/u/Aromatic-Document638)•May 31 '26
+
+## [Other](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Other%22&restrict_sr=on)[Made a program using LocalLLM based on llama.cpp for fellow Book Lovers!](https://redlib.catsarch.com/r/LocalLLaMA/comments/1tslzyc/made_a_program_using_localllm_based_on_llamacpp/)
+
+ 13  Upvotes
+
+**TL;DR: I built an Ebook reader embedded with a compact translation model.**
+
+Hi! I know this post has a promotional nature, but it contains a concept that I believe readers who love books will appreciate, so please take a look.
+
+While talking to an AI developer from an English-speaking country living in the Middle East, I complained that the books I wanted to read weren't translated into Korean. When I suggested that we no longer need to carry English-Korean dictionaries like in the past and that AI could handle the translation, he agreed it was a great idea. That’s when I started development. He also strongly recommended that I promote this on the [r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA) subreddit, saying that the community is tech-savvy and would have a lot of insights to offer. (Yes, I actually visit [r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA) often myself. Using an LLM without security concerns is everyone's dream. I haven't achieved it yet due to financial constraints, but based on my experience renting GPUs, I believe a 70B model would satisfy 80% of my requirements.)
+
+My previous experience fine-tuning a 4B LLM and various other projects helped me significantly with this development.
+
+The features are simple. It includes functionalities tailored for book lovers:
+
+*   Inserting sticky notes while reading,
+*   Bookmarks with multiple tags,
+*   Writing book reviews.
+
+Above all, you can search through the notes and reviews you've written to find that one line that left a deep impression on you. These might seem like simple, trivial features, but I personally have many loose papers tucked into the books I've read. When I pull out a book I read long ago, I find random scraps of paper inside—bookmarks and notes.
+
+[![Image 4](https://redlib.catsarch.com/preview/pre/5u08jpjbpe4h1.png?width=1917&format=png&auto=webp&s=0297c11d9feb338c44636a98a0f63bcceb8a382e)](https://redlib.catsarch.com/preview/pre/5u08jpjbpe4h1.png?width=1917&format=png&auto=webp&s=0297c11d9feb338c44636a98a0f63bcceb8a382e)[![Image 5](https://redlib.catsarch.com/preview/pre/4xxhrpjbpe4h1.png?width=1902&format=png&auto=webp&s=73e957e9d6369d91eed12441c4caafb4b2d4e8cd)](https://redlib.catsarch.com/preview/pre/4xxhrpjbpe4h1.png?width=1902&format=png&auto=webp&s=73e957e9d6369d91eed12441c4caafb4b2d4e8cd)[![Image 6](https://redlib.catsarch.com/preview/pre/khtunukbpe4h1.png?width=1914&format=png&auto=webp&s=6539f762ba535129e8d3add9169271184ef7fe84)](https://redlib.catsarch.com/preview/pre/khtunukbpe4h1.png?width=1914&format=png&auto=webp&s=6539f762ba535129e8d3add9169271184ef7fe84)[![Image 7](https://redlib.catsarch.com/preview/pre/2pd6ipjbpe4h1.png?width=1295&format=png&auto=webp&s=d4d1a3764fd9cf4a9e316824b6fd63395f5c890a)](https://redlib.catsarch.com/preview/pre/2pd6ipjbpe4h1.png?width=1295&format=png&auto=webp&s=d4d1a3764fd9cf4a9e316824b6fd63395f5c890a)
+Because I used a 1.8B translation-specific model, it consumes relatively low VRAM (about 3–4GB) while delivering quite decent translation results.
+
+Since everyone here is sharp, I believe you will understand the operating principle just by looking at a few screenshots. I have captured scenes of it translating a German book into English.
+
+Actually, I have a long-standing personal grievance in my heart. I wanted to recommend a Korean book to a young man from Nigeria whom I met in a startup community, but I couldn't introduce it because there was no English translation. I checked with the copyright holders, and they confirmed no English version existed. Back then, using AI for translation wasn't even a thought. Now that I’ve built 'emebala', I still can’t ask that friend to use it.
+
+99% of you on this subreddit probably don't realize how powerful your own hardware and computing power are. I didn't know what life in an impoverished nation was like until I started a small business with that young Nigerian friend. They live without starving, enjoying leisure time, but that is relative to absolute standards. It’s a different story when compared to people in relatively wealthy countries. First of all, they don't have computers. Forget high-end hardware; even mid-range hardware is expensive for them. Their only device is a cheap, low-end smartphone. They can't even dream of fancy iPhone 17s or the latest flagship Androids. They don't have money for paid ChatGPT subscriptions. This is another issue, so I won't go into detail. With the advent of the LLM and AI agent era, those with paid AI models can research these regions faster than the locals themselves. However, that doesn't mean they don't crave knowledge. Diligence and poverty are separate issues. Corrupt customs officers, absurd security problems—they live accepting these as a given, but from my perspective, it incurs serious social costs. After reading books on behavioral economics, I found many parts I couldn't sympathize with because the gap is too vast. I wanted to recommend books about the heroes of Korea's economy in the 50s and 60s when it was poorer, but I had no way to deliver them. So, I bought a few other books in English from a small British e-book broker and had him read and discuss them. Anyway, this is the uncomfortable feeling I carry. I have ideas for people in poor countries in the future, for those who don't have the hardware, but as of now, I lack the overall capabilities and infrastructure to execute them. Life is short, and if I don't take the next steps, I might not be able to recommend the right book at the right time.
+
+Personally, I once did translation work for a Korean Catholic broadcasting station as a volunteer rather than as a job. I was paid, but the hours I worked were much longer than that. So, I know the difficulties translators face, and I know their jobs are disappearing. But I don't think it ends there. Translators need to do more work. With people like me. AI should handle the initial translation, but the "tastier" translation is a field that humans must handle directly. This is an area I will keep in mind and focus on in the future.
+
+There are many booksellers in the world. There are giant bookstores like Amazon and Barnes & Noble, but there are also many very small booksellers. I want 'emebala' to handle books in all the world's languages. I've created a 'Find Book' tab where the feature isn't implemented yet. I want to make it possible to connect to bookstores to buy them, or download free books. If this project goes well, if it goes really well... I want to use a portion of the earnings to buy copyrights and effectively release them for free. So that people can buy them for just $0.5 or $1. I'll need to solve the unique DRM issues with booksellers, but such technical problems aren't the real issues, are they?
+
+The topic has jumped around too much. It's because 'emebala' is my constant concern from the moment I wake up until I sleep. It’s a promotional post, but please don't hate it too much. And I ask for your support.
+
+I've also created [r/emebala](https://redlib.catsarch.com/r/emebala) subreddit. I ask for your interest, especially those who love books!
+
+[https://www.reddit.com/r/emebala/comments/1trszm4/finally_it_is_released/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button](https://redlib.catsarch.com/r/emebala/comments/1trszm4/finally_it_is_released/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button)
+
+[20 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1tslzyc/made_a_program_using_localllm_based_on_llamacpp/ "20 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/ritis88](https://redlib.catsarch.com/u/ritis88)•Apr 14 '26
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[We benchmarked TranslateGemma-12b against 5 frontier LLMs on subtitle translation - it won across the board, with one significant catch](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sl5k6d/we_benchmarked_translategemma12b_against_5/)
+
+ 45  Upvotes
+
+As part of our ongoing translation quality research at Alconost, we put six models through subtitle translation into six language pairs. At first glance the numbers told a clean story. Then human QA added a chapter.
+
+**Models:**
+
+*   TranslateGemma-12b
+*   gemini-3.1-flash-lite-preview
+*   deepseek-v3.2
+*   claude-sonnet-4-6
+*   gpt-5.4-mini
+*   gpt-5.4-nano
+
+**Languages:** EN to Spanish, Japanese, Korean, Thai, Chinese Simplified, Chinese Traditional
+
+**Results (avg TQI - our combined metric, higher = better)**
+
+| Rank | Model | Avg TQI |
+| :--- | :--- | :--- |
+| #1 | TranslateGemma-12b | 0.6335 |
+| #2 | gemini-3.1-flash-lite-preview | 0.5981 |
+| #3 | deepseek-v3.2 | 0.5946 |
+| #4 | claude-sonnet-4-6 | 0.5811 |
+| #5 | gpt-5.4-mini | 0.5785 |
+| #6 | gpt-5.4-nano | 0.5562 |
+
+TQI = COMETKiwi × exp(−MetricX/10) - details in the report.
+
+The pattern held across every individual language. Draw your own conclusions, but the consistency is hard to ignore: a 12B task-specific model outperformed every general-purpose frontier model on translation fidelity across all six language pairs.
+
+Second notable result: gemini-3.1-flash-lite-preview - a lite model - consistently finished #2-3, ahead of full-weight Claude Sonnet and both GPT-5.4 variants.
+
+All models scored 0.75-0.79 on COMETKiwi (fluency). Models diverged significantly on MetricX-24 fidelity - TranslateGemma averaged 2.18 vs 3.06 for gpt-5.4-nano.
+
+**The catch**
+
+TranslateGemma ranked #1 across all languages. Then our linguists reviewed the Traditional Chinese output.
+
+The model was outputting Simplified Chinese for both zh-CN and zh-TW language codes. We investigated community reports suggesting zh-Hant as the correct explicit tag for Traditional Chinese and retested. Still didn't fix it: 76% of segments came back Simplified, 14% Traditional, 10% ambiguous (segments too short or script-neutral to classify). MetricX-24 and COMETKiwi gave top scores throughout and showed no sign of an issue.
+
+[![Image 8](https://redlib.catsarch.com/preview/pre/0f18kzv1p4vg1.jpg?width=773&format=pjpg&auto=webp&s=3ce537b8ad1a1a33461a478fe634a9f616682d1c)](https://redlib.catsarch.com/preview/pre/0f18kzv1p4vg1.jpg?width=773&format=pjpg&auto=webp&s=3ce537b8ad1a1a33461a478fe634a9f616682d1c)
+As it turns out, this is a confirmed, publicly documented issue caused by training data bias - TranslateGemma's fine-tuning corpus is heavily skewed toward Simplified Chinese. The locale tags are accepted without error but not honored by the model's weights. This affects all model sizes (4B, 12B, 27B) - upgrading to a larger model size won't resolve it, since the root cause is training data composition, not capacity. The documented workaround is OpenCC s2twp post-processing.
+
+The part most relevant to anyone building pipelines: your QE scores will look fine the whole time. The failure is completely invisible to automated metrics.
+
+The full report with per-language breakdowns, segment-level examples, and methodology (tabs are clickable): [https://files.alconost.com/r_DbyQKw3ZXKWUVvxpN5t](https://files.alconost.com/r_DbyQKw3ZXKWUVvxpN5t)
+
+[21 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sl5k6d/we_benchmarked_translategemma12b_against_5/ "21 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/Charming-Author4877](https://redlib.catsarch.com/u/Charming-Author4877)•14d ago
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[srt2speech: open-source, multilingual SRT narration with voice cloning and automatic duration matching - offline and lightweight](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vfcdnx/srt2speech_opensource_multilingual_srt_narration/)
+
+ 7  Upvotes
+
+For a small side project, I needed a basic AI speech tool to narrate videos without relying on expensive hardware or external APIs. It did not need the most expressive AI, just reliable output and matching to the SRT.
+
+The main challenge with converting SRT subtitles to speech is timing. Subtitles include pauses, and each spoken line has to fit into its exact time slot. Most speech generators do not handle that well on their own.
+
+So I built **srt2speech**.
+
+It uses a combination of:
+
+*   pitch-corrected speed adjustment
+*   automatic regeneration
+*   modification of pauses between words
+*   exact placement of silence between subtitle cues
+
+SRT does not support multiple speakers, so I also added simple templating.
+
+ Adding `{{speaker_name}}` to a subtitle automatically switches voices.
+
+ Of course voice cloning is supported, I added a small helper script.
+
+Dependencies are minimal: Python, NumPy, llama.cpp, and the required GGUF speech models. I tested it with Q4 quantization, which works well.
+
+**Performance on my laptop:**
+
+*   RTX 4080 Laptop GPU: around 12–13× real time
+*   CPU only: around 1.5–2.0× real time
+
+**Languages supported:**
+
+*   English (`en`)
+*   Japanese (`jp`)
+*   Korean (`ko`)
+*   Chinese (`zh`)
+*   French (`fr`)
+*   German (`de`)
+
+It should work on almost any hardware, including old PCs, Linux or Mac.
+
+It may be useful for anyone generating narration, translated audio tracks, accessibility audio, or quick video voiceovers.
+
+The project is open source under the Apache 2.0 license. Attribution and license notices must be preserved.
+
+GitHub:
+
+[https://github.com/Waversense/srt2speech/](https://github.com/Waversense/srt2speech/)
+
+The readme contains the 5 steps needed to set it up, you can get started in 2 minutes.
+
+ The included demo.srt file demonstrates the features.
+
+More support for different AI, including whisper integration are planned updates.
+
+ It will always stay lightweight and simple to install
+
+Update:
+
+ Here's the link to my original post, I'll post updates there:
+
+[https://www.reddit.com/r/LocalTextToSpeech/comments/1vawikw/srt2speech_opensource_multilingual_srt_narration/](https://redlib.catsarch.com/r/LocalTextToSpeech/comments/1vawikw/srt2speech_opensource_multilingual_srt_narration/)
+
+[8 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vfcdnx/srt2speech_opensource_multilingual_srt_narration/ "8 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/shoonee_balavolka](https://redlib.catsarch.com/u/shoonee_balavolka)•Feb 13 '26
+
+## [Other](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Other%22&restrict_sr=on)[I gave my on-device LLM 3% English data. It decided to be better at English than main language.](https://redlib.catsarch.com/r/LocalLLaMA/comments/1r42r9b/i_gave_my_ondevice_llm_3_english_data_it_decided/)
+
+ 23  Upvotes
+
+[![Image 9](https://redlib.catsarch.com/preview/pre/wo8sb8vi5cjg1.jpg?width=1856&format=pjpg&auto=webp&s=ffb852d59eec38cf022616fe150f55ca43f91c88)](https://redlib.catsarch.com/preview/pre/wo8sb8vi5cjg1.jpg?width=1856&format=pjpg&auto=webp&s=ffb852d59eec38cf022616fe150f55ca43f91c88)
+I’ve been messing around with Gemma 3 270M lately, and I’ve run into the most hilarious reality check.
+
+Since I’m based in Korea, I spent weeks obsessing over a fine-tuning dataset that was 97% Korean. I really tried to bake in every possible nuance and emotional expression. I threw in a tiny 3% of English data just so it wouldn’t be totally lost in translation—I honestly didn't expect much at all.
+
+But here’s the twist: The Korean side—the part I actually put my blood, sweat, and tears into—is still a bit of a wild card and gives random or off-topic responses sometimes. Meanwhile, the 3% English data is pumping out relatively clean and coherent replies!
+
+It’s pretty humbling (and a bit frustrating!) to see my "low-effort" English support behaving better than the language I actually focused on. I guess the base model’s pre-training is doing some heavy lifting here, but it definitely means I’ve still got some work to do on the Korean side!
+
+Just for some context on the screenshot, I’m actually building an on-device diary app called Offgram. The idea is to have a locally running LLM act as a companion that leaves thoughtful (and hopefully not too random) comments on your daily entries so you don't feel like you're just writing into a void.
+
+Since it's a diary, I'm a firm believer that privacy is non-negotiable, so everything runs 100% on-device—zero data ever leaves your phone. Using the tiny 270M model keeps things super snappy with basically no latency. It’s still under heavy development, but I’m planning to launch it soon!
+
+Has anyone else working with these ultra-small models seen this kind of "language flip"? I’d love to hear your theories or any tips on how to keep these tiny models on track!
+
+[28 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1r42r9b/i_gave_my_ondevice_llm_3_english_data_it_decided/ "28 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/Civil-Image5411](https://redlib.catsarch.com/u/Civil-Image5411)•Apr 27 '26
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[Turbo-OCR Update: Layout Model + Multilingual](https://redlib.catsarch.com/r/LocalLLaMA/comments/1swwns0/turboocr_update_layout_model_multilingual/)
+
+ 29  Upvotes
+
+Follow-up to my[post 18 days ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1sg8lfr/turboocr_for_highvolume_image_and_pdf_processing/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1&utm_content=share_button) about the C++/CUDA OCR server. Two additions:
+
+**What's New:**
+
+*   **Layout model:**Added PP-StructureV3 for layout detection
+*   **Multilingual:**No longer Latin-only. Now supports Chinese, Japanese, Korean, Cyrillic, Arabic, and Latin-script languages. 
+
+Same stack: C++, TensorRT FP16, multi-stream, gRPC/HTTP, direct pdf endpoint.
+
+**Benchmarks (Linux / RTX 5090 / CUDA 13.2):**
+
+*   Very text-heavy images: 100+ img/s
+*   Sparse/Low-text: 1,000+ img/s
+*   270p/s on FUNSD Dataset
+
+Source: [github.com/aiptimizer/TurboOCR](http://github.com/aiptimizer/TurboOCR)
+
+[12 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1swwns0/turboocr_update_layout_model_multilingual/ "12 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/PrimaryAbility9](https://redlib.catsarch.com/u/PrimaryAbility9)•Mar 26 '26
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[MacParakeet - Free + Open-source WisprFlow alternative that runs on Mac Silicon](https://redlib.catsarch.com/r/LocalLLaMA/comments/1s3x30d/macparakeet_free_opensource_wisprflow_alternative/)
+
+[![Image 10: Thumbnail](https://redlib.catsarch.com/preview/pre/i193zhu1bbrg1.png?width=140&height=108&auto=webp&s=7c92b79b1afaffb113982fa4ac462ff2cf7e6068) gallery](https://redlib.catsarch.com/r/LocalLLaMA/comments/1s3x30d/macparakeet_free_opensource_wisprflow_alternative/)
+
+ 28  Upvotes
+
+I'm on a journey to replacing my monthly SaaS subscriptions. First stop is WisprFlow.
+
+So I built **MacParakeet** (MacOS only) as a replacement. It's free and open-source under GPL!
+
+I mainly focused on the things that I need, which boiled down to:
+
+ - WisprFlow-like UIUX for dictation (smooth + polished)
+
+ - YouTube transcription & export to multiple formats
+
+There are some additional features I added, like chat with youtube transcript (integration is available with local ollama or cloud vendors like openai or claude). It runs on NVIDIA's Parakeet model (0.6B-v3) via FluidAudio, which has the best performance for realtime transcription for English. 60 min of audio transcribes in <30 seconds (after the local model has been loaded the first time ofc). WER is also very low.
+
+There are many other similar apps out there with much wider array of features, but I made this for myself and will continue iterating in the spirit of "_there are many dictation/transcription apps, but this one is mine._" (homage to badlogicgame's pi agent)
+
+**How it works**
+
+ - Press a hotkey in any app, speak, then text gets pasted
+
+ - File transcription: drag-drop audio/video files
+
+ - Transcribe YouTube URLs via yt-dlp
+
+ - Speaker diarization - identifies who said what, with renameable labels
+
+ - AI summaries and chat - bring your own API key (OpenAI, Anthropic, Ollama, OpenRouter)
+
+ - Clean text pipeline - filler word removal, custom words, text snippets
+
+ - Export formats - TXT, Markdown, SRT, VTT, DOCX, PDF, JSON
+
+**Limitations:**
+
+ - Apple silicon only (M1/M2/M3/M4 etc)
+
+ - Best with English - supports 25 European languages but accuracy varies; No broad multi-lingual support, so it won't transcribe korean, japanese, chinese, etc.
+
+This app has been in production for about 3 weeks now with 300 downloads thus far. Most of the discovery coming in from organic google search. I've been continually fixing and refining. In any case, I have cancelled subscription to wisprflow (which is a great app and has served me well for many months); but local asr models (like Parakeet) and runtime (like FluidAudio) have gotten way too good to ignore.
+
+Hope you like it - let me know!
+
+Website - [https://www.macparakeet.com/](https://www.macparakeet.com/)
+
+ Github - [https://github.com/moona3k/macparakeet](https://github.com/moona3k/macparakeet)
+
+PS 1. I also consume korean/chinese youtube content so I'll be adding support for qwen3-asr for transcribing asian languages in the near future.
+
+PS 2. The chat with youtube transcript feature is very barebones.. Claude will soon deliver more features, including:
+
+ - chat history navigation
+
+ - context window management (like auto-compaction in the background)
+
+ - chat with multiple videos/transcripts
+
+ - (and there can be so much done here...)
+
+Btw, if you are using windows or linux, you should try out Handy ([https://github.com/cjpais/handy](https://github.com/cjpais/handy)), which is basically what my app is doing plus more, plus it's cross-platform (mac supported too ofc). I was encouraged to open my project upon seeing Handy's work.
+
+[15 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1s3x30d/macparakeet_free_opensource_wisprflow_alternative/ "15 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/jshin49](https://redlib.catsarch.com/u/jshin49)•Aug 01 '25
+
+## [New Model](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22New%20Model%22&restrict_sr=on)[[P] Tri-70B-preview-SFT: New 70B Model (Research Preview, SFT-only)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1mejkcu/p_tri70bpreviewsft_new_70b_model_research_preview/)
+
+ 63  Upvotes
+
+Hey [r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA),
+
+We're a scrappy startup at Trillion Labs and just released [Tri-70B-preview-SFT](https://huggingface.co/trillionlabs/Tri-70B-preview-SFT), our largest language model yet (70B params!), trained from scratch on ~1.5T tokens. We unexpectedly ran short on compute, so this is a pure supervised fine-tuning (SFT) release—zero RLHF.
+
+# TL;DR:
+
+*   **70B parameters**; pure supervised fine-tuning (**no RLHF** yet!)
+*   **32K token context window** (perfect for experimenting with Yarn, if you're bold!)
+*   Optimized primarily for **English and Korean**, with decent Japanese performance
+*   Tried some new tricks (**FP8 mixed precision, Scalable Softmax, iRoPE attention**)
+*   Benchmarked roughly around **Qwen-2.5-72B and LLaMA-3.1-70B**, but it's noticeably raw and needs alignment tweaks.
+*   Model and tokenizer fully open on 🤗 HuggingFace under a permissive license (**auto-approved** conditional commercial usage allowed, but it’s definitely experimental!).
+
+# Why release it raw?
+
+We think releasing Tri-70B in its current form might spur unique research—especially for those into RLHF, RLVR, GRPO, CISPO, GSPO, etc. It’s a perfect baseline for alignment experimentation. Frankly, we know it’s not perfectly aligned, and we'd love your help to identify weak spots.
+
+Give it a spin and see what it can (and can’t) do. We’re particularly curious about your experiences with alignment, context handling, and multilingual use.
+
+**👉 ** [**Check out the repo and model card here!**](https://huggingface.co/trillionlabs/Tri-70B-preview-SFT)
+
+Questions, thoughts, criticisms warmly welcomed—hit us up below!
+
+[38 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1mejkcu/p_tri70bpreviewsft_new_70b_model_research_preview/ "38 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/BunchaQuestion](https://redlib.catsarch.com/u/BunchaQuestion)•May 25 '26
+
+## [Question | Help](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Question%20|%20Help%22&restrict_sr=on)[Need Help - What would you build? Air-gapped NL assistant that is integrated with Splunk](https://redlib.catsarch.com/r/LocalLLaMA/comments/1tnpg9h/need_help_what_would_you_build_airgapped_nl/)
+
+ 9  Upvotes
+
+So I have a side project with given scope:
+
+*   Fully air-gapped / on-prem - no internet, no outbound calls of any kind
+*   Engineers ask questions about Splunk data in natural language
+*   Has to hold the conversation in Korean (index/field names stay English)
+*   Local/small models preferred, needs to fit a modest GPU - was looking at Qwen/Gemma4 but indexing more on what is good enough small model to have decent performance
+*   Some memory across the session (not required, but at least within the current session would be nice)
+*   Strictly read-only and safe enough to point at prod logs
+
+I am thinking simple chat interface (like claude, openAI style) where we give Splunk API access for AI to retrieve and reason.
+
+2 Questions:
+
+*   I was thinking deploying like Openclaw/Hermes agent + small language model to start - because I really like the interaction with them. Is there any better or easier way to achieve similar experience? (vLM, ollama, open WebUI, any suggestions would be nice)
+*   In terms of outcome, what do you think we can actually let it do? log analysis? RCA? basic questions?
+
+Pretty new to this and trying to learn.. any initial guidance or tips would be awesome!
+
+[9 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1tnpg9h/need_help_what_would_you_build_airgapped_nl/ "9 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/AIatMeta](https://redlib.catsarch.com/u/AIatMeta)•8d ago
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[Introducing Muse Glimmer: an open-weight model optimized for always-on local agent workflows](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vkgsum/introducing_muse_glimmer_an_openweight_model/)
+
+[![Image 11: Thumbnail](https://redlib.catsarch.com/preview/pre/d61pdytdviih1.jpg?width=140&height=140&crop=1:1,smart&auto=webp&s=a9bd06548c930452218a339ca26a79de14dd13cd) gallery](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vkgsum/introducing_muse_glimmer_an_openweight_model/)
+
+ 1.8k  Upvotes
+
+Hi [r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA) 👋
+
+Today we’re excited to release Muse Glimmer, a 30B open-weight model built specifically for local agent workflows. We’re releasing the weights to the community under a permissive Apache 2.0 license.
+
+**A few specs**
+
+*   30B params, dense
+*   Multimodal: interleaved text + images via a dedicated perception encoder
+*   Trained on 100+ languages
+*   Controllable reasoning effort (quality/speed tradeoff)
+
+**Memory footprint**
+
+ At full precision, 30B needs 55+ GB, which is out of reach for consumer hardware. We quantize weights to ~4-bit, bringing the LM under 20 GB. That leaves headroom in a 24 GB or 32 GB envelope for the KV cache, the perception encoder, and the speculative decoding drafter running simultaneously. We validated minimal to no degradation on agentic tasks under compression.
+
+**Speculative decoding**
+
+ Ships with a lightweight DFlash-based drafter that proposes blocks of tokens which the main model verifies in parallel. Significantly faster than token-by-token generation with identical output quality. We're also shipping quantized drafter versions so the memory overhead stays small.
+
+**A few capabilities**
+
+ We trained Muse Glimmer for agentic loop tasks, including:
+
+*   End-to-end task completion (strong performance on DeepSearch QA, MCP-Atlas, 𝛕 3-Bench, SWE-Bench, and more)
+*   Function calling with precise schemas across long workflows
+*   Multi-step reasoning over long horizons
+*   Failure recovery — when a tool call fails or returns something unexpected, it's trained to diagnose and retry instead of halting. This was a deliberate training target.
+*   Works with OpenClaw and other agentic scaffolds
+*   Multimodal understanding and reasoning
+
+**Running it**
+
+ Weights are up on Hugging Face. Coming soon: Ollama, LM Studio, Unsloth and torchtitan, plus optimized integrations for llama.cpp, MLX, and ExecuTorch. vLLM and SGLang for serving. Get started quickly with Together AI, Fireworks AI, and OpenRouter. We're also working with AMD, Arm, Dell, Intel, and NVIDIA on per-device optimization.
+
+We look forward to your feedback and seeing what the community builds with Muse Glimmer.
+
+🔗 Weights: [https://huggingface.co/meta-models](https://huggingface.co/meta-models)
+
+ 🔗 Research Blog: [https://go.meta.me/museglimmer](https://go.meta.me/museglimmer)
+
+ 🔗 Resources: [https://developer.meta.com/ai/models/muse-glimmer/](https://developer.meta.com/ai/models/muse-glimmer/)
+
+[371 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vkgsum/introducing_muse_glimmer_an_openweight_model/ "371 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/0ffCloud](https://redlib.catsarch.com/u/0ffCloud)•Jun 26 '25
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[Tips that might help you using your LLM to do language translation.](https://redlib.catsarch.com/r/LocalLLaMA/comments/1lklzav/tips_that_might_help_you_using_your_llm_to_do/)
+
+ 30  Upvotes
+
+After using LLM translation for production work(Korean<->English<->Chinese) for some time and got some experiences. I think I can share some idea that might help you improve your translation quality.
+
+*   Give it context, detailed context.
+*   If it is a text, tells it what this text is about. Briefly.
+*   If it is a conversation, assign name to each person. Prompt the model what it he/she doing, and insert context along the way. Give it the whole conversation, not individual line.
+*   **Prompt the model to repeat the original text before translating.** This will drastically reduce the hallucination, especially if it's a non-thinking model.
+*   Prompt it to analysis each section or even individual sentence. Sometimes they might pick the wrong word in the translation result, but give you the correct one in the analysis.
+*   If the model is not fine tuned to a certain format, don't prompt it to input/output in that format. This will reduce the quality of translation by a lot, especially in small model.
+*   Try to translate it into English first, this is especially true for general model without the fine tuning.
+*   Assert how good the model is in the language by giving it some simple task in the source/target language. If it can't understand the task, it can't translate that.
+
+A lot of these advice will eats a lot of context window, but it's the price to pay if you want high quality translation.
+
+Now, for my personal experience:
+
+For the translation task, I like Gemini Pro the most, I literally had a wow moment when I fist saw the result. It even understand the subtle tone change in the Korean conversation and knows why. For the first time I don't have to do any editing/polishing on the output and could just copy and paste. It gets every merit correctly with an original content.
+
+The local counterpart Gemma 3 12/27b QAT is also pretty good. It might missed a few in-joke but as a local model without fine tuning, most of time it's gets the meaning correct and "good enough". But it's really sensitive to the system prompt, if you don't prompt it correctly it will hallucinate to hell.
+
+Qwen 3 32b q4k-xl is meh unless it's being fine tuned(even QwQ 32b is better than Qwen3 32b). "Meh" means it sometime gets the meaning of the sentence wrong in about 1 of 10, often with wrong words being used.
+
+Deepseek R1-0528 671b FP8 is also meh, for its size it has greater vocabulary but otherwise the result isn't really better than Gemma3.
+
+ChatGPT 4o/o3 as a online model is okay-ish, it can get the meaning correctly but often loses the merit, as a result it often need polishing. It also seems to have less data on Korean. O3 seems to have some regression on translation. I don't have access to o4.
+
+[16 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1lklzav/tips_that_might_help_you_using_your_llm_to_do/ "16 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/OldPin8654](https://redlib.catsarch.com/u/OldPin8654)•Oct 16 '25
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[Tutorial - How to Use YanoljaNEXT-Rosetta Translation Model with LM Studio?](https://redlib.catsarch.com/r/LocalLLaMA/comments/1o8bqvg/tutorial_how_to_use_yanoljanextrosetta/)
+
+ 6  Upvotes
+
+Thank you all for your interest in YanoljaNEXT-Rosetta translation model! It has been the most trending translation model on HuggingFace!
+
+Some people asked me how to use this model using LM Studio, so here I would like to briefly explain it.
+
+# What is YanoljaNEXT-Rosetta?
+
+YanoljaNEXT-Rosetta is a powerful multilingual translation model that supports 32 languages. It's designed to provide high-quality translations with context awareness and domain-specific terminology support. Also, you can input a JSON string as a source text!
+
+# Step 1: Download and Install LM Studio
+
+First, you need to download LM Studio:
+
+1.   Visit [**https://lmstudio.ai/download**](https://lmstudio.ai/download)
+2.   Download the version for your operating system (Windows, Mac, or Linux)
+3.   Install LM Studio on your computer
+4.   Launch the application
+
+LM Studio is a desktop application that allows you to run large language models locally on your machine without needing cloud services or API keys.
+
+# Step 2: Search for the Model
+
+Once LM Studio is open:
+
+1.   Click on the **Search icon** (🔍) in the left sidebar
+2.   In the search box, type: **"rosetta"**
+3.   You should see **"Yanoljanext Rosetta 12B 2510"** appear in the search result
+
+[![Image 12](https://redlib.catsarch.com/preview/pre/rr8fl37e6ivf1.png?width=2552&format=png&auto=webp&s=055dd1a5f2097473f9a821adf4fb23ef1e2ee5a5)](https://redlib.catsarch.com/preview/pre/rr8fl37e6ivf1.png?width=2552&format=png&auto=webp&s=055dd1a5f2097473f9a821adf4fb23ef1e2ee5a5)
+# Step 3: Download the Model
+
+1.   Click on the **"YanoljaNEXT Rosetta 12B 2510"** model from the search results
+2.   You'll see different quantization options (GGUF format with different sizes)
+3.   Choose a quantization based on your hardware: 
+    *   **Q4_K_M**: Good balance of quality and size (recommended for most users)
+    *   **Q5_K_M**: Better quality, slightly larger
+    *   **Q8_0**: Highest quality, largest size
+
+4.   Click the **Download** button
+5.   Wait for the download to complete (the model is around 7-8 GB depending on quantization)
+
+Once downloaded, the model will appear in your **"My Models"** section.
+
+# Step 4: Load the Model
+
+1.   Click on the **Chat icon** (💬) in the left sidebar to go to the chat interface
+2.   At the top of the chat window, click on the **model selector dropdown**
+3.   Find **"YanoljaNEXT Rosetta 12B 2510"** in the list under "Your Models"
+4.   Click on it to load the model
+
+The model will take a few seconds to load into memory.
+
+# Step 5: Create a Translation Preset
+
+1.   First, you need to switch the UI to Power User or Developer
+2.   Then click the **settings button** on the top right corner
+3.   In the settings, look for the **preset section** (usually on the left or top)
+4.   Click the **"+" button** to create a new preset
+5.   Name it **"translation"** (or any name you prefer)
+6.   This preset will store your configuration for translation tasks
+
+[![Image 13](https://redlib.catsarch.com/preview/pre/efhz9s0o8ivf1.png?width=1400&format=png&auto=webp&s=637192a5852cdce90bb4db79849c310b24e65051)](https://redlib.catsarch.com/preview/pre/efhz9s0o8ivf1.png?width=1400&format=png&auto=webp&s=637192a5852cdce90bb4db79849c310b24e65051)
+
+Power User or Developer
+
+[![Image 14](https://redlib.catsarch.com/preview/pre/wgaxqmur8ivf1.png?width=1180&format=png&auto=webp&s=c13b84d5926d551a3a227089bf65d40c22f9dfac)](https://redlib.catsarch.com/preview/pre/wgaxqmur8ivf1.png?width=1180&format=png&auto=webp&s=c13b84d5926d551a3a227089bf65d40c22f9dfac)
+
+Clicking the monkey spanner button will show the settings panel
+
+# Step 6: Configure the System Prompt
+
+1.   Click on the **"Context"** tab at the top of the preset editor
+2.   In the **"System Prompt"** field, enter your translation instructions
+
+Here's an example system prompt:
+
+```
+Translate the user's text to Korean.
+Context: Simple introduction about a tech company.
+Tone: Informative and helpful
+Glossary:
+- Yanolja NEXT -> 야놀자넥스트
+- travel industry -> 여행 산업
+Provide the final translation immediately without any other text.
+```
+
+**You can customize this based on your needs:**
+
+*   Change the target language (e.g., "Translate the user's text to Spanish")
+*   Adjust the context and tone
+*   Add your own glossary terms for domain-specific vocabulary
+
+# Step 7: Configure the Jinja Prompt Template
+
+**This is the most critical step!** YanoljaNEXT-Rosetta uses a specific prompt format that you must configure correctly:
+
+1.   Click on the **"Model"** tab at the top in settings
+2.   Scroll down until you find **"Prompt Template"**
+3.   You'll see two options: switch to **"Template (Jinja)"** mode (not "Manual")
+4.   Clear the existing template and paste this code:
+
+​
+
+```
+{{- bos_token -}}
+{%- set system_messages = messages | selectattr('role', 'equalto', 'system') | list -%}
+{%- set user_messages = messages | selectattr('role', 'equalto', 'user') | list -%}
+{%- if system_messages | length > 0 -%}
+<start_of_turn>instruction{{ '\n' }}
+{{- system_messages[0]['content'] | trim -}}<end_of_turn>{{ '\n' }}
+{%- endif -%}
+{%- if user_messages | length > 0 -%}
+<start_of_turn>source{{ '\n' }}
+{{- user_messages[-1]['content'] | trim -}}<end_of_turn>{{ '\n' }}
+{%- endif -%}
+{%- if add_generation_prompt -%}
+<start_of_turn>translation{{ '\n' }}
+{%- endif -%}
+```
+
+# Understanding the Template:
+
+This Jinja template structures the conversation in the exact format that YanoljaNEXT-Rosetta was trained on:
+
+*   `<start_of_turn>instruction`: Contains your system prompt with translation instructions
+*   `<start_of_turn>source`: Contains the source text that needs to be translated
+*   `<start_of_turn>translation`: Signals the model to generate the translation
+
+Without this specific format, the model will not produce good translations!
+
+# Step 8: Save Your Configuration
+
+1.   Click the **"Save"** button to save your preset
+2.   You can also use **"Save As New..."** if you want to create multiple presets for different language pairs or use cases
+
+# Step 9: Start Translating!
+
+Now you're ready to use the model:
+
+1.   Make sure your **"translation"** preset is selected
+2.   In the chat input box, type or paste the text you want to translate
+3.   Press **Up icon** or hit Enter
+4.   The model will generate the translation
+
+# Example Usage:
+
+**Input (Korean):**
+
+```
+안녕하세요! 저희 회사는 인공지능 기술을 개발하고 있습니다.
+```
+
+**Output (English):**
+
+```
+Hello! Our company develops artificial intelligence technology.
+```
+
+YanoljaNEXT-Rosetta supports translation between 32 languages, including:
+
+*   English, Korean, Japanese, Chinese
+*   Spanish, French, German, Italian, Portuguese
+*   Russian, Arabic, Hindi, Thai, Vietnamese
+*   And many more!
+
+# Troubleshooting:
+
+**Problem**: The model generates text but not a proper translation
+
+*   **Solution**: Make sure you've configured the Jinja template correctly in Step 7
+
+**Problem**: The translation quality is poor
+
+*   **Solution**: Check your system prompt - be specific about the target language and context
+
+**Problem**: The model is too slow
+
+*   **Solution**: Try a smaller quantization (Q4_K_M) or enable GPU acceleration in Settings
+
+**Problem**: Running out of memory
+
+*   **Solution**: Use a smaller quantization or close other applications
+
+That's it! You're now ready to use YanoljaNEXT-Rosetta for professional translation tasks in LM Studio. Happy translating! 🌐✨
+
+If you have any questions or run into issues, feel free to ask in the comments or check the model's HuggingFace page for more information.
+
+[1 comment](https://redlib.catsarch.com/r/LocalLLaMA/comments/1o8bqvg/tutorial_how_to_use_yanoljanextrosetta/ "1 comment")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/chibop1](https://redlib.catsarch.com/u/chibop1)•Aug 11 '24
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[openbmb/MiniCPM-Llama3-V-2_5 in llama.cpp](https://redlib.catsarch.com/r/LocalLLaMA/comments/1eppklz/openbmbminicpmllama3v2_5_in_llamacpp/)
+
+ 25  Upvotes
+
+The model has been released back in May 2024, but llama.cpp finally merged [the support for openbmb/MiniCPM-Llama3-V-2_5](https://github.com/ggerganov/llama.cpp/pull/7599) 2 days ago.
+
+The [support for 2.6](https://github.com/ggerganov/llama.cpp/pull/8967) is also on the way soon. If you want to try 2.6 before getting merged, [try this](https://redlib.catsarch.com/r/LocalLLaMA/comments/1ereuk5/you_can_now_try_minicpmv_26_if_you_build_llamacpp/) instead.
+
+Here's the [official gguf.](https://huggingface.co/openbmb/MiniCPM-Llama3-V-2_5-gguf)
+
+### [Model Summary from their Huggingface:](https://huggingface.co/openbmb/MiniCPM-Llama3-V-2_5)
+
+MiniCPM-Llama3-V 2.5 is the latest model in the MiniCPM-V series. The model is built on SigLip-400M and Llama3-8B-Instruct with a total of 8B parameters. It exhibits a significant performance improvement over MiniCPM-V 2.0. Notable features of MiniCPM-Llama3-V 2.5 include:
+
+*   🔥 Leading Performance. MiniCPM-Llama3-V 2.5 has achieved an average score of 65.1 on OpenCompass, a comprehensive evaluation over 11 popular benchmarks. With only 8B parameters, it surpasses widely used proprietary models like GPT-4V-1106, Gemini Pro, Claude 3 and Qwen-VL-Max and greatly outperforms other Llama 3-based MLLMs.
+*   💪 Strong OCR Capabilities. MiniCPM-Llama3-V 2.5 can process images with any aspect ratio and up to 1.8 million pixels (e.g., 1344x1344), achieving an 700+ score on OCRBench, surpassing proprietary models such as GPT-4o, GPT-4V-0409, Qwen-VL-Max and Gemini Pro. Based on recent user feedback, MiniCPM-Llama3-V 2.5 has now enhanced full-text OCR extraction, table-to-markdown conversion, and other high-utility capabilities, and has further strengthened its instruction-following and complex reasoning abilities, enhancing multimodal interaction experiences.
+*   🏆 Trustworthy Behavior. Leveraging the latest RLAIF-V method (the newest technology in the RLHF-V [CVPR'24] series), MiniCPM-Llama3-V 2.5 exhibits more trustworthy behavior. It achieves 10.3% hallucination rate on Object HalBench, lower than GPT-4V-1106 (13.6%), achieving the best-level performance within the open-source community. Data released.
+*   🌏 Multilingual Support. Thanks to the strong multilingual capabilities of Llama 3 and the cross-lingual generalization technique from VisCPM, MiniCPM-Llama3-V 2.5 extends its bilingual (Chinese-English) multimodal capabilities to over 30 languages including German, French, Spanish, Italian, Korean, Japanese etc. All Supported Languages.
+*   🚀 Efficient Deployment. MiniCPM-Llama3-V 2.5 systematically employs model quantization, CPU optimizations, NPU optimizations and compilation optimizations, achieving high-efficiency deployment on edge devices. For mobile phones with Qualcomm chips, we have integrated the NPU acceleration framework QNN into llama.cpp for the first time. After systematic optimization, MiniCPM-Llama3-V 2.5 has realized a 150-fold acceleration in multimodal large model end-side image encoding and a 3-fold increase in language decoding speed.
+*   💫 Easy Usage. MiniCPM-Llama3-V 2.5 can be easily used in various ways: (1) llama.cpp and ollama support for efficient CPU inference on local devices, (2) GGUF format quantized models in 16 sizes, (3) efficient LoRA fine-tuning with only 2 V100 GPUs, (4) streaming output, (5) quick local WebUI demo setup with Gradio and Streamlit, and (6) interactive demos on HuggingFace Spaces.
+
+[21 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1eppklz/openbmbminicpmllama3v2_5_in_llamacpp/ "21 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/teleprint-me](https://redlib.catsarch.com/u/teleprint-me)•Aug 14 '25
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[Vox Populi: Revised](https://redlib.catsarch.com/r/LocalLLaMA/comments/1mptx5r/vox_populi_revised/)
+
+ 7  Upvotes
+
+I posted a near complete Byte-Pair Encoder Model last week, but [botched the post](https://redlib.catsarch.com/r/LocalLLaMA/comments/1mjlg5q/vox_populi/), so here's a clearer, more thorough version. I spent this past week ironing out the details to get a deeper comprehension of how the model operates from the ground up.
+
+Byte-pair is a non-trivial model because it addresses a non-trivial problem in NLP.
+
+The core idea is to pre-process text by merging the most frequent adjacent symbol pairs. This essentially takes a large corpus of text and attempts to pair the most frequently occurring symbols within that body of text. The goal is to get the model to learn subword units that better represent the structure of natural language.
+
+[HuggingFace provides materials](https://huggingface.co/docs/tokenizers/index) for the most common approaches if you're unfamiliar with them. I'm assuming most people here have a minimum exposure to these concepts already.
+
+Language is messy!
+
+Processing text for NLP is a very hard problem. Different languages have different rules.
+
+*   Latin-1 (English, Spanish, etc) uses spaces and punctuation.
+*   CJK (Chinese, Japanese, Korean) has no spaces, but does use punctuation.
+*   Languages like Breton have composite letters, like `c'h`.
+
+If you think [you can just reverse a string](https://www.youtube.com/watch?v=wCExnGiMeF0) and be done with it, you're in for a hell of ride.
+
+Let's say our corpus has the word `"blueberry"`.
+
+We check a corpus for the frequency of the most common "words" and count the number of appearances. This is used to get the statistical frequency of that word.
+
+If the word "blueberry" appears 5 times in a corpus, then it will have a frequency of 5. This becomes a likely candidate to merge pairs with.
+
+We scan the word for the best pairs and grab the one with the "best" frequency.
+
+To merge these pairs, we split the word up into individual bytes.
+
+```py
+
+> > > list("blueberry") ['b', 'l', 'u', 'e', 'b', 'e', 'r', 'r', 'y']
+> > > 
+> > > 
+> > > ```
+
+Then join them using a space as a separator.
+
+```py
+
+> > > " ".join(list("blueberry")) 'b l u e b e r r y' ```
+
+This gives us our base symbol set.
+
+Using the best pair and frequency, we scan for the most frequent adjacent pair and merge it.
+
+```
+py
+for word, freq in vocab.items():
+    syms = word.split() # ['b', 'l', 'u', 'e', 'b', 'e', 'r', 'r', 'y']
+    out = []
+    i = 0
+    while i < len(syms): # stop at 'y'
+        if i + 1 < len(syms) and syms[i] == a and syms[i + 1] == b:
+            out.append(a + b)  # merge the pair
+            i += 2  # skip the next symbol
+        else:
+            out.append(syms[i]) # nothing to merge
+            i += 1 # go to next symbol
+    new_word = " ".join(out) # "b l u e be r r y"
+    new_vocab[new_word] = new_vocab.get(new_word, 0) + freq
+```
+
+The number of collisions is simply the frequency of each time that pair is found. So here, `be` might be the best pair, or `er` depending on the frequency. This happens for the number of selected merges during training.
+
+Each time we merge a pair, we update the vocab for the next round. Pair counts and possible merges change over time as a result.
+
+By the end of the process, we may end up with two merge pairs.
+
+Lets look at an example. Suppose we have a text file with the following contents.
+
+```
+blue
+berry
+blueberry
+```
+
+Then we can dry run the sample set. It's tiny, so it's easy to exhaust all possible pairs. We'll keep it merge count small.
+
+```
+sh
+$ python -m byte.model -c samples/blueberry.txt -m 5 -v 
+[training] Initialized.
+[training] merge[0] (('b', 'e'), 2)
+[training] merge[1] (('b', 'l'), 2)
+[training] merge[2] (('be', 'r'), 2)
+[training] merge[3] (('ber', 'r'), 2)
+[training] merge[4] (('berr', 'y'), 2)
+[training] Completed.
+```
+
+We can see the best pair and it's frequency. The most common pairs are `b` and `e` and `b` and `l`.
+
+Each line shows the pair merged and its frequency in the vocab. The process just updates the vocab and runs again for the chosen number of merges.
+
+By the time we're done, we get the merges.
+
+```
+json
+  "vocab": {
+    "bl u e": 1,
+    "berry": 1,
+    "bl u e berry": 1
+  },
+  "merges": [
+    [
+      "b",
+      "e"
+    ],
+    [
+      "b",
+      "l"
+    ],
+    [
+      "be",
+      "r"
+    ],
+    [
+      "ber",
+      "r"
+    ],
+    [
+      "berr",
+      "y"
+    ]
+  ],
+```
+
+These merges are basically the “syllables” the model will use.
+
+Here's a key step and that's commonly known as prompt-processing (pp), aka tokenization, in the llama.cpp community.
+
+Before we get into the details of that, let's look at a sample run and predict some pairs.
+
+```
+sh
+$ python -m byte.model -c samples/blueberry.txt -m 5 -p "blueberry"
+[training] ...
+Tokenizer (size=265)
+Prompt: blueberry
+encoded: [107, 126, 110, 106]
+decoded: blueberry
+```
+
+The idea is: for any new input, we want to reproduce the same merge sequence, encoding it to a set of known token IDs.
+
+So "blueberry" got turned into 4 tokens ("bl", "u", "e", and "berry"). These tokens correspond to ids.
+
+```
+json
+"berry" : 106
+"bl" : 107
+"e" : 110
+"u" : 126
+```
+
+When you train the model, the model learns this mapping. During inference, the model only ever sees the IDs - not the raw characters.
+
+```
+py
+[107, 126, 110, 106]
+```
+
+Typically, the ids are fed into the embedding model, which creates the word vectors. This is out of scope, but worth noting.
+
+Lets say you ask the model, "How many b's are in blueberry?". It is impossible for the model to tell you because it never saw the raw characters. Instead, the model only saw the ids, their relationships, and has no concept of letters the way we do.
+
+**The model’s perspective is tokens as units - not letters, not "words", etc, but whatever the BPE rules defined as subword units.**
+
+When we see "blueberry", we see it as a conjoined, readable, "word". We can decompose that "word" down into it's alphabetic sequence fairly naturally (assuming we know how to read and write in that language). Note that I use quotes here because the notion of a word becomes messy once you look at other languages.
+
+When a prompt is processed, we need the list of merges to predict the most likely pairs to properly encode the input text into the list of ids which then become the models input.
+
+Usually, there's a base alphabet that's added and it is Latin-1 in most cases. This is just the ASCII table, which is just the first 256 Unicode characters (including ASCII as a subset).
+
+This is pretty trivial to build out.
+
+```
+py
+@property
+@functools.lru_cache
+def unicode(self) -> dict[int, str]:
+    # exact bijection: 0..255 -> single Unicode char (Latin-1 is perfect)
+    return {b: chr(b) for b in range(256)}
+```
+
+GPT-2 uses a more complex mapping and regular expressions, but honestly, that adds a lot of edge-case complexity that isn’t always necessary.
+
+When we encode, we need to scan the input bytes and then map them to the base unicode tokens.
+
+```py
+
+# Map text -> byte-to-unicode base tokens
+
+text = "".join(self.unicode[b] for b in text.encode("utf-8")) ids = [self.token_to_id[ch] for ch in text] ```
+
+GPT-2 uses ranks, but you can use scores, and/or combine scores with frequencies. Scaling the score by the frequency might work, but it's more involved. Otherwise, ranks and scores yield the same results. One is argmin (ranks) and the other is argmax (scores).
+
+From here, we just run greedy merges according to the learned scores/ranks.
+
+```py
+
+# Greedy merges using scores
+
+while self.scores: # skip if no merges were learned best_score = float("-inf") best_idx = None ```
+
+The naive implementation uses greedy merges with ranks in most cases. Otherwise, to beat O(V * M) time complexity, we'd need something like a trie data structure.
+
+Assuming the model is constructed properly, we already have a mapping between ids and tokens at this point.
+
+We can use the ids to figure out and predict the most likely merges that occur in the input text.
+
+```py
+
+# scan for best pair
+
+for i in range(len(ids) - 1): tok_a = self.id_to_token.get(ids[i], self.special["unk"]) tok_b = self.id_to_token.get(ids[i + 1], self.special["unk"]) merged = tok_a + tok_b score = self.scores.get(merged, float("-inf")) if score > best_score: best_score = score best_idx = i
+
+if best_idx is None: break # no more merges ```
+
+This is essentially the encoding mechanism the converts the input text "blueberry" into the predicted pairs which produce the id sequence as `["bl", "u", "e", "berry"]`.
+
+Once we've encoded the input text, we get back the list of ids.
+
+```
+sh
+[107, 126, 110, 106]
+```
+
+Decoding is easier—you just map IDs back to their tokens, and join them into the final string. That’s it.
+
+If you're curious to see how this works, the source, some examples and samples, as well as wiki ultitly, is all included and available here.
+
+[https://github.com/teleprint-me/byte-pair](https://github.com/teleprint-me/byte-pair)
+
+The `README.md` contains all the papers I read and referenced throughout the process. Shannon's method of n-grams in included in that list.
+
+So, in the future, when you're considering asking the model how many letters are in a word, think of this post. It can't. The model doesn’t see "letters". It only sees "tokens". If it gives you the right answer, you just got lucky that the tokenization happened to line up. The only other option with current models is to let it use an appropriate tool for the given task.
+
+The primary motivation behind BPE is to compress the models input sequence. This reduces the computational cost of running inference as a result. This is why modern LLMs use subword units instead of characters or words.
+
+[1 comment](https://redlib.catsarch.com/r/LocalLLaMA/comments/1mptx5r/vox_populi_revised/ "1 comment")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/Ok-Entertainment8086](https://redlib.catsarch.com/u/Ok-Entertainment8086)•Nov 15 '24
+
+## [New Model](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22New%20Model%22&restrict_sr=on)[MaskGCT: Zero-Shot Text-to-Speech with Masked Generative Codec Transformer (Best Local TTS?)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1grv6va/maskgct_zeroshot_texttospeech_with_masked/)
+
+ 27  Upvotes
+
+Github:[https://github.com/open-mmlab/Amphion/blob/main/models/tts/maskgct/README.md](https://github.com/open-mmlab/Amphion/blob/main/models/tts/maskgct/README.md)
+
+ Paper:[https://arxiv.org/abs/2409.00750](https://arxiv.org/abs/2409.00750)
+
+ Model Weights:[https://huggingface.co/amphion/MaskGCT](https://huggingface.co/amphion/MaskGCT)
+
+**Demonstrations:**[https://maskgct.github.io/](https://maskgct.github.io/)
+
+> Overview
+> 
+> 
+> MaskGCT (Masked Generative Codec Transformer) is a fully non-autoregressive TTS model that eliminates the need for explicit alignment information between text and speech supervision, as well as phone-level duration prediction. MaskGCT is a two-stage model: in the first stage, the model uses text to predict semantic tokens extracted from a speech self-supervised learning (SSL) model, and in the second stage, the model predicts acoustic tokens conditioned on these semantic tokens. MaskGCT follows the mask-and-predict learning paradigm. During training, MaskGCT learns to predict masked semantic or acoustic tokens based on given conditions and prompts. During inference, the model generates tokens of a specified length in a parallel manner. Experiments with 100K hours of in-the-wild speech demonstrate that MaskGCT outperforms the current state-of-the-art zero-shot TTS systems in terms of quality, similarity, and intelligibility.
+
+I am not the owner of this project. The demo examples are SOTA for local models as far as I know. It can even do harder voice clones like whispers. I am not knowledgeable for technical parts but from what I understand:
+
+**Pros**
+
+ -Uses the same architecture as F5, but is way better probably because it's a much bigger model (needs 12+ GB VRAM).
+
+ -Outputs clearer and higher quality voices for every reference voice.
+
+ -Supports longer reference voices (I tried up to 5 minutes and it worked fine).
+
+ -Supports [multiple languages](https://github.com/open-mmlab/Amphion/issues/302#issuecomment-2444593921), including English, Chinese, Japanese, German, French, and Korean (although languages other than English and Chinese are undertrained, as it was trained on the Emilia dataset).
+
+ -Can simulate the emotion of the text better, as in, it doesn't just copy the emotion of the reference voice, but can simulate the emotion of the text more accurately and produce a more natural voice.
+
+ -More robust and can handle tough tongue twisters without errors.
+
+ -Can clone harder voices like whispers, which F5 couldn't do. CosyVoice could do this too, but it's slower and lower quality.
+
+**Cons**
+
+ -Hard to get working on Win 11 (required [help](https://github.com/open-mmlab/Amphion/issues/323#issuecomment-2453035410) from other users to make it work).
+
+ -Still a bit wonky on Win 11, with lower quality outputs compared to the demo page.
+
+ -Struggles with predicting duration for non-English languages.
+
+ -Generally a bit worse at non-English languages on my local version.
+
+ -Can't replicate the demo page examples, for example with the whisper voice reference, it outputs something between a whisper and a low voice.
+
+I tried several different versions of this, including the original repository, the [Windows fork](https://github.com/justinjohn0306/MaskGCT-Windows), and running it in Colab (to test it on a Linux system), but I couldn't replicate the quality of the examples in any of them. While it's still better than other alternatives, it doesn't quite match the level of the examples provided. If anyone finds a method to make this work, it will probably be the best free TTS model.
+
+[10 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1grv6va/maskgct_zeroshot_texttospeech_with_masked/ "10 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/NickGr89](https://redlib.catsarch.com/u/NickGr89)•Aug 19 '24
+
+## [Tutorial | Guide](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Tutorial%20|%20Guide%22&restrict_sr=on)[DIY Transcription app: How to set up OpenAI's Whisper on your laptop - A Step-by-Step Guide to your](https://redlib.catsarch.com/r/LocalLLaMA/comments/1ew4gzf/diy_transcription_app_how_to_set_up_openais/)
+
+ 30  Upvotes
+
+Hey!
+
+This post is for those of you who prefer a DIY approach or simply can't justify the cost of a paid solution right now. I believe in the power of open-source tools and want to share how you can set up a free, private, and unlimited transcription system on your own computer using OpenAI's Whisper. It can recognize speech in numerous languages and convert it to text. According to tests, it works best with these languages: English, Spanish, Italian, Korean, Portuguese, Polish, Catalan, Japanese, German, Russian
+
+Since it's running locally, using your PC's CPU and GPU, speed of recognition heavily depends on your PC's specs. For low budget laptops, it will take 4 hours to recognize 1 hour of audio
+
+So, if you're tech-savvy, have some time on your hands, and want to dive into the nitty-gritty of speech recognition, this guide is for you. If you want to save the time - check [easy whisper app](https://easywhisper.me/) with no subscription, which will help you to transcribe audio to text easily.
+
+### **Let's dive in!**
+
+> All of this was done on a MacBook Pro M1 Pro 32 GB with macOS Ventura 13.2.1, but experiments show that 16GB of memory is quite sufficient on processors M1 and above. When working on Windows, a dedicated graphics card may be required for acceptable performance.All of this was done on a MacBook Pro M1 Pro 32 GB with macOS Ventura 13.2.1, but experiments show that 16GB of memory is quite sufficient on processors M1 and above. When working on Windows, a dedicated graphics card may be required for acceptable performance.
+
+#### **0. Environment Setup**
+
+You'll need Python3.10, git, and clang. Python3.10 is already included with macOS. To install git and clang (if you don't have them yet), run the command
+
+```
+xcode-select --install
+```
+
+Now we need to set up a virtual environment for Python, where we'll install all packages and libraries. To do this, execute the following commands:
+
+```
+python3.10 -m venv whisper && cd whisper
+source bin/activate
+```
+
+#### **1. Installing whisper.cpp**
+
+whisper.cpp is a C++ implementation of Whisper. It's worth using this instead of the original Whisper from OpenAI, as it works significantly faster. At the same time, it uses the same neural network models as OpenAI.
+
+We download the repository with whisper.cpp, build the program, and download the largest (large-v1) model from OpenAI:
+
+```
+git clone https://github.com/ggerganov/whisper.cpp.git && cd 
+whisper.cpp
+make
+./models/download-ggml-model.sh large-v1
+```
+ At this stage, you can already try to transcribe an audio recording to text by executing the following command
+
+```
+./main -m models/ggml-large-v1.bin -l ru --no-timestamps -f ~/output.wav -of output -otxt
+```
+
+The parameters mean the following:
+
+*   `-m` — path to the model file
+
+*   `-l` — language
+
+*   `--no-timestamps` — don't output time stamps in the transcript (leave only text)
+
+*   `-f` — path to the audio file in wav format
+
+*   `-of` — name of the file with the transcript (without extension!)
+
+*   `-otxt` — output in txt format (text file)
+
+If your audio file is not in .wav format, you can convert it using the ffmpeg utility:
+
+```
+ffmpeg -i audio1470766962.m4a -ar 16000 output.wav
+```
+
+#### 2. Installing libraries for speaker recognition
+
+To segment the audio file into segments with each speaker's speech separately, we'll need the following:
+
+*   pywhispercpp — Python bindings to whispercpp, so we can use fast model application in C++ right from Python.
+
+*   pyannote-audio — a set of libraries for dividing the audio stream into segments and for recognizing individual speakers in it.
+
+*   pyannote-whisper — a wrapper around pyannote-audio to use trained language models from Whisper.
+
+To install all of this, we execute the following commands:
+
+```
+pip3 install openai-whisper pywhispercpp pyannote-audio
+```
+
+Most likely, the installation of pyannote-audio will fail with an error when building the hmmlearn package, with approximately the following text
+
+```
+note: This error originates from a subprocess, and is likely not a problem with pip.
+error: legacy-install-failure
+× Encountered error while trying to install package.
+╰─> hmmlearn
+note: This is an issue with the package mentioned above, not pip.
+hint: See above for output from the failure.
+```
+
+Therefore, we'll have to install the dependencies manually using the following commands:
+
+```
+pip3 install pytorch_lightning==1.6 torch-audiomentations==0.11.0 asteroid-filterbanks==0.4
+pyannote.metrics==3.2 pyannote.pipeline==2.3 speechbrain torchaudio==2.0.0 torch==2.0.0 hmmlearn==0.2.6
+pip3 install pyannote.audio --no-deps
+```
+
+Finally, we download pyannote-whisper:
+
+```
+git clone https://github.com/yinruiqing/pyannote-whisper.git && cd pyannote-whisper
+```
+
+#### 3. Setting up the model for audio file segmentation
+
+Now we need to download the model from pyannote-audio that will parse the audio file into segments and the model configuration file. To do this, follow these steps:
+
+*   Register on the HuggingFace website
+
+*   Download the model file segmentation/pytorch_model.bin
+
+*   Download the configuration file config.yaml
+
+*   Save both files in the pyannote-whisper directory
+
+*   Edit the following fields in the config.yaml file
+
+Set pipeline.params.embedding_batch_size to 1
+
+In pipeline.params.segmentation, specify the name of the pytorch_model.bin file
+
+As a result, the config.yaml file should look like this:
+
+``` .yaml pipeline: name: pyannote.audio.pipelines.SpeakerDiarization params: clustering: AgglomerativeClustering embedding: speechbrain/spkrec-ecapa-voxceleb embedding_batch_size: 1 # reduction from 32 to 1 suddenly significantly speeds up the process, hint found in issues on github embedding_exclude_overlap: true segmentation: pytorch_model.bin # name of the model file segmentation_batch_size: 32
+
+params: clustering: method: centroid min_cluster_size: 15 threshold: 0.7153814381597874 segmentation: min_duration_off: 0.5817029604921046 threshold: 0.4442333667381752 ```
+
+#### 4. Running the code for audio transcription and segmentation
+
+After this, having all the libraries, models, and config, all that's left is to execute the Python code that will process the audio file.
+
+Save the following code in the pyannote-whisper directory in a file called diarize.py.
+
+``` from pyannote.audio import Pipeline from pyannote_whisper.utils import diarize_text from pywhispercpp.model import Model
+
+# Specify the path to the config file, it should be in the same directory as mentioned in step 3.
+
+pipeline = Pipeline.from_pretrained("config.yaml")
+
+# Specify the name of the large-v1 model and the path to the directory with whisper models from step 1.
+
+model = Model('large-v1', '/Users/guschin/whisper.cpp/models', n_threads=6)
+
+# Specify the path to the audio file that we'll transcribe to text. The path must be absolute.
+
+asr_result = model.transcribe("/Users/guschin/audio1470766962.wav", language="ru")
+
+# Converting the result to a format that pyannote-whisper understands.
+
+result = {'segments': list()}
+
+for item in asr_result: result['segments'].append({ 'start': item.t0 / 100, 'end': item.t1 / 100, 'text': item.text } )
+
+# Segmentation of the audio file into speaker utterances. The path must be absolute.
+
+diarization_result = pipeline("/Users/guschin/audio1470766962.wav")
+
+# Intersection of transcription and segmentation.
+
+final_result = diarize_text(result, diarization_result)
+
+# Output of the result.
+
+for seg, spk, sent in final_result: line = f'{seg.start:.2f} {seg.end:.2f} {spk} {sent}' print(line) ``` Run the code with the following command
+
+```
+python3 diarize.py
+```
+
+As a result of the work, segments of the original audio file will be displayed on the screen: the start and end time of the segment in seconds, the speaker identifier, and the text of the segment.
+
+Overall, the resulting combination allows for local transcription of calls and podcasts, which replaces a paid transcription app for windows and mac like [Easy Whisper app](https://easywhisper.me/) with its $49 lifetime license.
+
+Feel free to ask questions!
+
+[12 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1ew4gzf/diy_transcription_app_how_to_set_up_openais/ "12 comments")
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/maddiedreese](https://redlib.catsarch.com/u/maddiedreese)•May 12 '26
+
+## [Tutorial | Guide](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Tutorial%20|%20Guide%22&restrict_sr=on)[I got a real transformer language model running locally on a stock Game Boy Color!](https://redlib.catsarch.com/r/LocalLLaMA/comments/1tbi2n3/i_got_a_real_transformer_language_model_running/)
+
+[![Image 15: Post image](https://redlib.catsarch.com/img/1hl9id7ghs0h1.jpeg)](https://redlib.catsarch.com/img/1hl9id7ghs0h1.jpeg)
+
+ 1.6k  Upvotes
+
+No phone, PC, Wi-Fi, link cable, or cloud inference.
+
+• The cartridge boots a ROM, and the GBC runs the model itself.
+
+ • The model is Andrej Karpathy’s TinyStories-260K, converted to INT8 weights with fixed-point math so it can run without floating point.
+
+ • Built with GBDK-2020 as an MBC5 Game Boy ROM.
+
+ • The model weights live in bank-switched cartridge ROM. Prompt entry happens on-device with the D-pad/buttons and an on-screen keyboard.
+
+ • The prompt is tokenized on the Game Boy, then the ROM runs transformer prefill + autoregressive generation. The KV cache is stored in cartridge SRAM, because the GBC’s work RAM is tiny.
+
+It is extremely slow, and the output is gibberish because the math is heavily quantized/approximated, but the core thing works!
+
+Hardware: stock Game Boy Color + EZ Flash Junior + microSD.
+
+Used Codex for a large portion of the building!
+
+[https://github.com/maddiedreese/gbc-transformer](https://github.com/maddiedreese/gbc-transformer)
+
+[121 comments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1tbi2n3/i_got_a_real_transformer_language_model_running/ "121 comments")
+
+[NEXT](https://redlib.catsarch.com/r/LocalLLaMA/search?q=korean%20language%20model%20local&restrict_sr=on&sort=relevance&t=&after=t3_1tbi2n3)
+
+v0.36.0 [ⓘ View instance info](https://redlib.catsarch.com/info "View instance information")[<> Code](https://github.com/redlib-org/redlib "View code on GitHub")

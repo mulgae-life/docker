@@ -1,0 +1,802 @@
+Title: gemma4 26b a4b 모델들을 이것저것 테스트 해보고 있습니다 : 클리앙
+
+URL Source: https://www.clien.net/service/board/park/19175955
+
+Markdown Content:
+# [CLIEN](https://www.clien.net/service/ "클리앙홈 바로가기")
+
+[본문 바로가기](https://www.clien.net/service/board/park/19175955#div_content)[메뉴 바로가기](https://www.clien.net/service/board/park/19175955#menuTop)[보기설정](javascript:;)[테마설정](javascript:;)
+
+[톺아보기](https://www.clien.net/service/group/clien_all "톺아보기 바로가기")[공감글](https://www.clien.net/service/group/clien_all?&od=T33 "톺아보기의 공감글")
+
+[](javascript:;)[](javascript:;)
+
+[커뮤니티](https://www.clien.net/service/board/park/19175955)[커뮤니티전체](https://www.clien.net/service/group/board_all)[C 모두의광장](https://www.clien.net/service/group/community)[F 모두의공원](https://www.clien.net/service/board/park)[I 사진게시판](https://www.clien.net/service/board/image)[Q 아무거나질문](https://www.clien.net/service/board/kin)[D 정보와자료](https://www.clien.net/service/group/allinfo)[N 새로운소식](https://www.clien.net/service/board/news)[T 유용한사이트](https://www.clien.net/service/board/useful)[P 자료실](https://www.clien.net/service/board/pds)[E 강좌/사용기](https://www.clien.net/service/group/allreview)[L 팁과강좌](https://www.clien.net/service/board/lecture)[U 사용기](https://www.clien.net/service/board/use)[·체험단사용기](https://www.clien.net/service/board/chehum)[W 사고팔고](https://www.clien.net/service/group/allsell)[J 알뜰구매](https://www.clien.net/service/board/jirum)[S 회원중고장터](https://www.clien.net/service/board/sold)[B 직접홍보](https://www.clien.net/service/board/hongbo)[·보험상담실](https://www.clien.net/service/group/insure)[H 클리앙홈](https://www.clien.net/service/)
+
+[소모임](https://www.clien.net/service/board/park/19175955)[소모임전체](https://www.clien.net/service/group/cm_all)[·굴러간당](https://www.clien.net/service/board/cm_car)[·아이포니앙](https://www.clien.net/service/board/cm_iphonien)[·주식한당](https://www.clien.net/service/board/cm_stock)[·일본산당](https://www.clien.net/service/board/cm_japanlive)[·MaClien](https://www.clien.net/service/board/cm_mac)[·방탄소년당](https://www.clien.net/service/board/cm_bts)[·개발한당](https://www.clien.net/service/board/cm_app)[·자전거당](https://www.clien.net/service/board/cm_bike)[·야구당](https://www.clien.net/service/board/cm_baseball)[·걸그룹당](https://www.clien.net/service/board/cm_girlgroup)[·소시당](https://www.clien.net/service/board/cm_girl)[·이륜차당](https://www.clien.net/service/board/cm_mbike)[·골프당](https://www.clien.net/service/board/cm_golf)[·키보드당](https://www.clien.net/service/board/cm_keyboard)[·가상화폐당](https://www.clien.net/service/board/cm_vcoin)[·나스당](https://www.clien.net/service/board/cm_nas)[·IoT당](https://www.clien.net/service/board/cm_iot)[·육아당](https://www.clien.net/service/board/cm_baby)[·디아블로당](https://www.clien.net/service/board/cm_dia)[·DANGER당](https://www.clien.net/service/board/cm_danger)[·안드로메당](https://www.clien.net/service/board/cm_andro)[·덕질한당](https://www.clien.net/service/board/cm_ku)[·바다건너당](https://www.clien.net/service/board/cm_oversea)[·땀흘린당](https://www.clien.net/service/board/cm_gym)[·어학당](https://www.clien.net/service/board/cm_lang)[·AI당](https://www.clien.net/service/board/cm_ai)[·퐁당퐁당](https://www.clien.net/service/board/cm_swim)[·리눅서당](https://www.clien.net/service/board/cm_linux)[·레고당](https://www.clien.net/service/board/cm_lego)[·PC튜닝한당](https://www.clien.net/service/board/cm_pctuning)[·시계찬당](https://www.clien.net/service/board/cm_watch)[·3D메이킹](https://www.clien.net/service/board/cm_3dmaking)[·X세대당](https://www.clien.net/service/board/cm_70)[·ADHD당](https://www.clien.net/service/board/cm_adhd)[·AI그림당](https://www.clien.net/service/board/cm_aigurim)[·날아간당](https://www.clien.net/service/board/cm_airplane)[·사과시계당](https://www.clien.net/service/board/cm_applewatch)[·배드민턴당](https://www.clien.net/service/board/cm_badmin)[·농구당](https://www.clien.net/service/board/cm_basket)[·블랙베리당](https://www.clien.net/service/board/cm_bb)[·곰돌이당](https://www.clien.net/service/board/cm_bear)[·비어있당](https://www.clien.net/service/board/cm_beer)[·FM당구당](https://www.clien.net/service/board/cm_billiards)[·블록체인당](https://www.clien.net/service/board/cm_blockchain)[·보드게임당](https://www.clien.net/service/board/cm_board)[·활자중독당](https://www.clien.net/service/board/cm_book)[·볼링친당](https://www.clien.net/service/board/cm_bowling)[·캠핑간당](https://www.clien.net/service/board/cm_camp)[·냐옹이당](https://www.clien.net/service/board/cm_cat)[·문명하셨당](https://www.clien.net/service/board/cm_civilize)[·클래시앙](https://www.clien.net/service/board/cm_classic)[·클다방](https://www.clien.net/service/board/cm_coffee)[·콘솔한당](https://www.clien.net/service/board/cm_console)[·요리한당](https://www.clien.net/service/board/cm_cook)[·쿠키런당](https://www.clien.net/service/board/cm_cookierun)[·대구당](https://www.clien.net/service/board/cm_daegu)[·뚝딱뚝당](https://www.clien.net/service/board/cm_dduk)[·개판이당](https://www.clien.net/service/board/cm_dog)[·동숲한당](https://www.clien.net/service/board/cm_dongsup)[·날아올랑](https://www.clien.net/service/board/cm_drone)[·전기자전거당](https://www.clien.net/service/board/cm_ebicycle)[·e북본당](https://www.clien.net/service/board/cm_ebook)[·갖고다닌당](https://www.clien.net/service/board/cm_edc)[·이브한당](https://www.clien.net/service/board/cm_eve)[·패셔니앙](https://www.clien.net/service/board/cm_fashion)[·물고기당](https://www.clien.net/service/board/cm_fish)[·도시어부당](https://www.clien.net/service/board/cm_fisher)[·FM한당](https://www.clien.net/service/board/cm_fm)[·맛있겠당](https://www.clien.net/service/board/cm_food)[·포뮬러당](https://www.clien.net/service/board/cm_formula1)[·젬워한당](https://www.clien.net/service/board/cm_gemwar)[·안경쓴당](https://www.clien.net/service/board/cm_glasses)[·차턴당](https://www.clien.net/service/board/cm_gta)[·총쏜당](https://www.clien.net/service/board/cm_gun)[·하스스톤한당](https://www.clien.net/service/board/cm_hearth)[·히어로즈한당](https://www.clien.net/service/board/cm_heroes)[·인스타한당](https://www.clien.net/service/board/cm_instar)[·KARA당](https://www.clien.net/service/board/cm_kara)[·꼬들한당](https://www.clien.net/service/board/cm_kordle)[·가죽당](https://www.clien.net/service/board/cm_leather)[·LOLien](https://www.clien.net/service/board/cm_lol)[·Mabinogien](https://www.clien.net/service/board/cm_mabi)[·임시소모임](https://www.clien.net/service/board/cm_main)[·미드당](https://www.clien.net/service/board/cm_midra)[·밀리터리당](https://www.clien.net/service/board/cm_military)[·땅판당](https://www.clien.net/service/board/cm_mine)[·헌팅한당](https://www.clien.net/service/board/cm_monhunt)[·오른당](https://www.clien.net/service/board/cm_mount)[·영화본당](https://www.clien.net/service/board/cm_movie)[·MTG한당](https://www.clien.net/service/board/cm_mtg)[·소리당](https://www.clien.net/service/board/cm_music)[·노키앙](https://www.clien.net/service/board/cm_nokien)[·적는당](https://www.clien.net/service/board/cm_note)[·방송한당](https://www.clien.net/service/board/cm_onair)[·찰칵찍당](https://www.clien.net/service/board/cm_photo)[·그림그린당](https://www.clien.net/service/board/cm_pic)[·소풍간당](https://www.clien.net/service/board/cm_picnic)[·심는당](https://www.clien.net/service/board/cm_plant)[·패스오브엑자일당](https://www.clien.net/service/board/cm_poe)[·라즈베리파이당](https://www.clien.net/service/board/cm_rasp)[·품앱이당](https://www.clien.net/service/board/cm_redeem)[·리듬탄당](https://www.clien.net/service/board/cm_rhythm)[·노젓는당](https://www.clien.net/service/board/cm_rowing)[·달린당](https://www.clien.net/service/board/cm_running)[·Sea마당](https://www.clien.net/service/board/cm_sea)[·SimSim하당](https://www.clien.net/service/board/cm_sim)[·심야식당](https://www.clien.net/service/board/cm_simsik)[·윈태블릿당](https://www.clien.net/service/board/cm_slate)[·미끄러진당](https://www.clien.net/service/board/cm_snow)[·축구당](https://www.clien.net/service/board/cm_soccer)[·나혼자산당](https://www.clien.net/service/board/cm_solo)[·스타한당](https://www.clien.net/service/board/cm_star)[·스팀한당](https://www.clien.net/service/board/cm_steam)[·파도탄당](https://www.clien.net/service/board/cm_surfing)[·테니스친당](https://www.clien.net/service/board/cm_tennis)[·테스트당](https://www.clien.net/service/board/cm_test)[·빨콩이당](https://www.clien.net/service/board/cm_thinkpad)[·공대시계당](https://www.clien.net/service/board/cm_tiwatch)[·여행을떠난당](https://www.clien.net/service/board/cm_tour)[·터치패드당](https://www.clien.net/service/board/cm_tpad)[·트윗당](https://www.clien.net/service/board/cm_twit)[·창업한당](https://www.clien.net/service/board/cm_venture)[·VR당](https://www.clien.net/service/board/cm_vr)[·WebOs당](https://www.clien.net/service/board/cm_webos)[·소셜게임한당](https://www.clien.net/service/board/cm_werule)[·위스키당](https://www.clien.net/service/board/cm_whiskey)[·와인마신당](https://www.clien.net/service/board/cm_wine)[·WOW당](https://www.clien.net/service/board/cm_wow)[·윈폰이당](https://www.clien.net/service/board/cm_wp)
+
+[임시소모임](https://www.clien.net/service/board/cm_main)
+
+[고객지원](javascript:;)
+*   [게시물 삭제 요청](https://www.clien.net/service/cs/singo/article)
+*   [불법촬영물등 신고](https://www.clien.net/service/cs/singo/article?type=illegal)
+*   [쪽지 신고](https://www.clien.net/service/cs/singo/message)
+*   [닉네임 신고](https://www.clien.net/service/cs/singo/nickname)
+*   [제보 및 기타 제안](mailto:admin@clien.net)
+
+[© CLIEN.NET](https://www.clien.net/service "클리앙홈")[](https://www.clien.net/service/board/park/19175955#menuTop "메뉴맨위로")
+
+공지[점검] 잠시후 서비스 점검을 위해 약 30분간 접속이 차단됩니다. (금일 18:15 ~ 18:45)
+
+## [모두의공원](https://www.clien.net/service/board/park)
+
+### gemma4 26b a4b 모델들을 이것저것 테스트 해보고 있습니다[15](https://www.clien.net/service/board/park/19175955#comment-head "댓글 15개")
+
+[5](https://www.clien.net/service/board/park/19175955#comment-head "공감 5명")
+
+**8,203** 2026-04-10 23:08:05  59.♡.58.69
+
+메이잉
+
+우선 사양은 라이젠 7800x3d, 32기가램, rtx5070ti 16기가인데
+
+lm스튜디오로 사용하고 구글 공식 Gemma 4 26B A4B q4_k_m 사용시 gpu오프로딩 20레이어, kv양자화 q4주고 컨텍스트윈도우크기 16384일때  35/s토큰 정도 나와줍니다 사용하면서 컨텍스트 찰수록 30정도로떨어지구요
+
+레이어 한개라도 더 올리거나 컨텍스트가 커져서 gpu공유메모리가 0.1이라도 넘어가는순간 토큰생성수가 1/10이하로 뚝떨어집니다 엄청난 병목이 생기죠
+
+근데 unsloth 튜닝한 Gemma 4 26B A4B iq4_nl 사용시 gpu오프로딩 30레이어 통채로 올리고 gpu공유메모리 1.5GB를 넘겨도 토큰수가 110을 넘어갑니다 그래서 공식버전같이 공유메모리 안넘기게 레이어 조절해서 올리니 오히려 토큰수가 50초반대로 절반이 깍여버리네요
+
+iq4_nl이 중요도를 기반으로 선택적으로 더 양자화 해서 가볍게 만든거라는데 진짜 가볍긴 하네요 공식버전과 지능차이도 못느낍니다
+
+토큰수 100이 넘어가니까 화면에 뿌려지는게 엄청나게빠르네요
+
+**메이잉** 님의[게시글](javascript:;)[댓글](javascript:;)
+
+0
+
+[모공 아침에 밖에 나가니 순간적으로 썰렁하네요](https://www.clien.net/service/board/park/19243943)7
+
+08-09 2026-08-09 10:06:44
+
+3
+
+[자료실[v1.3.0업데이트] Samsung DeX를 Windows에서 실행하는 DX Manager v1.0을 만들었습니다](https://www.clien.net/service/board/pds/19230579)10
+
+07-19 2026-07-19 21:00:17
+
+5
+
+[모공 제가 만드는 삼성 덱스 매니저 윈도우용 프로그램 만들기가 거의 완료됐네요](https://www.clien.net/service/board/park/19221217)
+
+07-05 2026-07-05 16:18:27
+
+0
+
+[모공 프로그램 ui구상하는거 진짜 어렵네요](https://www.clien.net/service/board/park/19218046)18
+
+06-29 2026-06-29 12:48:47
+
+2
+
+[모공 제가만든 갤럭시 dex시스템을 윈도우프로그램으로 만들어봤습니다](https://www.clien.net/service/board/park/19209191)2
+
+06-14 2026-06-14 13:55:04
+
+0
+
+[모공 Claude의 새모델 fable5이 생명과학쪽 검열이 무지막지 한가봅니다](https://www.clien.net/service/board/park/19206488)3
+
+06-10 2026-06-10 04:13:57
+
+1
+
+[모공 6개월 그냥 냅뒀다고 안켜지던 라이젠용 메인보드 as보내보니 답이 없다네요](https://www.clien.net/service/board/park/19198946)2
+
+05-31 2026-05-31 12:40:28
+
+0
+
+[모공 gpt가 새벽에 업데이트 하더니 검열이 엄청 늘었네요](https://www.clien.net/service/board/park/19198310)4
+
+05-29 2026-05-29 19:12:16
+
+9
+
+[모공 glp-1 다이어트치료제(마운자로,위고비)가 오남용 우려 의약품 지정되네요?](https://www.clien.net/service/board/park/19197754)14
+
+05-28 2026-05-28 19:22:09
+
+ 신고 스크랩
+
+ 공유
+*   [주소복사](javascript:)
+*   [Facebook](http://www.facebook.com/sharer/sharer.php?u=https://www.clien.net/service/board/park/19175955)
+*   [X(Twitter)](https://x.com/intent/tweet?text=gemma4%2026b%20a4b%20%EB%AA%A8%EB%8D%B8%EB%93%A4%EC%9D%84%20%EC%9D%B4%EA%B2%83%EC%A0%80%EA%B2%83%20%ED%85%8C%EC%8A%A4%ED%8A%B8%20%ED%95%B4%EB%B3%B4%EA%B3%A0%20%EC%9E%88%EC%8A%B5%EB%8B%88%EB%8B%A4&url=https://www.clien.net/service/board/park/19175955)
+
+[**5**명](https://www.clien.net/service/board/park/19175955)
+
+[댓글 • [**15**]](https://www.clien.net/service/board/park/19175955#comment_write_point)
+
+[메모동기화](javascript:;)
+
+ 을 누르면 회원메모를 할 수 있습니다.
+
+삭제 되었습니다.
+
+아띠팡
+
+1 2 3 4 5 [](javascript:;)입력
+
+LINK
+
+#151438077
+
+IP 58.♡.132.183
+
+26-04-10 2026-04-10 23:15:18 
+
+대댓글 _·_ 공감 신고
+
+**0**
+
+ 햄복합니다.. 
+
+메이잉
+
+1 2 3 4 5 [](javascript:;)입력
+
+LINK
+
+#151438259
+
+IP 59.♡.58.69
+
+26-04-11 2026-04-11 01:02:01 
+
+언급 _·_ 공감 신고
+
+**0**
+
+**@아띠팡**님 저도 행복합니다 ㅋㅋ 
+
+게지히트
+
+1 2 3 4 5 [](javascript:;)입력
+
+LINK
+
+#151438087
+
+IP 125.♡.92.209
+
+26-04-10 2026-04-10 23:21:45 
+
+대댓글 _·_ 공감 신고
+
+**0**
+
+ 좋은 정보 감사합니다! 
+
+메이잉
+
+1 2 3 4 5 [](javascript:;)입력
+
+LINK
+
+#151438257
+
+IP 59.♡.58.69
+
+26-04-11 2026-04-11 01:00:43 
+
+언급 _·_ 공감 신고
+
+**0**
+
+**@게지히트**님 잘쓰세요 성능만 받춰주면 진짜 좋아요 
+
+오히려종아
+
+1 2 3 4 5 [](javascript:;)입력
+
+LINK
+
+#151438156
+
+IP 14.♡.208.210
+
+26-04-10 2026-04-10 23:57:20 
+
+대댓글 _·_ 공감 신고
+
+**0**
+
+ 실 사용 성능은 어느정도 되나요...다른 모델 비교해서요 
+
+메이잉
+
+1 2 3 4 5 [](javascript:;)입력
+
+LINK
+
+#151438255
+
+IP 59.♡.58.69
+
+26-04-11 2026-04-11 01:00:22 
+
+언급 _·_ 공감 신고
+
+**0**
+
+**@오히려종아**님 전 같은 젬마4랑만 비교해서요.. 아예 다른 모델하고의 성능은 벤치 찾아보셔애 할듯하네요 
+
+에일리언
+
+1 2 3 4 5 [](javascript:;)입력
+
+LINK
+
+#151438157
+
+IP 92.♡.186.150
+
+26-04-10 2026-04-10 23:57:49 
+
+대댓글 _·_ 공감 신고
+
+**0**
+
+[https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF](https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF) ... like 정말 많군요.
+
+AMD 9070xt 도전해봅니다... 
+
+에일리언
+
+1 2 3 4 5 [](javascript:;)입력
+
+LINK
+
+#151438190
+
+IP 92.♡.186.150
+
+26-04-11 2026-04-11 00:16:18 
+
+언급 _·_ 공감 신고
+
+**0**
+
+ LM Studio설치및 위의 모델을 올려봤습니다.
+
+엄청원활하게 도네요. 그래픽카드와 32기가의 메인 메모리는 거의 꽉차네요?? 
+
+그래도 답변 속도가 ollama에 그냥 26b 18기가 모델 돌릴 때와는 비교가 안되게 빨라서 실용적인 것 같습니다. 
+
+메이잉
+
+1 2 3 4 5 [](javascript:;)입력
+
+LINK
+
+#151438253
+
+IP 59.♡.58.69
+
+26-04-11 2026-04-11 00:59:51 
+
+언급 _·_ 공감 신고
+
+**0**
+
+**@에일리언**님 전 30레이어 통채로 올리면 본문과같이 공유메모리쪽으로 1.5기가 넘어가고 메인램은 20기가 초반 정도 먹어요
+
+근데도 속도가 미친듯이 나오니까 좋네요 
+
+천문공
+
+1 2 3 4 5 [](javascript:;)입력
+
+LINK
+
+#151438216
+
+IP 122.♡.56.205
+
+26-04-11 2026-04-11 00:26:46 
+
+대댓글 _·_ 공감 신고
+
+**0**
+
+ LMstudio에 레이어 올리는 걸 선택하는 기능이 있나요..;;
+
+전 빠른 속도 필요 없는 걸로 오프로딩 해서 비슷한 크기로 사용하는데요. 
+
+메이잉
+
+1 2 3 4 5 [](javascript:;)입력
+
+LINK
+
+#151438250
+
+IP 59.♡.58.69
+
+26-04-11 2026-04-11 00:58:06 
+
+언급 _·_ 공감 신고
+
+**0**
+
+**@천문공**님 lm스튜디오 왼쪽 메뉴에서 모델 선택하는 메뉴에서 모델 세팅 아이콘 눌러서 기본적으로 설정할수있구요
+
+채팅 하는 메뉴에서 모델 로드할때 모델 선택후 밑에 쇼 어드밴스드 세팅 토클 켜면 이것저것 세팅 할수잇습니다 
+
+아가로스
+
+1 2 3 4 5 [](javascript:;)입력
+
+LINK
+
+#151438220
+
+IP 121.♡.64.75
+
+26-04-11 2026-04-11 00:29:38 
+
+대댓글 _·_ 공감 신고
+
+**0**
+
+ 저랑 사양이 비슷하시군요… 
+
+Gemma 4 26B A4B iq4_nl 을 찾으라는거죠?
+
+저도 돌려봐야겠네요 고맙습니다 
+
+메이잉
+
+1 2 3 4 5 [](javascript:;)입력
+
+LINK
+
+#151438251
+
+IP 59.♡.58.69
+
+26-04-11 2026-04-11 00:58:43 
+
+언급 _·_ 공감 신고
+
+**0**
+
+**@아가로스**님 이거 한번 맛보니 다른 모델은 쓰기 싫어져요 추론모드 없이 답변 나올땐 진짜 질문 쓰고 엔터치자마자 바로 답이 나옵니다 
+
+![Image 3: Acidburn](https://edgio.clien.net/F94/1085122/4d5a4028c3e84704965.gif)
+
+1 2 3 4 5 [](javascript:;)입력
+
+LINK
+
+#151438545
+
+IP 211.♡.39.212
+
+26-04-11 2026-04-11 08:28:31 
+
+대댓글 _·_ 공감 신고
+
+**0**
+
+ tool call 무한루프 문제는 없으신가요? qwen3.5에서는 멀쩡한데 Gemma 4만 올리면 tool 사용이 안되서 말입니다..;; 
+
+느아아아
+
+1 2 3 4 5 [](javascript:;)입력
+
+LINK
+
+#151440906
+
+IP 118.♡.2.26
+
+26-04-11 2026-04-11 21:05:13 
+
+대댓글 _·_ 공감 신고
+
+**0**
+
+ 와 저는 5060ti 16GB에 64GB 램 환경으로 아직 올라마로 모델별로 대화만 좀 해보고 있는데 확실히 이 사양에서도 MoE 26B는 꽤 쓸만하더라구요 
+
+ 새로운 댓글이 없습니다. 
+
+**다음 댓글 확인**_15 / 15_
+
+**새로운 댓글 확인하기**_단축키 'R'_
+
+**다음 댓글 확인**_15 / 15_
+
+댓글은 로그인이 필요한 서비스 입니다.
+
+댓글쓰기
+
+![Image 4](https://www.clien.net/service/board/park/19175955)
+
+ 이미지 최대 업로드 용량 **15 MB** / 업로드 가능 확장자 **jpg,gif,png,jpeg,webp**
+
+지나치게 큰 이미지의 크기는 조정될 수 있습니다. 
+
+[목록으로](javascript:;)
+
+[글쓰기](https://www.clien.net/service/board/regist?boardCd=park)
+
+[](https://saedu.naver.com/adbiz/searchad/intro.nhn)
+
+*   [즐거운 경험이 쌓이는 디자인](https://ader.naver.com/v1/WToHSlyxhqqj060vBodbtsqgLoJUJ0DjHtci6bhtIMhr99QHNPlEn1Ohb2Mhw1iiQ8syyHtftUA7NwlyD-v1VbVLFwkp5b6FpEB74i_iwQmKsah2vDeBOwhqd2LFjqNxhmd4XDCg-ae1XdIBeOKppMZTSTi3gSARjv_MISqIWyJgjWuSdIxankLSMYppOhrZc-Nit7oVA8c0LEQN_YsVFVonwWyYURJcXtpqOrmxC2Rx5CFlx3twNDYsoDED6FSNq-imkziTKhNUGed4jjwTNBgz-awnn5XNvUbzHLZUKW-Xx2ykFLzZrr_hWKYdpnjR1vJ5OeBCEbuSCzD9EqNNI_78WP_884ZJS68iW1HvWdg=?c=clien.ch1&t=1)[F&B 브랜드 전문 브랜딩, 패키지, 팝업, 공간](https://ader.naver.com/v1/WToHSlyxhqqj060vBodbtsqgLoJUJ0DjHtci6bhtIMhr99QHNPlEn1Ohb2Mhw1iiQ8syyHtftUA7NwlyD-v1VbVLFwkp5b6FpEB74i_iwQmKsah2vDeBOwhqd2LFjqNxhmd4XDCg-ae1XdIBeOKppMZTSTi3gSARjv_MISqIWyJgjWuSdIxankLSMYppOhrZc-Nit7oVA8c0LEQN_YsVFVonwWyYURJcXtpqOrmxC2Rx5CFlx3twNDYsoDED6FSNq-imkziTKhNUGed4jjwTNBgz-awnn5XNvUbzHLZUKW-Xx2ykFLzZrr_hWKYdpnjR1vJ5OeBCEbuSCzD9EqNNI_78WP_884ZJS68iW1HvWdg=?c=clien.ch1&t=1)  
+*   [무대설치업체](https://ader.naver.com/v1/dZoN33VEq8K_C6zRYaM76l-4_eCV3oN8AtI3HIYPL_VVUgI7jEOvMi5SMSwBGWi9fUt0SV4QUliw3xAHexS3th35JtbBtoNdUDmqXaDeFvjfbQRFzpo4Db2_EVJTd4modqXEcT0LpiNnTDBymsvyDk7SGEKTUCBJx1tXynpB_Bdza1Mis6NU47sM6DreOgqm?c=clien.ch1&t=0)[레이어/레이허/아시바/백공월 +행사무대전문](https://ader.naver.com/v1/dZoN33VEq8K_C6zRYaM76l-4_eCV3oN8AtI3HIYPL_VVUgI7jEOvMi5SMSwBGWi9fUt0SV4QUliw3xAHexS3th35JtbBtoNdUDmqXaDeFvjfbQRFzpo4Db2_EVJTd4modqXEcT0LpiNnTDBymsvyDk7SGEKTUCBJx1tXynpB_Bdza1Mis6NU47sM6DreOgqm?c=clien.ch1&t=0)  
+*   [효성인포메이션시스템](https://ader.naver.com/v1/2lEGtfM8A5Np45awBU7qk02l8V9h1Uha5uwzBfmToNY40CaqL9VctIj7E7MEWkX9KOVLr7vaqkH0T4KA39QUIHp1jzSNmSJbsoWAlMxNWkQ6k10ej7R1plSpCwtsSxC2Ubb-PKyc4aLIut_gEPsmiRdwi5QGtUzOzHlz3UCNWBBiUW5VdQsT8-VceXOp4zbwgOGpzgc1QI4dXTfjQMIQJ5HxWbTfjbAriLH4d5_3tCbR0ZFRQNFEkV9oGmjjNRyf?c=clien.ch1&t=0)[슈퍼마이크로 한국총판, GPU서버, GPUDirect 스토리지, 통합 AI플랫폼](https://ader.naver.com/v1/2lEGtfM8A5Np45awBU7qk02l8V9h1Uha5uwzBfmToNY40CaqL9VctIj7E7MEWkX9KOVLr7vaqkH0T4KA39QUIHp1jzSNmSJbsoWAlMxNWkQ6k10ej7R1plSpCwtsSxC2Ubb-PKyc4aLIut_gEPsmiRdwi5QGtUzOzHlz3UCNWBBiUW5VdQsT8-VceXOp4zbwgOGpzgc1QI4dXTfjQMIQJ5HxWbTfjbAriLH4d5_3tCbR0ZFRQNFEkV9oGmjjNRyf?c=clien.ch1&t=0)  [![Image 5](https://searchad-phinf.pstatic.net/MjAyMjA5MTlfNzQg/MDAxNjYzNTY5NzkzNzk5.7DkG9Wk7Pi6T7gprFA9gHeVv8Qi5b3KRCi0umOQOGIkg.464yKlk9pahf2A4fUhhWz9bb5thGSgiYpkuFxyJWFEgg.JPEG/1916809-003239b4-5e7b-447e-a425-87708cd2ee1d.jpg)](https://ader.naver.com/v1/7ck4cZ0iYdiyfjXGBHo8rOyDgfF1KlB4j6fgnFZu-KsJa0Co2eIrmHZ3Zhh0IH_8FKyRQAFZxYCztZ76lk0rfsTqT2tKHIfT2EU0oycwAd4u4kXK85NHyhB7EuEEpGgzBswwmWh3B-H5STJMoA0yg4-5Prfzv8lJ2QQoe0t1k_TMIdB81U3dwiJ8_6DjBctNdIgiiphWZuhy0fuqPgOLTHjjLAlkMXdYV8L2m6TzeFfuoOJGV3snai9uagrpm1DP_1bpR5ERert5a_VNppy-2Q==?c=clien.ch1&t=0)
+*   [성주테크몰](https://ader.naver.com/v1/dZoN33VEq8K_C6zRYaM76l-4_eCV3oN8AtI3HIYPL_VVUgI7jEOvMi5SMSwBGWi9ncVZMc4rX8HudA7Rsy62WjWXdq3AG2uIMDXy05JmXQeVx_uzXmLTrUA-asEfcQ5u3zNdA5kJPQTcW7uGWqFDVVHHi4LfkFHlWldkOfYo0GnJ_MsN6o5oeb8VJ2uJUAq2?c=clien.ch1&t=0)[예산 절감 필수, 맞춤형 서버 구축(GPU서버,Rack서버,HCI서버, 스토리지)](https://ader.naver.com/v1/dZoN33VEq8K_C6zRYaM76l-4_eCV3oN8AtI3HIYPL_VVUgI7jEOvMi5SMSwBGWi9ncVZMc4rX8HudA7Rsy62WjWXdq3AG2uIMDXy05JmXQeVx_uzXmLTrUA-asEfcQ5u3zNdA5kJPQTcW7uGWqFDVVHHi4LfkFHlWldkOfYo0GnJ_MsN6o5oeb8VJ2uJUAq2?c=clien.ch1&t=0)  [![Image 6](https://searchad-phinf.pstatic.net/MjAyNjA1MTVfMjkx/MDAxNzc4ODA5MDkxODA1.p5P_7fuE18ulMTa9bN6UReHrzYeOzt4Wp9O4lonJNXwg.cDISi7B91EK-a4HD0sjESLUaGGdCWnZRZuB24A0tT7sg.JPEG/4364273-7497c2a7-8971-4578-95d0-df580a22d076.jpg)](https://ader.naver.com/v1/dZoN33VEq8K_C6zRYaM76l-4_eCV3oN8AtI3HIYPL_VVUgI7jEOvMi5SMSwBGWi9ncVZMc4rX8HudA7Rsy62WjWXdq3AG2uIMDXy05JmXQfNQgRw3SOleCQUKt5DkvLc6fvMkLr2OASLV4KVA5JeKGMbLrJDPlUcyPTOdO2KUrcrR03lI2wXkV4gYzqdNXv_WR3Giy_Wvo3OhQ2YbT7BYw==?c=clien.ch1&t=0)
+
+## 모두의공원
+
+AD
+
+[[클리앙회원 비밀혜택] [현금 47만원OO만원 추가혜택] [전국 당일설치 전액현금]](https://www.clien.net/service/board/hongbo/19250248)
+
+전국통신
+
+39
+
+08-19 2026-08-19 12:05:04
+
+0
+
+[바지 밑단 수선하고 옷장에 넣어놨다가 어제 꺼내봤더니...](https://www.clien.net/service/board/park/19250424?od=T31&po=0&category=0&groupCd=)[2](https://www.clien.net/service/board/park/19250424?od=T31&po=0&category=0&groupCd=#comment-point "댓글2개")
+
+고양이는귀엽다
+
+158
+
+ 16:08 2026-08-19 16:08:49
+
+0
+
+[서울은 용산이고, 그린벨트고 최대한 해제해야죠 ㄷㄷㄷ.txt](https://www.clien.net/service/board/park/19250423?od=T31&po=0&category=0&groupCd=)[4](https://www.clien.net/service/board/park/19250423?od=T31&po=0&category=0&groupCd=#comment-point "댓글4개")
+
+레드핏클
+
+187
+
+ 16:07 2026-08-19 16:07:48
+
+1
+
+[저는 메신저에 이렇게 용건 보내는 사람은 답을 하지 않습니다.](https://www.clien.net/service/board/park/19250422?od=T31&po=0&category=0&groupCd=)[5](https://www.clien.net/service/board/park/19250422?od=T31&po=0&category=0&groupCd=#comment-point "댓글5개")
+
+집에가고싶다!!
+
+435
+
+ 16:05 2026-08-19 16:05:33
+
+1
+
+[닌자 베이스볼 게임이 리메이크되네요.](https://www.clien.net/service/board/park/19250421?od=T31&po=0&category=0&groupCd=)[4](https://www.clien.net/service/board/park/19250421?od=T31&po=0&category=0&groupCd=#comment-point "댓글4개")
+
+루다나리에
+
+361
+
+ 16:05 2026-08-19 16:05:05
+
+1
+
+[닉스는 3개월 동안 자사주 40조원 매입해야 하네요.](https://www.clien.net/service/board/park/19250418?od=T31&po=0&category=0&groupCd=)[3](https://www.clien.net/service/board/park/19250418?od=T31&po=0&category=0&groupCd=#comment-point "댓글3개")
+
+mericrius
+
+1286
+
+ 15:58 2026-08-19 15:58:19
+
+1
+
+[김민석은 민생 신경안써요?](https://www.clien.net/service/board/park/19250416?od=T31&po=0&category=0&groupCd=)[6](https://www.clien.net/service/board/park/19250416?od=T31&po=0&category=0&groupCd=#comment-point "댓글6개")
+
+쿠브릭 
+
+635
+
+ 15:56 2026-08-19 15:56:37
+
+1
+
+['안전 확인' 경찰 말 믿었는데…37세 장미란씨 3개월째 실종](https://www.clien.net/service/board/park/19250415?od=T31&po=0&category=0&groupCd=)[11](https://www.clien.net/service/board/park/19250415?od=T31&po=0&category=0&groupCd=#comment-point "댓글11개")
+
+망고주스바나나
+
+955
+
+ 15:55 2026-08-19 15:55:04
+
+0
+
+[부동산 상승기에 갑자기 급매물?](https://www.clien.net/service/board/park/19250414?od=T31&po=0&category=0&groupCd=)[11](https://www.clien.net/service/board/park/19250414?od=T31&po=0&category=0&groupCd=#comment-point "댓글11개")
+
+회뜨는네모
+
+890
+
+ 15:54 2026-08-19 15:54:51
+
+0
+
+[속보]SK하이닉스 '잉여현금흐름 50% 이상 주주환원, 자사주 취득·소각·배당 병행](https://www.clien.net/service/board/park/19250413?od=T31&po=0&category=0&groupCd=)[9](https://www.clien.net/service/board/park/19250413?od=T31&po=0&category=0&groupCd=#comment-point "댓글9개")
+
+박계현
+
+1969
+
+ 15:52 2026-08-19 15:52:43
+
+7
+
+[이언주도 대놓고 뭉개버리네요](https://www.clien.net/service/board/park/19250411?od=T31&po=0&category=0&groupCd=)[8](https://www.clien.net/service/board/park/19250411?od=T31&po=0&category=0&groupCd=#comment-point "댓글8개")
+
+보호대
+
+1593
+
+ 15:46 2026-08-19 15:46:07
+
+2
+
+[[2보] SK하이닉스 40조 자사주 취득·소각…'주주가치 제고 목적'](https://www.clien.net/service/board/park/19250410?od=T31&po=0&category=0&groupCd=)[15](https://www.clien.net/service/board/park/19250410?od=T31&po=0&category=0&groupCd=#comment-point "댓글15개")
+
+ _딘_ 
+
+2794
+
+ 15:45 2026-08-19 15:45:08
+
+0
+
+[중국 아이돌은 인기가 없을만 하네요](https://www.clien.net/service/board/park/19250407?od=T31&po=0&category=0&groupCd=)[13](https://www.clien.net/service/board/park/19250407?od=T31&po=0&category=0&groupCd=#comment-point "댓글13개")
+
+t.t
+
+2559
+
+ 15:36 2026-08-19 15:36:05
+
+0
+
+[정권 재창출 시나리오](https://www.clien.net/service/board/park/19250405?od=T31&po=0&category=0&groupCd=)[4](https://www.clien.net/service/board/park/19250405?od=T31&po=0&category=0&groupCd=#comment-point "댓글4개")
+
+우재
+
+1239
+
+ 15:31 2026-08-19 15:31:33
+
+0
+
+[투산 풀체인지 외관은 멋지네요.](https://www.clien.net/service/board/park/19250404?od=T31&po=0&category=0&groupCd=)[23](https://www.clien.net/service/board/park/19250404?od=T31&po=0&category=0&groupCd=#comment-point "댓글23개")
+
+콩쓰v
+
+2481
+
+ 15:30 2026-08-19 15:30:57
+
+6
+
+[거제 야호!” 외친 리센느 팬덤 뭉쳤다…거제 수해에 4000만원 기부](https://www.clien.net/service/board/park/19250399?od=T31&po=0&category=0&groupCd=)[2](https://www.clien.net/service/board/park/19250399?od=T31&po=0&category=0&groupCd=#comment-point "댓글2개")
+
+루다나리에
+
+1612
+
+ 15:20 2026-08-19 15:20:52
+
+1
+
+[용산공원 개발은 뭐가 문제인가요?](https://www.clien.net/service/board/park/19250398?od=T31&po=0&category=0&groupCd=)[60](https://www.clien.net/service/board/park/19250398?od=T31&po=0&category=0&groupCd=#comment-point "댓글60개")
+
+광푸
+
+2295
+
+ 15:20 2026-08-19 15:20:08
+
+0
+
+[싸이월드 10월 다시 출시 예정...??](https://www.clien.net/service/board/park/19250397?od=T31&po=0&category=0&groupCd=)[24](https://www.clien.net/service/board/park/19250397?od=T31&po=0&category=0&groupCd=#comment-point "댓글24개")
+
+![Image 7: 파랑검정](https://edgio.clien.net/F94/13993699/a83711943f44b.gif)
+
+1950
+
+ 15:16 2026-08-19 15:16:50
+
+0
+
+[스테이씨 팬콘 셋리스트 24곡 공개영상](https://www.clien.net/service/board/park/19250396?od=T31&po=0&category=0&groupCd=)
+
+memorobot
+
+385
+
+ 15:13 2026-08-19 15:13:56
+
+0
+
+[마라톤 대회 운영 원가율과 수익 ㄷ.news](https://www.clien.net/service/board/park/19250393?od=T31&po=0&category=0&groupCd=)[5](https://www.clien.net/service/board/park/19250393?od=T31&po=0&category=0&groupCd=#comment-point "댓글5개")
+
+백반이
+
+1977
+
+ 15:09 2026-08-19 15:09:37
+
+3
+
+[김민석 당대표 배웅하는 문재인 전 대통령](https://www.clien.net/service/board/park/19250392?od=T31&po=0&category=0&groupCd=)[13](https://www.clien.net/service/board/park/19250392?od=T31&po=0&category=0&groupCd=#comment-point "댓글13개")
+
+dramarama
+
+2770
+
+ 15:09 2026-08-19 15:09:29
+
+2
+
+[축구) 사람이 가진 피할수 없는 운명이란 게, 숙명이란 게 있는가 봅니다.](https://www.clien.net/service/board/park/19250391?od=T31&po=0&category=0&groupCd=)[1](https://www.clien.net/service/board/park/19250391?od=T31&po=0&category=0&groupCd=#comment-point "댓글1개")
+
+다녀와
+
+903
+
+ 15:07 2026-08-19 15:07:04
+
+0
+
+[용산공원도 문제인데 지금 전월세 대책은 있나요?](https://www.clien.net/service/board/park/19250390?od=T31&po=0&category=0&groupCd=)[23](https://www.clien.net/service/board/park/19250390?od=T31&po=0&category=0&groupCd=#comment-point "댓글23개")
+
+가즈오의나라
+
+1477
+
+ 15:06 2026-08-19 15:06:23
+
+1
+
+[환율 좋네요ㅎㅎ](https://www.clien.net/service/board/park/19250389?od=T31&po=0&category=0&groupCd=)[14](https://www.clien.net/service/board/park/19250389?od=T31&po=0&category=0&groupCd=#comment-point "댓글14개")
+
+벨러노
+
+2437
+
+ 15:04 2026-08-19 15:04:23
+
+7
+
+[강득구 빠르게 챙겨주네요](https://www.clien.net/service/board/park/19250388?od=T31&po=0&category=0&groupCd=)[7](https://www.clien.net/service/board/park/19250388?od=T31&po=0&category=0&groupCd=#comment-point "댓글7개")
+
+보호대
+
+1714
+
+ 14:59 2026-08-19 14:59:50
+
+0
+
+[BMW X7 뒤에 있는 모니터 가격 살벌하네요](https://www.clien.net/service/board/park/19250387?od=T31&po=0&category=0&groupCd=)[28](https://www.clien.net/service/board/park/19250387?od=T31&po=0&category=0&groupCd=#comment-point "댓글28개")
+
+JJSK718
+
+3064
+
+ 14:59 2026-08-19 14:59:27
+
+사유
+
+-
+
+일시
+
+-
+
+관리자 삭제된 게시물입니다.
+
+3
+
+[부동산은 어디서부터 꼬여버린걸까요](https://www.clien.net/service/board/park/19250384?od=T31&po=0&category=0&groupCd=)[26](https://www.clien.net/service/board/park/19250384?od=T31&po=0&category=0&groupCd=#comment-point "댓글26개")
+
+롤로로로
+
+1802
+
+ 14:56 2026-08-19 14:56:10
+
+32
+
+[모두의 공원 게시물 분석 기록 (2026.01~2026.04)](https://www.clien.net/service/board/park/19250383?od=T31&po=0&category=0&groupCd=)[13](https://www.clien.net/service/board/park/19250383?od=T31&po=0&category=0&groupCd=#comment-point "댓글13개")
+
+![Image 8: 운영자](https://edgio.clien.net/F94/10153810/8cbadf818f13fd.gif)
+
+748
+
+ 14:56 2026-08-19 14:56:07
+
+5
+
+[뭘하든 욕먹는 부동산 정책](https://www.clien.net/service/board/park/19250381?od=T31&po=0&category=0&groupCd=)[40](https://www.clien.net/service/board/park/19250381?od=T31&po=0&category=0&groupCd=#comment-point "댓글40개")
+
+스파이크80
+
+2281
+
+ 14:51 2026-08-19 14:51:42
+
+0
+
+[비개발자 바이브 코딩 시도 중인데 난이도가 꽤 높네요](https://www.clien.net/service/board/park/19250380?od=T31&po=0&category=0&groupCd=)[11](https://www.clien.net/service/board/park/19250380?od=T31&po=0&category=0&groupCd=#comment-point "댓글11개")
+
+대니얼K
+
+1337
+
+ 14:51 2026-08-19 14:51:39
+
+[목록으로](javascript:;)
+
+[1](javascript:paging.getBoard('direct', 0);)[2](javascript:paging.getBoard('direct', 1);)[3](javascript:paging.getBoard('direct', 2);)[4](javascript:paging.getBoard('direct', 3);)[5](javascript:paging.getBoard('direct', 4);)[6](javascript:paging.getBoard('direct', 5);)[7](javascript:paging.getBoard('direct', 6);)[8](javascript:paging.getBoard('direct', 7);)[9](javascript:paging.getBoard('direct', 8);)[10](javascript:paging.getBoard('direct', 9);)
+
+[](javascript:paging.getBoard('direct', 1);)[다음](javascript:paging.getBoard('direct', 10);)
+
+[글쓰기](https://www.clien.net/service/board/regist?boardCd=park)
+
+[글쓰기](https://www.clien.net/service/board/regist?boardCd=park)
+
+[목록으로](javascript:;)[댓글보기](https://www.clien.net/service/board/park/19175955#comment-head)[이전글](javascript:;)[다음글](javascript:;)[](https://www.clien.net/service/board/park/19175955#down "맨아래로 이동")
+
+[](https://www.clien.net/service/board/park/19175955#top "맨위로 이동")
+
+로그인
+
+[아이디 · 비밀번호 찾기](https://www.clien.net/service/auth/findAccountCert)[회원가입](https://www.clien.net/service/auth/join)
+
+[이용규칙](https://www.clien.net/service/board/rule)[운영알림판](https://www.clien.net/service/board/annonce)[운영소통](https://www.clien.net/service/board/symposium)[재검토요청](https://www.clien.net/service/board/claim)[도움말](https://www.clien.net/service/board/faq)[버그신고](https://www.clien.net/service/board/bug)
+
+[**개인정보처리방침**](https://www.clien.net/service/cs/privacy)[이용약관](https://www.clien.net/service/cs/conditions)[책임의 한계와 법적고지](https://www.clien.net/service/cs/policy)[청소년 보호정책](https://www.clien.net/service/cs/teenager)
+
+© 2026•CLIEN.NET
+
+**보안 강화를 위한 이메일 인증**
+
+**안전한 서비스 이용을 위해 이메일 인증을 완료해 주세요.** 현재 회원님은 **이메일 인증이 완료되지 않은 상태**입니다.
+
+ 최근 급증하는 해킹 및 도용 시도로부터 계정을 보호하기 위해 인증 절차가 강화되었습니다.
+
+*   이메일 미인증 시 **글쓰기, 댓글 작성 등 게시판 활동이 제한됩니다.**
+*   이후 **새로운 기기에서 로그인할 때마다 반드시 이메일 인증을 거쳐야 합니다.**
+*   2단계 인증 사용 회원도 최초 1회는 반드시 인증하여야 합니다.
+*   [개인정보](https://www.clien.net/service/mypage/myInfo)에서도 이메일 인증을 할 수 있습니다.
+
+[**지금 이메일 인증하기** 등록된 이메일 주소를 확인하고 인증번호를 입력하여 인증을 완료해 주세요.](https://www.clien.net/service/auth/email/verify)
+
+나중에 하기
+
+**GIF 파일 다운로드**
+
+0 0 0 0
+
+GIF 파일을 다운로드 받으려면
+
+화면에 표시된 4자리 번호를 입력해주세요.
+
+확인 취소
+
+**댓글 주소복사**

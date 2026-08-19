@@ -1,0 +1,1798 @@
+Title: A preliminary Qwen3.8-27B model card is live! - r/LocalLLaMA
+
+URL Source: https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/
+
+Markdown Content:
+[red lib.](https://redlib.catsarch.com/)
+
+Feeds
+
+MAIN FEEDS
+
+[Home](https://redlib.catsarch.com/)[Popular](https://redlib.catsarch.com/r/popular)[All](https://redlib.catsarch.com/r/all)
+
+- [x] in /r/LocalLLaMA 
+
+[reddit](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/#popup)
+
+# You are about to leave Redlib
+
+Do you want to continue?
+
+https://www.reddit.com/r/LocalLLaMA/comments/1vo2iiz/
+
+[No, go back!](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/#)[Yes, take me to Reddit](https://www.reddit.com/r/LocalLLaMA/comments/1vo2iiz/)
+
+[settings](https://redlib.catsarch.com/settings)
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/-Cubie-](https://redlib.catsarch.com/user/-Cubie-)•4d ago
+
+# [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on) A preliminary Qwen3.8-27B model card is live!
+
+[![Image 1: Post image](https://redlib.catsarch.com/img/3u6hgcgk7bjh1.png)](https://redlib.catsarch.com/img/3u6hgcgk7bjh1.png)
+
+If you scroll down from the countdown at [https://huggingface.co/Qwen/Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B), you see a big model card with a bunch of sections: Highlights, Model Overview, Quickstart, Best Practices, Citation, etc!
+
+No benchmarks on this yet as far as I can tell. We'll still need to wait another 5.5 hours for those I reckon.
+
+Edit: Ladies and gentlemen, the model is live. Let the testing begin!
+
+ 572  Upvotes
+
+*   [perma link](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/)
+*   [reddit](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/#popup)# You are about to leave Redlib
+
+Do you want to continue?
+
+https://www.reddit.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/
+
+[No, go back!](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/#)[Yes, take me to Reddit](https://www.reddit.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/)  
+*   [dl download](https://redlib.catsarch.com/img/3u6hgcgk7bjh1.png)
+
+96% Upvoted
+
+218 comments sorted by
+
+117
+
+[u/darwinanim8or](https://redlib.catsarch.com/user/darwinanim8or)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m628t/?context=3#p3m628t "Aug 14 2026, 09:42:24 UTC")
+
+Seems like reasoning effort is the new big thing here
+
+> 41
+> 
+> 
+> 
+> [u/DismalIngenuity4604](https://redlib.catsarch.com/user/DismalIngenuity4604)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mawqr/?context=3#p3mawqr "Aug 14 2026, 10:19:14 UTC")
+> 
+> Yeah, cool. I've been liking Glimmer, and a big part of that is that it spends about 1/8th of the tokens thinking that Qwen 27B does. Should be fun!
+> 
+> 
+> > 16
+> > 
+> > 
+> > 
+> > [u/GCoderDCoder](https://redlib.catsarch.com/user/GCoderDCoder)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mn7i2/?context=3#p3mn7i2 "Aug 14 2026, 11:41:14 UTC")
+> > 
+> > Yeah I like Qwen 3.6 27b output more BUT glimmer can fit like 6-8 concurrent 130k lanes on 48gb at 8bit weight 16bit cache. It's a great agentic model to support Qwen 3.6 27b and deepseek v4 flash 0731 in my lab. I have all 3 and dsv4f is my big brain, qwen is my default, and muse is the workhorse.
+> > 
+> > 
+> > Zuck putting Meta torward the top of the big and the small models with genuine benefits over the other options is a great come back story.
+> > 
+> > 
+> > > 2
+> > > 
+> > > 
+> > > 
+> > > [u/orbli](https://redlib.catsarch.com/user/orbli)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nuuuo/?context=3#p3nuuuo "Aug 14 2026, 15:14:18 UTC")
+> > > 
+> > > What special benefits are those?
+> > > 
+> > > 
+> > > > 4
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/Stahlkocher](https://redlib.catsarch.com/user/Stahlkocher)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nyw49/?context=3#p3nyw49 "Aug 14 2026, 15:32:11 UTC")
+> > > > 
+> > > > Glimmer has very low memory requirements for the KV cache. something like 1.7 or 1.8GB for 128k F16.
+> > > > 
+> > > > 
+> > > > > 1
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > [u/onetom](https://redlib.catsarch.com/user/onetom)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3o8h26/?context=3#p3o8h26 "Aug 14 2026, 16:14:04 UTC")
+> > > > > 
+> > > > > funnily enough, from Hong Kong, I see this on the glimmer 30b page:
+> > > > > 
+> > > > > 
+> > > > > > This model is not available in your region You can still browse this page, but downloads are disabled in your region.
+> > > > > 
+> > > > > 
+> > > > > mlx-community/Muse-Glimmer-30B-8bit doesn't have this restriction though, so it's a bit of legal theater really...
+> > > > 
+> > > > 
+> > > > 
+> > > > 1
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/GCoderDCoder](https://redlib.catsarch.com/user/GCoderDCoder)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3o9y7k/?context=3#p3o9y7k "Aug 14 2026, 16:20:25 UTC")
+> > > > 
+> > > > Do you mean benefit of concurrent agents? It allows me to be talking to a good generalist orchestration bot (qwen 3.6 27b q8 75-85 t/s) that can direct big tasks to the planner/ coder bots (deepseek v4 flash dynamic q4 qat 45 t/s) or send smaller tasks to the baby bots (muse glimmer q8 100-150t/s). I do truly frontier stuff on chatgpt but I am increasingly relying on dsv4flash. It made me nervous at first because it is literally operating at cloud provider level which im not accustomed to my agents doing.
+> > > > 
+> > > > 
+> > > > My lab has background lanes which involves automated tasks managing any of 100 workloads. I run my own email, messaging apps for bot communication and approval channelse, dns, shared storage, data fabric, git, media servers, ai servers, work lab (products), personal apps, automation, ha/dr solutions, k8s, virtualization, identity and access tools, etc. I work in tech so there are business and technical aspects of my job. Scraping web data to provide up to date intelligence and preparing customer presentations, forecasts, etc.
+> > > > 
+> > > > 
+> > > > I say all this to say I run a lot of AI to do a lot. It is busier than I have to do but I am better at my job and able to spend more time on things I enjoy which also in turn make me better at my job. I spend an hour or 2 tuning a custom customer presentation now that used to take a week dye to my schedule and it is a better presentation usually with custom demos now.
+> > > > 
+> > > > 
+> > > > We also cant use cloud on proprietary or customer data so my peers who dont have these tools cant do or talk about these things where I can. It allows me to talk to customers about enterprise implementation best practices that we are all just learning. No one has been doing this stuff for years like this so being able to say i had this problem and here was the best solution because xyz is better than figuring it out on the fly.
+> > > > 
+> > > > 
+> > > > If I misunderstood the question let me know.
+> > > 
+> > > 
+> > > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/emil2015](https://redlib.catsarch.com/user/emil2015)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3oc6vi/?context=3#p3oc6vi "Aug 14 2026, 16:30:07 UTC")
+> > > 
+> > > In my very brief testing I felt like glimmer was terrible. I was using it with Hermes. Where did you find it worked well?
+> > > 
+> > > 
+> > > > 1
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/GCoderDCoder](https://redlib.catsarch.com/user/GCoderDCoder)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3oxtgu/?context=3#p3oxtgu "Aug 14 2026, 18:03:30 UTC")
+> > > > 
+> > > > It doesnt replace qwen 3.6 27b for me but it is very good at tool calls. It is operational for me so my research workflows, git ops, cli... so I have workflows where some have planning, all have a SME, and then there are ephemeral action bots. The executor bots need to be good at terminal and tools by the time they get orders from SMEs. Glimmer gives me more of those lanes for email, web search, file management, running my mcps driving automation. Also I was using multiple Qwens before with llm as a judge workflows which is an antipattern so now im more compliant lol.
+> > > > 
+> > > > 
+> > > > > 1
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > [u/emil2015](https://redlib.catsarch.com/user/emil2015)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3q1lx6/?context=3#p3q1lx6 "Aug 14 2026, 20:59:52 UTC")
+> > > > > 
+> > > > > Interesting, I’ll have to toy around with it some more. Thanks for the info.
+> > > 
+> > > 
+> > > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/estrafire](https://redlib.catsarch.com/user/estrafire)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3owbp5/?context=3#p3owbp5 "Aug 14 2026, 17:57:00 UTC")
+> > > 
+> > > do you have a threshold of how many parallel instances at full context do you need to make it worth loading Glimmer weights? Or just the context saving alone justifies it for your use case, like, in tasks that need more context than Qwen could do due to the excessive amount of thinking tokens
+> > > 
+> > > 
+> > > > 2
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/GCoderDCoder](https://redlib.catsarch.com/user/GCoderDCoder)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3p06q8/?context=3#p3p06q8 "Aug 14 2026, 18:13:35 UTC")
+> > > > 
+> > > > It depends on if you feel set up for handling multiple agents. In codex or claude apps they have a ton of plumbing to keep their models behaving well. I trust my local models less so a lot of my infrastructure I implemented was due to my low confidence in my models. So my local models cant do things I dont want them to do or at least that's the spirit of how I configure them.
+> > > > 
+> > > > 
+> > > > I run multiple agents for different narrowly scoped tasks of value to me. It's not a passive process. My job is building systems not products like websites so that's why I tell myself the time I spend is justifiable lol.
+> > > > 
+> > > > 
+> > > > My main local coder is DeepSeek-V4-Flash 0731 on mac studio and it slows down with multiple concurrency so I really only do multiple instances of that when something needs a plan and then it returns to running faster with one instance. I dont like multi agent builds on cloud because I think the coordination burns my tokens faster than linearly. I only do concurrency on a code base when I am close to my quota reset with a lot of quota to burn.
+> > > > 
+> > > > 
+> > > > So for glimmer your hardware amd the use cases will need to drive that. I want speed and accuracy. If concurrency messes those up then no thank you
+> > 
+> > 
+> > 
+> > 2
+> > 
+> > 
+> > 
+> > [u/uber-linny](https://redlib.catsarch.com/user/uber-linny)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mgxi1/?context=3#p3mgxi1 "Aug 14 2026, 11:01:45 UTC")
+> > 
+> > It's a fair bit slower isn't it without mtp ?
+> > 
+> > 
+> > > 10
+> > > 
+> > > 
+> > > 
+> > > [u/BigYoSpeck](https://redlib.catsarch.com/user/BigYoSpeck)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mtxn9/?context=3#p3mtxn9 "Aug 14 2026, 12:19:50 UTC")
+> > > 
+> > > It has dflash so not anything like as fast as mtp, but weigh in the token output for a fairly unscientific quick test on the same prompt (create a calculator app as a single html file):
+> > > 
+> > > 
+> > > ```
+> > > Muse: 2,173 tokens, 50.00 t/s, 43s
+> > > Qwen: 6,227 tokens, 97.99 t/s, 1min 3s
+> > > ```
+> > > [![Image 2](https://redlib.catsarch.com/preview/pre/ctzozkdo1cjh1.png?width=1152&format=png&auto=webp&s=a0c6c5d61f746bfea39476f6a786e57ee50a6ee1)](https://redlib.catsarch.com/preview/pre/ctzozkdo1cjh1.png?width=1152&format=png&auto=webp&s=a0c6c5d61f746bfea39476f6a786e57ee50a6ee1)
+> > > Left is Muse, right is Qwen. Both work, Qwen looks a little better and has more interaction animations which weren't asked for but that's Qwen, it often adds more flare you don't ask for
+> > > 
+> > > 
+> > > > 1
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/BigYoSpeck](https://redlib.catsarch.com/user/BigYoSpeck)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3oh2s0/?context=3#p3oh2s0 "Aug 14 2026, 16:51:12 UTC")
+> > > > 
+> > > > And Qwen3.8 27b
+> > > > 
+> > > > 
+> > > > 11,956 tokens, 64.66 t/s, 3min 4s (Reasoning max of 2048 tokens or it will just go forever)
+> > > > 
+> > > > [![Image 3](https://redlib.catsarch.com/preview/pre/5kowpft6edjh1.png?width=1280&format=png&auto=webp&s=1b88169067f9ca2e186d873dedde9e974bdda5f7)](https://redlib.catsarch.com/preview/pre/5kowpft6edjh1.png?width=1280&format=png&auto=webp&s=1b88169067f9ca2e186d873dedde9e974bdda5f7)
+> > > > 
+> > > > 
+> > > > 
+> > > > 0
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/Schlick7](https://redlib.catsarch.com/user/Schlick7)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mw7ol/?context=3#p3mw7ol "Aug 14 2026, 12:32:00 UTC")
+> > > > 
+> > > > I'd say that Muse looks better there... outside of the icon issues at least.
+> > > > 
+> > > > 
+> > > > > 11
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > [u/BigYoSpeck](https://redlib.catsarch.com/user/BigYoSpeck)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n15bv/?context=3#p3n15bv "Aug 14 2026, 12:57:30 UTC")
+> > > > > 
+> > > > > Colour palette subjective preference aside, Qwen has better grid alignment
+> > > > > 
+> > > > > 
+> > > > > > 4
+> > > > > > 
+> > > > > > 
+> > > > > > 
+> > > > > > [u/Schlick7](https://redlib.catsarch.com/user/Schlick7)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n23j0/?context=3#p3n23j0 "Aug 14 2026, 13:02:15 UTC")
+> > > > > > 
+> > > > > > oh i didn't even notice the '=' being larger. Seems like it knew that was common on calculators but didn't know how to implement it.
+> > > 
+> > > 
+> > > 
+> > > 6
+> > > 
+> > > 
+> > > 
+> > > [u/xienze](https://redlib.catsarch.com/user/xienze)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mpte6/?context=3#p3mpte6 "Aug 14 2026, 11:56:35 UTC")
+> > > 
+> > > Perhaps? But from a wall time perspective, a somewhat faster model with dramatically more thinking will be slower.
+> > > 
+> > > 
+> > > > 6
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/Borkato](https://redlib.catsarch.com/user/Borkato)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3msdkr/?context=3#p3msdkr "Aug 14 2026, 12:11:12 UTC")
+> > > > 
+> > > > Yeah it blew my mind recently after doing some benchmarking with my own prompts that muse glimmer, qwen 27B, and Gemma 26BA4B ended up coming to the same time (~27 seconds) for one of my benchmarks. It really shouldn’t be all about TPS
+> > > > 
+> > > > 
+> > > > > 2
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > [u/uber-linny](https://redlib.catsarch.com/user/uber-linny)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n5vy4/?context=3#p3n5vy4 "Aug 14 2026, 13:20:55 UTC")
+> > > > > 
+> > > > > Ahhh I mostly use Qwen with thinking turned off .
+> > > > > 
+> > > > > 
+> > > > > > 2
+> > > > > > 
+> > > > > > 
+> > > > > > 
+> > > > > > [u/Borkato](https://redlib.catsarch.com/user/Borkato)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nk1pe/?context=3#p3nk1pe "Aug 14 2026, 14:26:26 UTC")
+> > > > > > 
+> > > > > > Ah, that definitely changes things. I used to do the same before MTP
+> > > 
+> > > 
+> > > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/Motor_Ad16](https://redlib.catsarch.com/user/Motor_Ad16)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3oxr0u/?context=3#p3oxr0u "Aug 14 2026, 18:03:12 UTC")
+> > > 
+> > > It's slow with mtp as well as compared to qwen3.6
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/RLutz](https://redlib.catsarch.com/user/RLutz)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nht8u/?context=3#p3nht8u "Aug 14 2026, 14:16:25 UTC")
+> > 
+> > I feel like the sentiment here on Glimmer doesn't match my experience with it. I don't think it's going to be as good for agentic coding as 3.8 but I was running the dynamic k quant from Meta and getting like 300 tokens/s on my 5090. It was fast enough that even if it's a bit dumber it'd probably still be amazing for like auto research loops and similar where fast inference is more important than absolute top intelligence
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/arbv](https://redlib.catsarch.com/user/arbv)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3npl38/?context=3#p3npl38 "Aug 14 2026, 14:51:03 UTC")
+> > 
+> > I also liked that it has "editorial we" kind of thinking publicly released in GPT-OSS and, apparently, common among larger models.
+> > 
+> > 
+> > 
+> > 0
+> > 
+> > 
+> > 
+> > [u/Borkato](https://redlib.catsarch.com/user/Borkato)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3ms5df/?context=3#p3ms5df "Aug 14 2026, 12:09:54 UTC")
+> > 
+> > Try the nail 27B prompt template
+> > 
+> > 
+> > > 2
+> > > 
+> > > 
+> > > 
+> > > [u/DismalIngenuity4604](https://redlib.catsarch.com/user/DismalIngenuity4604)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mx8k0/?context=3#p3mx8k0 "Aug 14 2026, 12:37:24 UTC")
+> > > 
+> > > Will do, thanks, I haven't played around with templates much outside of the obvious qwen updates.
+> > 
+> > 
+> > 
+> > 0
+> > 
+> > 
+> > 
+> > [u/PrimeDirective8](https://redlib.catsarch.com/user/PrimeDirective8)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3meq9v/?context=3#p3meq9v "Aug 14 2026, 10:46:48 UTC")
+> > 
+> > It stumbles a bit in CoT by repeating some lines, etc. But yeah, way less time spent spinning its brain wheels.
+> > 
+> > 
+> > Does that affect its output quality though, and why some are finding Qwen3.6 27B still smarter?
+> > 
+> > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/DismalIngenuity4604](https://redlib.catsarch.com/user/DismalIngenuity4604)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mx4uw/?context=3#p3mx4uw "Aug 14 2026, 12:36:52 UTC")
+> > > 
+> > > I've been using it mostly for design and architecture in a heavily physics-based project, I can't talk to how other people are using models, so it may just be my use case that it gels with.
+> > 
+> > [→ More replies (11)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mawqr)
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/Altruistic_Heat_9531](https://redlib.catsarch.com/user/Altruistic_Heat_9531)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mh1eh/?context=3#p3mh1eh "Aug 14 2026, 11:02:28 UTC")
+> 
+> i forgot that many model still only using token budget instead of this.
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/Personal_Tutor7771](https://redlib.catsarch.com/user/Personal_Tutor7771)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mhpzm/?context=3#p3mhpzm "Aug 14 2026, 11:06:55 UTC")
+> 
+> I think we'll be seeing more improvements of existing work in the (near) future than we'll see completely new approaches or advancements
+> 
+> 
+> 
+> -3
+> 
+> 
+> 
+> [u/ANR2ME](https://redlib.catsarch.com/user/ANR2ME)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mgtqq/?context=3#p3mgtqq "Aug 14 2026, 11:01:03 UTC")
+> 
+> I can't change the reasoning effort to below medium on Qwen3.8 2.4T 🤔 it keeps answering "medium" or "85 (out of 100)" whenever I asked "what is your current reasoning effort?".
+> 
+> 
+> Meanwhile, Kimi-K3 can answers the reasoning effort correctly (except when i set it to "none")
+> 
+> 
+> > 2
+> > 
+> > 
+> > 
+> > [u/SocialDinamo](https://redlib.catsarch.com/user/SocialDinamo)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nrzb5/?context=3#p3nrzb5 "Aug 14 2026, 15:01:35 UTC")
+> > 
+> > You are asking for it something it doesn’t know because it doesn’t know what it’s sampling parameters are unless you feed it back to it with a system prompt or something
+> > 
+> > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/ANR2ME](https://redlib.catsarch.com/user/ANR2ME)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3qlss9/?context=3#p3qlss9 "Aug 14 2026, 22:39:44 UTC")
+> > > 
+> > > Well for some reason Kimi-K3 was able to reply with the correct reasoning_effort value whenever i changed the reasoning_effort. My system prompt is "You are a concise technical assistant."
+> 
+> 
+> 
+> -3
+> 
+> 
+> 
+> [u/BringTea_666](https://redlib.catsarch.com/user/BringTea_666)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mkx7v/?context=3#p3mkx7v "Aug 14 2026, 11:27:11 UTC")
+> 
+> You are reading too much into that. 27B officially didn't support reasoning modes but you could force it to do that with model settings. From no thinking to low, medium and high.
+> 
+> 
+> That's probably just stuff from their api.
+> 
+> 
+> > 2
+> > 
+> > 
+> > 
+> > [u/Borkato](https://redlib.catsarch.com/user/Borkato)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mlebo/?context=3#p3mlebo "Aug 14 2026, 11:30:07 UTC")
+> > 
+> > What model settings?
+> > 
+> > 
+> > > [→ More replies (4)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mlebo)
+
+77
+
+[u/Valuable-Repeat-7347](https://redlib.catsarch.com/user/Valuable-Repeat-7347)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m5pju/?context=3#p3m5pju "Aug 14 2026, 09:39:38 UTC")
+
+> Context Length: 262,144 natively and extensible up to 1,000,000 tokens.
+
+Nice
+
+> 31
+> 
+> 
+> 
+> [u/Infinite100p](https://redlib.catsarch.com/user/Infinite100p)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m6t6v/?context=3#p3m6t6v "Aug 14 2026, 09:48:17 UTC")
+> 
+> I'm curious what the perf fall-off is beyond 262k.
+> 
+> 
+> > 42
+> > 
+> > 
+> > 
+> > [u/oxygen_addiction](https://redlib.catsarch.com/user/oxygen_addiction)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mb7tz/?context=3#p3mb7tz "Aug 14 2026, 10:21:27 UTC")
+> > 
+> > After 120-150k they all start being dumber.
+> > 
+> > 
+> > > 19
+> > > 
+> > > 
+> > > 
+> > > [u/anderspitman](https://redlib.catsarch.com/user/anderspitman)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mzr4s/?context=3#p3mzr4s "Aug 14 2026, 12:50:28 UTC")
+> > > 
+> > > These numbers are quoted all the time but no one ever has some nice charts of benchmarks showing the falloff. That would be so useful.
+> > > 
+> > > 
+> > > > 14
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/makingnoise](https://redlib.catsarch.com/user/makingnoise)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n8fyw/?context=3#p3n8fyw "Aug 14 2026, 13:33:06 UTC")
+> > > > 
+> > > > I am honestly surprised there aren't like 1,000 different benchmarkers generating actually useful benchmarks for us mere mortals with 24GB of vram or less. Like a Benchmark of unsloth Q4 Qwen against Q5 Qwen against Q4 Gemma against Q5 Muse.
+> > > > 
+> > > > 
+> > > > Instead (if we're lucky) we get a Q8 model benched against FP16 of DeepSeek or some other absurdity. It's like watching a movie or TV show where broke people live in palatial NYC apartments with no source of income and no mention of a trust fund.
+> > > > 
+> > > > 
+> > > > > 3
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > [u/Hefty_Wolverine_553](https://redlib.catsarch.com/user/Hefty_Wolverine_553)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nkblb/?context=3#p3nkblb "Aug 14 2026, 14:27:40 UTC")
+> > > > > 
+> > > > > I am working on this area! I recently made a post with KLD benchmarks between GGUF and other vLLM quants for Qwen3.6 27B.
+> > > > > 
+> > > > > 
+> > > > > Interesting idea though, it would be good to see how different quants of different models perform on existing benchmarks. I've run some of my own benchmarks on Qwen3.6/Qwen3.5/Gemma4 before purely out of curiosity and the underlying model does seem to show a bigger difference in benchmark performance than IQ3/Q4/Q6 quants of the same model. I'm surprised that nobody seems to have made benchmarks on this though, it's one of the easier things to do.
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > 3
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > [u/NaiveIdea344](https://redlib.catsarch.com/user/NaiveIdea344)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3ndjsh/?context=3#p3ndjsh "Aug 14 2026, 13:56:53 UTC")
+> > > > > 
+> > > > > Yeah really good point. Comparing quantizations would be incredibly helpful.
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > 1
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > [u/taimusrs](https://redlib.catsarch.com/user/taimusrs)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3o2yhv/?context=3#p3o2yhv "Aug 14 2026, 15:50:05 UTC")
+> > > > > 
+> > > > > I mean, generally you want to use the highest quant you can. The GPU is most likely memory constrained, not compute constrained. Now it depends on the model architecture which one takes up the most space for KV cache and whether you want to quantize that cache. And for the quant quality, Unsloth for coding, any other for general purpose use, especially for languages support.
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > 1
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > [u/fluffysheap](https://redlib.catsarch.com/user/fluffysheap)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3p4pu2/?context=3#p3p4pu2 "Aug 14 2026, 18:32:54 UTC")
+> > > > > 
+> > > > > So like watching a TV show
+> > > > 
+> > > > 
+> > > > 
+> > > > 0
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/Strong_Chicken6838](https://redlib.catsarch.com/user/Strong_Chicken6838)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nmz07/?context=3#p3nmz07 "Aug 14 2026, 14:39:35 UTC")
+> > > > 
+> > > > A couple of months ago it was “anything beyond 30k tokens and they fall apart”
+> > > 
+> > > 
+> > > 
+> > > 12
+> > > 
+> > > 
+> > > 
+> > > [u/OkWalrus890](https://redlib.catsarch.com/user/OkWalrus890)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mc58z/?context=3#p3mc58z "Aug 14 2026, 10:28:14 UTC")
+> > > 
+> > > I see this often, but is it a universal truth or are people using low quants with KV cache at Q4, too? I’ve been running 262K with Q8, and it’s been fine.
+> > > 
+> > > 
+> > > > 11
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/DistanceSolar1449](https://redlib.catsarch.com/user/DistanceSolar1449)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mr2hn/?context=3#p3mr2hn "Aug 14 2026, 12:03:47 UTC")
+> > > > 
+> > > > If your KV is Q4 then it’s dumb period
+> > > > 
+> > > > 
+> > > > > 1
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > [u/draconic_tongue](https://redlib.catsarch.com/user/draconic_tongue)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n5aqe/?context=3#p3n5aqe "Aug 14 2026, 13:18:00 UTC")
+> > > > > 
+> > > > > good enough for me
+> > > > > 
+> > > > > 
+> > > > > > 7
+> > > > > > 
+> > > > > > 
+> > > > > > 
+> > > > > > [u/AnyMongoose3041](https://redlib.catsarch.com/user/AnyMongoose3041)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nmyqn/?context=3#p3nmyqn "Aug 14 2026, 14:39:33 UTC")
+> > > > > > 
+> > > > > > Prove it. Show us your full furry roleplay chat logs so we can verify independently.
+> > > > 
+> > > > 
+> > > > 
+> > > > 1
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/Party-Special-5177](https://redlib.catsarch.com/user/Party-Special-5177)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n14us/?context=3#p3n14us "Aug 14 2026, 12:57:26 UTC")edited 4d ago
+> > > > 
+> > > > Universal(ish) truth, independently partly caused by position embeds and partly by attention dilution during context extension - you can heal the damage but not perfectly. It’s not ‘universal’ in the sense that it is impossible to fix, but until better attention mechanisms or better position embeddings come along, it will remain unavoidable.
+> > > > 
+> > > > 
+> > > > 
+> > > > 1
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/draconic_tongue](https://redlib.catsarch.com/user/draconic_tongue)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n5g09/?context=3#p3n5g09 "Aug 14 2026, 13:18:44 UTC")
+> > > > 
+> > > > No, it was never true. Back in the day people used to say "everything above 16k is broken!" for some reason, and it was never true either even on the oldest ass pygmalioin ass models
+> > > > 
+> > > > 
+> > > > > 1
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > [u/Borkato](https://redlib.catsarch.com/user/Borkato)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3njyj0/?context=3#p3njyj0 "Aug 14 2026, 14:26:02 UTC")
+> > > > > 
+> > > > > Good thought. Will stop truncating my sessions now, thanks!
+> > > 
+> > > 
+> > > 
+> > > 4
+> > > 
+> > > 
+> > > 
+> > > [u/Beneficial-Boot7479](https://redlib.catsarch.com/user/Beneficial-Boot7479)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mneaf/?context=3#p3mneaf "Aug 14 2026, 11:42:24 UTC")
+> > > 
+> > > You mean qwen models or every model? because it feels like Deepseek is the new kv king, you can have a +900k context session and he doesn't lose track of what he was meant to do
+> > > 
+> > > 
+> > > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/Borkato](https://redlib.catsarch.com/user/Borkato)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mo78n/?context=3#p3mo78n "Aug 14 2026, 11:47:13 UTC")
+> > > 
+> > > Is this true? I’ve assumed so so I always stop after 120k, but is it actually true
+> > > 
+> > > 
+> > > 
+> > > 0
+> > > 
+> > > 
+> > > 
+> > > [u/Gesha24](https://redlib.catsarch.com/user/Gesha24)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mf2zl/?context=3#p3mf2zl "Aug 14 2026, 10:49:14 UTC")
+> > > 
+> > > Smarter/dumber is subjective, but being able to call tools or not is reasonably objective. And while Qwen3.6 and Gemma4 do start having issues with that by 150K context (actually Gemma sooner), DeepSeek Flash has been quite solid for my up until 200K context. It's super slow at that context for me, but it has no issues with too calls. Hopefully 3.8 Qwen can do the same.
+> > > 
+> > > 
+> > > 
+> > > -3
+> > > 
+> > > 
+> > > 
+> > > [u/Infinite100p](https://redlib.catsarch.com/user/Infinite100p)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mdvqv/?context=3#p3mdvqv "Aug 14 2026, 10:40:48 UTC")
+> > > 
+> > > Well, obviously, but by how much is what I want to know.
+> > > 
+> > > 
+> > > > 3
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/oxygen_addiction](https://redlib.catsarch.com/user/oxygen_addiction)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3meegw/?context=3#p3meegw "Aug 14 2026, 10:44:31 UTC")
+> > > > 
+> > > > It depends a lot on the type of attention the model is using. There is no set number because it highly depends on how diverse the tokens in the context pool are. It's easy to notice it on Deepseek Flash for example, as it tends to forget the information from the start of the chat after 80-120k tokens.
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/GrungeWerX](https://redlib.catsarch.com/user/GrungeWerX)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mjtvl/?context=3#p3mjtvl "Aug 14 2026, 11:20:23 UTC")
+> > 
+> > I ran Qwen 3.6 27B to 340K in my last session and it handled everything I threw at it. I was using a lower quant at iq3-xxs kv 4/4 which is extremely quanted, but it stayed coherent. The only issue I noticed was a few stumbled tool calls above 300K.
+> > 
+> > 
+> > I typically don’t use iq3-xxs…but my Q5 had run over 200K and I thought maybe it would be faster tok/s if I just dropped it low and I already had a 325K profile for it set up in llama.cpp. But next time I’ll probably just run the q4 when I’m over 200K and see where my yarn tok/s bottleneck is…
+> > 
+> > 
+> > > 2
+> > > 
+> > > 
+> > > 
+> > > [u/Infinite100p](https://redlib.catsarch.com/user/Infinite100p)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mkype/?context=3#p3mkype "Aug 14 2026, 11:27:26 UTC")
+> > > 
+> > > Have you tried the NVFP4 quants of Qwen 3.6 27B? Are they nearly as good as 8-bit quants, as some benchmarks suggest?
+> > > 
+> > > 
+> > > > -3
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/GrungeWerX](https://redlib.catsarch.com/user/GrungeWerX)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mshgy/?context=3#p3mshgy "Aug 14 2026, 12:11:49 UTC")
+> > > > 
+> > > > I think those are for a MAC, I’m on windows.
+> > > > 
+> > > > 
+> > > > > 5
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > [u/JamesEvoAI](https://redlib.catsarch.com/user/JamesEvoAI)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mvlgy/?context=3#p3mvlgy "Aug 14 2026, 12:28:45 UTC")
+> > > > > 
+> > > > > NVFP4 is NVIDIA
+> > > > > 
+> > > > > 
+> > > > > > 1
+> > > > > > 
+> > > > > > 
+> > > > > > 
+> > > > > > [u/GrungeWerX](https://redlib.catsarch.com/user/GrungeWerX)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nmfs7/?context=3#p3nmfs7 "Aug 14 2026, 14:37:11 UTC")
+> > > > > > 
+> > > > > > My bad, I got confused. I can’t use it because it’s Blackwell, not a Mac. Lol
+> 
+> 
+> 
+> 13
+> 
+> 
+> 
+> [u/ANR2ME](https://redlib.catsarch.com/user/ANR2ME)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mh9lx/?context=3#p3mh9lx "Aug 14 2026, 11:03:58 UTC")
+> 
+> Which is basically the same with Qwen3.6-27B 😅 [https://huggingface.co/Qwen/Qwen3.6-27B#model-overview](https://huggingface.co/Qwen/Qwen3.6-27B#model-overview)
+> 
+> 
+> > Context Length: 262,144 natively and extensible up to 1,010,000 tokens.
+
+71
+
+[u/Alternative_You3585](https://redlib.catsarch.com/user/Alternative_You3585)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m4yyv/?context=3#p3m4yyv "Aug 14 2026, 09:33:41 UTC")
+
+Crazy that the 27B has vision while the 2.4T model doesnt
+
+> 61
+> 
+> 
+> 
+> [u/-Cubie-](https://redlib.catsarch.com/user/-Cubie-)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m5pzc/?context=3#p3m5pzc "Aug 14 2026, 09:39:44 UTC")
+> 
+> > In particular, **Qwen3.8-Max** is the official version based on Qwen3.8-2.4T-A95B with more features, such as vision input & non-thinking support, 1M context length by default, official built-in tools, etc. For more information, please refer to the [Qwen3.8-Max Overview](https://www.qwencloud.com/models/qwen3.8-max).
+> 
+> 
+> From the [https://huggingface.co/Qwen/Qwen3.8-2.4T-A95B](https://huggingface.co/Qwen/Qwen3.8-2.4T-A95B) model card.
+> 
+> 
+> It feels a bit like the 2.4T model they released is just a hamstrung version of their actual Qwen3.8-Max, which does have vision. Granted, I think they never open weighted their max-sized model before, so I'd rather get a hamstrung 2.4T than nothing at all.
+> 
+> 
+> > 23
+> > 
+> > 
+> > 
+> > [u/z_3454_pfk](https://redlib.catsarch.com/user/z_3454_pfk)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m63r4/?context=3#p3m63r4 "Aug 14 2026, 09:42:44 UTC")
+> > 
+> > i think the 3.8 max doesn’t have vision and via api is being router to another model or a vision adapter has been trained for it (most likely). this is because none of the previous max models had vision and this isn’t a large architectural change.
+> > 
+> > 
+> > > 6
+> > > 
+> > > 
+> > > 
+> > > [u/RuthlessCriticismAll](https://redlib.catsarch.com/user/RuthlessCriticismAll)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mcu01/?context=3#p3mcu01 "Aug 14 2026, 10:33:13 UTC")
+> > > 
+> > > it is SOTA vision model... sadly that is almost certainly the reason they didn't release that part.
+> > 
+> > 
+> > 
+> > 5
+> > 
+> > 
+> > 
+> > [u/nullc](https://redlib.catsarch.com/user/nullc)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mssv7/?context=3#p3mssv7 "Aug 14 2026, 12:13:36 UTC")
+> > 
+> > it'll suddenly have vision when GLM's SOTA model does... :P
+> 
+> 
+> 
+> 15
+> 
+> 
+> 
+> [u/Valuable-Repeat-7347](https://redlib.catsarch.com/user/Valuable-Repeat-7347)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m5fj4/?context=3#p3m5fj4 "Aug 14 2026, 09:37:25 UTC")
+> 
+> That critique is kind of like bashing a train for not having a CD player, kind of...
+> 
+> 
+> > 48
+> > 
+> > 
+> > 
+> > [u/hyperrealists](https://redlib.catsarch.com/user/hyperrealists)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m5stm/?context=3#p3m5stm "Aug 14 2026, 09:40:22 UTC")
+> > 
+> > Yea what the fuck train
+> > 
+> > 
+> > > 2
+> > > 
+> > > 
+> > > 
+> > > [u/buckwheaton](https://redlib.catsarch.com/user/buckwheaton)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mh24k/?context=3#p3mh24k "Aug 14 2026, 11:02:36 UTC")
+> > > 
+> > > No dude it’s fine you just need a cassette adapter and a CD Walkman.
+> > > 
+> > > 
+> > > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/Sharpastic](https://redlib.catsarch.com/user/Sharpastic)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mqoci/?context=3#p3mqoci "Aug 14 2026, 12:01:32 UTC")
+> > > 
+> > > I’m literally crying drops of Jupiter
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/thatcodingboi](https://redlib.catsarch.com/user/thatcodingboi)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3myslh/?context=3#p3myslh "Aug 14 2026, 12:45:31 UTC")
+> > 
+> > well its more like it dedicated a compartment for music, which is cool, but I didn't come here for that and that compartment could have had better use
+> 
+> 
+> 
+> 5
+> 
+> 
+> 
+> [u/WetSound](https://redlib.catsarch.com/user/WetSound)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m7laa/?context=3#p3m7laa "Aug 14 2026, 09:54:24 UTC")
+> 
+> And _Natively_, 3.6 27B used mmproj compatibility layer
+> 
+> 
+> 
+> 4
+> 
+> 
+> 
+> [u/VotZeFuk](https://redlib.catsarch.com/user/VotZeFuk)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mk646/?context=3#p3mk646 "Aug 14 2026, 11:22:31 UTC")
+> 
+> Can't see your own wiener when you're too fat. - perfectly logical
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/ScoreUnique](https://redlib.catsarch.com/user/ScoreUnique)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mu8dv/?context=3#p3mu8dv "Aug 14 2026, 12:21:28 UTC")
+> 
+> I think you really don't need a vision encoder on sota models , you can have a 3b explain images to 2.4T and it'll still be efficient (remember AI first solved Computer Vision before Language)
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/Internal_Werewolf_48](https://redlib.catsarch.com/user/Internal_Werewolf_48)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n2ils/?context=3#p3n2ils "Aug 14 2026, 13:04:22 UTC")
+> 
+> All 3 people capable of running a 2.4T model locally are devastated.
+
+34
+
+[u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mlcr1/?context=3#p3mlcr1 "Aug 14 2026, 11:29:51 UTC")
+
+The bots are waiting impatiently...
+
+[![Image 4](https://redlib.catsarch.com/preview/pre/r8fsink2tbjh1.png?width=692&format=png&auto=webp&s=50c967762bccd2e24cf66749d1d487e3e80b8c99)](https://redlib.catsarch.com/preview/pre/r8fsink2tbjh1.png?width=692&format=png&auto=webp&s=50c967762bccd2e24cf66749d1d487e3e80b8c99)
+
+> 9
+> 
+> 
+> 
+> [u/kkingsbe](https://redlib.catsarch.com/user/kkingsbe)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n0bil/?context=3#p3n0bil "Aug 14 2026, 12:53:21 UTC")
+> 
+> Got my Hermes monitoring as well 😂
+> 
+> 
+> > 0
+> > 
+> > 
+> > 
+> > [u/virtualworker](https://redlib.catsarch.com/user/virtualworker)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n2c9q/?context=3#p3n2c9q "Aug 14 2026, 13:03:28 UTC")
+> > 
+> > Openclaw for me!
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/cosmicnag](https://redlib.catsarch.com/user/cosmicnag)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mw6ba/?context=3#p3mw6ba "Aug 14 2026, 12:31:48 UTC")
+> 
+> lulz
+
+34
+
+[u/quadra-lab](https://redlib.catsarch.com/user/quadra-lab)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m7eef/?context=3#p3m7eef "Aug 14 2026, 09:52:53 UTC")
+
+No mentions about QAT _yet_, seeing how well it performed for Gemma 4 31B I hope they did it with 27B training
+
+> 8
+> 
+> 
+> 
+> [u/Significant_Bar_460](https://redlib.catsarch.com/user/Significant_Bar_460)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mchkw/?context=3#p3mchkw "Aug 14 2026, 10:30:44 UTC")
+> 
+> QAT was a big thing for Gemma because the original version was very quantization sensitive (specially for KV). Qwen always handled quantization much better than Gemma. Gemma QAT is like Qwen without QAT when comparing quality degradation after quantization.
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/kivaougu](https://redlib.catsarch.com/user/kivaougu)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mwmkm/?context=3#p3mwmkm "Aug 14 2026, 12:34:13 UTC")
+> 
+> Also worked out very well for deepseek. In my opinion QAT would be a much better improvement for most systems compared to reasoning effort. Maxing out reasoning effort only gives miniscule improvements in results.
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/GiGiGus](https://redlib.catsarch.com/user/GiGiGus)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mjqd1/?context=3#p3mjqd1 "Aug 14 2026, 11:19:47 UTC")
+> 
+> I mean, all Qwen models have official FP8 models, so I guess they're already trained in this precision and doesn't necessarily require QAT?
+> 
+> 
+> > 5
+> > 
+> > 
+> > 
+> > [u/ain92ru](https://redlib.catsarch.com/user/ain92ru)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3ms5ht/?context=3#p3ms5ht "Aug 14 2026, 12:09:55 UTC")
+> > 
+> > FP8 isn't supported on older hardware like RTX 30-series though so INT4 QAT is still valuable
+
+34
+
+[u/Guna1260](https://redlib.catsarch.com/user/Guna1260)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m597q/?context=3#p3m597q "Aug 14 2026, 09:35:59 UTC")
+
+This day will also pass...
+
+> 94
+> 
+> 
+> 
+> [u/hyperrealists](https://redlib.catsarch.com/user/hyperrealists)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m5yq9/?context=3#p3m5yq9 "Aug 14 2026, 09:41:38 UTC")
+> 
+> 3.9 27B when 😡
+> 
+> 
+> > 21
+> > 
+> > 
+> > 
+> > [u/Adventurous_Bus_437](https://redlib.catsarch.com/user/Adventurous_Bus_437)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3maebl/?context=3#p3maebl "Aug 14 2026, 10:15:33 UTC")
+> > 
+> > When 3.8 35B A3B or 60B A12B. Begger trying to choose
+> > 
+> > 
+> > 
+> > 14
+> > 
+> > 
+> > 
+> > u/[deleted][4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m81wy/?context=3#p3m81wy "Aug 14 2026, 09:57:58 UTC")
+> > 
+> > [deleted]
+> > 
+> > 
+> > > 5
+> > > 
+> > > 
+> > > 
+> > > [u/Borkato](https://redlib.catsarch.com/user/Borkato)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mojrs/?context=3#p3mojrs "Aug 14 2026, 11:49:16 UTC")
+> > > 
+> > > If they don’t release it in 1 second, it means they’re never releasing again. Rug pull!!!1!!1!!!!11!!!!!one!!!!1!!!
+> > > 
+> > > 
+> > > 
+> > > 3
+> > > 
+> > > 
+> > > 
+> > > [u/terorvlad](https://redlib.catsarch.com/user/terorvlad)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mdh7g/?context=3#p3mdh7g "Aug 14 2026, 10:37:53 UTC")
+> > > 
+> > > Nah, they will never release open source again, otherwise we would've had 4.0 months ago
+
+25
+
+[u/_-_David](https://redlib.catsarch.com/user/_-_David)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m6zzc/?context=3#p3m6zzc "Aug 14 2026, 09:49:45 UTC")
+
+You had me at reasoning_effort
+
+11
+
+[u/Dany0](https://redlib.catsarch.com/user/Dany0)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m7nl3/?context=3#p3m7nl3 "Aug 14 2026, 09:54:54 UTC")
+
+I hope a DSpark/DFlash drafter will be released alongside just like 2.4T
+
+> 6
+> 
+> 
+> 
+> [u/wgaca2](https://redlib.catsarch.com/user/wgaca2)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m8ayy/?context=3#p3m8ayy "Aug 14 2026, 09:59:57 UTC")
+> 
+> If Dspark is released this will be huge, dflash is good only for coding tasks and falls off really bad in reasoning
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Party-Special-5177](https://redlib.catsarch.com/user/Party-Special-5177)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n2qs2/?context=3#p3n2qs2 "Aug 14 2026, 13:05:30 UTC")
+> > 
+> > OOTL, what’s the difference?
+> > 
+> > 
+> > > 6
+> > > 
+> > > 
+> > > 
+> > > [u/wgaca2](https://redlib.catsarch.com/user/wgaca2)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n4f2a/?context=3#p3n4f2a "Aug 14 2026, 13:13:44 UTC")
+> > > 
+> > > **"DSpark** (released by DeepSeek) builds directly on top of DFlash's parallel structural backbone, adding a lightweight "Markov/RNN head" for token coherence and a dynamic confidence-scheduled verification layer to optimize GPU load"
+> > > 
+> > > 
+> > > There was a very good video explaining how it works when deepseek released it.
+> > > 
+> > > 
+> > > > 1
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/Party-Special-5177](https://redlib.catsarch.com/user/Party-Special-5177)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n5muo/?context=3#p3n5muo "Aug 14 2026, 13:19:40 UTC")
+> > > > 
+> > > > Cheers.
+> > > 
+> > > 
+> > > 
+> > > 2
+> > > 
+> > > 
+> > > 
+> > > [u/simcop2387](https://redlib.catsarch.com/user/simcop2387)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n69n4/?context=3#p3n69n4 "Aug 14 2026, 13:22:45 UTC")
+> > > 
+> > > layman's bad understanding: There's some architectural differences of course, dspark is based off the way dflash works but changed things up a bit to be more efficient and allow for cheaper early bailout and cheaper validation of the tokens. So that it doesn't generate as many bad tokens, nor does it spend as long validating bad tokens. This doesn't hugely change the acceptance rate but it makes it less costly when generating bad tokens. This ends up applying a lot more during reasoning because it's less predictable (like writing a story, or other creative tasks) than coding or tool calling where things tend to be much more structured grammatically i.e. if you're writing JSON, `{` is almost always followed by `"`, and then some letters, followed by `"` and then `:`. That lends itself to being predicted by the smaller draft model MUCH easier so you get high acceptance rates.
+> > > 
+> > > 
+> > > DFlash is basically just a single drafting layer using a diffusion block (terrible explination) that predicts a bunch at once even if they're not all great predictions so it generates a lot fast, which is great when it's right but if it's bad there's just a lot of thrown away work. DSpark is some kind of hybrid diffusion + AR setup that does a few smaller blocks I think, and the AR bits help it decide if it should continue and nudge things into better predictions.
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/boomerang473](https://redlib.catsarch.com/user/boomerang473)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n0qyg/?context=3#p3n0qyg "Aug 14 2026, 12:55:31 UTC")
+> 
+> Was that drafter released? I can’t figure out how to find the drafter on HF. Would love if they did it versus a community version as I think you’d get better token acceptance
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Dany0](https://redlib.catsarch.com/user/Dany0)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n2hf4/?context=3#p3n2hf4 "Aug 14 2026, 13:04:12 UTC")
+> > 
+> > I thought it was released, wasn't it in the official vllm recipe? 🥺
+> > 
+> > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/boomerang473](https://redlib.catsarch.com/user/boomerang473)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n2o5k/?context=3#p3n2o5k "Aug 14 2026, 13:05:08 UTC")
+> > > 
+> > > Might be ha, I’m genuinely asking. Haven’t tried to run the 2.4T locally 😂
+
+6
+
+[u/tinny66666](https://redlib.catsarch.com/user/tinny66666)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m5kek/?context=3#p3m5kek "Aug 14 2026, 09:38:30 UTC")
+
+I guess us llama.cpp users will need to wait a little longer for a gguf? Does llama.cpp fully support the new model or will it also need an update?
+
+> 11
+> 
+> 
+> 
+> [u/-Cubie-](https://redlib.catsarch.com/user/-Cubie-)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m5voe/?context=3#p3m5voe "Aug 14 2026, 09:40:58 UTC")
+> 
+> The "Model Overview" section from [https://huggingface.co/Qwen/Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B) looks very similar to the one from [https://huggingface.co/Qwen/Qwen3.6-27B](https://huggingface.co/Qwen/Qwen3.6-27B), so I bet llama.cpp either immediately supports it, or will be able to support it very quickly.
+> 
+> 
+> > 17
+> > 
+> > 
+> > 
+> > [u/nunodonato](https://redlib.catsarch.com/user/nunodonato)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m7i1m/?context=3#p3m7i1m "Aug 14 2026, 09:53:41 UTC")
+> > 
+> > Unsloth said day 0 support, so yeah. As long as architecture is the same, llamacpp should work right away
+> > 
+> > 
+> > > 8
+> > > 
+> > > 
+> > > 
+> > > [u/-Cubie-](https://redlib.catsarch.com/user/-Cubie-)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m97oy/?context=3#p3m97oy "Aug 14 2026, 10:06:53 UTC")
+> > > 
+> > > Unsloth is famously extremely fast and reliable, so I trust them.
+> > > 
+> > > 
+> > > > 23
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/CloggedBathtub](https://redlib.catsarch.com/user/CloggedBathtub)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mg080/?context=3#p3mg080 "Aug 14 2026, 10:55:33 UTC")
+> > > > 
+> > > > If they weren't fast, they'd just be "sloth"
+
+7
+
+[u/Brilliant-Hall1387](https://redlib.catsarch.com/user/Brilliant-Hall1387)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m821z/?context=3#p3m821z "Aug 14 2026, 09:58:00 UTC")
+
+Will try to build MLX quantization of Qwen 3.8 27B with activation aware bit allocation, it will be interesting to see what performance one can get from a smaller variant of 3.8 27B 😄
+
+Anyone else preparing to do quantization of Qwen 3.8 and, if so, which methods are you considering? (AWQ, GPTQ? TASA/TAQ-O, other methods?)
+
+7
+
+[u/Weird-Field6128](https://redlib.catsarch.com/user/Weird-Field6128)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3myby4/?context=3#p3myby4 "Aug 14 2026, 12:43:07 UTC")
+
+2 hours more! GOD
+
+> 6
+> 
+> 
+> 
+> [u/Ok-Lengthiness-3988](https://redlib.catsarch.com/user/Ok-Lengthiness-3988)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mz17e/?context=3#p3mz17e "Aug 14 2026, 12:46:45 UTC")
+> 
+> 2 hours and 12 minutes more, actually.
+> 
+> 
+> > 2
+> > 
+> > 
+> > 
+> > [u/Weird-Field6128](https://redlib.catsarch.com/user/Weird-Field6128)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3o38dw/?context=3#p3o38dw "Aug 14 2026, 15:51:17 UTC")
+> > 
+> > Thanks for waking me up
+
+4
+
+[u/FerLuisxd](https://redlib.catsarch.com/user/FerLuisxd)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mibag/?context=3#p3mibag "Aug 14 2026, 11:10:45 UTC")
+
+Vision or no?
+
+> 6
+> 
+> 
+> 
+> [u/GanjaRaidersTR](https://redlib.catsarch.com/user/GanjaRaidersTR)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mk0fo/?context=3#p3mk0fo "Aug 14 2026, 11:21:31 UTC")
+> 
+> Yes native
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/DanTup](https://redlib.catsarch.com/user/DanTup)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3miwa7/?context=3#p3miwa7 "Aug 14 2026, 11:14:29 UTC")
+> 
+> They said on Twitter yes.
+
+5
+
+[u/pigeon57434](https://redlib.catsarch.com/user/pigeon57434)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3ncx2p/?context=3#p3ncx2p "Aug 14 2026, 13:53:58 UTC")
+
+Qwen3.8-27B-heretic when?
+
+3
+
+[u/timerski](https://redlib.catsarch.com/user/timerski)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m7j0p/?context=3#p3m7j0p "Aug 14 2026, 09:53:54 UTC")
+
+Aww yisss we get vision
+
+> Native support for image and video understanding, from STEM diagrams and documents to hour-scale videos.
+
+4
+
+[u/johnzadok](https://redlib.catsarch.com/user/johnzadok)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mmapv/?context=3#p3mmapv "Aug 14 2026, 11:35:41 UTC")
+
+Cool. Last time I was as excited for some release was iPhone 4.
+
+3
+
+[u/cafedude](https://redlib.catsarch.com/user/cafedude)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nrhyo/?context=3#p3nrhyo "Aug 14 2026, 14:59:27 UTC")
+
+I just watched the countdown go to 00
+
+5
+
+[u/_en_svensk_tiger](https://redlib.catsarch.com/user/_en_svensk_tiger)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nsiw0/?context=3#p3nsiw0 "Aug 14 2026, 15:04:00 UTC")
+
+Unsloth bringing quants early too <3
+
+[https://huggingface.co/unsloth/Qwen3.8-27B-GGUF](https://huggingface.co/unsloth/Qwen3.8-27B-GGUF)
+
+4
+
+[u/Eduard2609](https://redlib.catsarch.com/user/Eduard2609)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3myi4m/?context=3#p3myi4m "Aug 14 2026, 12:44:00 UTC")
+
+Is just me or the time is passing slower
+
+3
+
+[u/Developer-Y](https://redlib.catsarch.com/user/Developer-Y)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3ns6t3/?context=3#p3ns6t3 "Aug 14 2026, 15:02:30 UTC")edited 4d ago
+
+Their benchmark compares it to Opus 4.6, it is going to be lit.
+
+Gguf [https://huggingface.co/unsloth/Qwen3.8-27B-GGUF](https://huggingface.co/unsloth/Qwen3.8-27B-GGUF)
+
+1
+
+[u/My_Unbiased_Opinion](https://redlib.catsarch.com/user/My_Unbiased_Opinion)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m9rpz/?context=3#p3m9rpz "Aug 14 2026, 10:10:59 UTC")
+
+This is the model I'm waiting for to finally make the switch to vLLM.
+
+> 1
+> 
+> 
+> 
+> [u/cosmicnag](https://redlib.catsarch.com/user/cosmicnag)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mx956/?context=3#p3mx956 "Aug 14 2026, 12:37:29 UTC")
+> 
+> if you have the vram, vllm is for the most part better - the faster prefill and LMCache integration ups the game IMO
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Borkato](https://redlib.catsarch.com/user/Borkato)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3njbvs/?context=3#p3njbvs "Aug 14 2026, 14:23:13 UTC")
+> > 
+> > It just sucks MISERABLY if you’re the kind of person to change models often. The load time is like 4 whole minutes, it’s aggravating
+> > 
+> > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/cosmicnag](https://redlib.catsarch.com/user/cosmicnag)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nrauu/?context=3#p3nrauu "Aug 14 2026, 14:58:35 UTC")
+> > > 
+> > > yeah sure, but its better if you use it for actual work lol with a single 'chosen' model.
+> > > 
+> > > 
+> > > > 1
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/Borkato](https://redlib.catsarch.com/user/Borkato)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3ntrje/?context=3#p3ntrje "Aug 14 2026, 15:09:28 UTC")
+> > > > 
+> > > > “Actual work” lmao actual work involves switching models for some of us, because no single model is great at everything.
+
+2
+
+[u/Aggravating-Push-207](https://redlib.catsarch.com/user/Aggravating-Push-207)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3ms702/?context=3#p3ms702 "Aug 14 2026, 12:10:09 UTC")
+
+Maybe they are running the benchmarks in preperation for the official release.
+
+2
+
+[u/No-Understanding2406](https://redlib.catsarch.com/user/No-Understanding2406)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n7d77/?context=3#p3n7d77 "Aug 14 2026, 13:27:58 UTC")
+
+When will we get the 3.9 27B?
+
+2
+
+[u/mattrs1101](https://redlib.catsarch.com/user/mattrs1101)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nd33i/?context=3#p3nd33i "Aug 14 2026, 13:54:44 UTC")
+
+I hope its q2 quant is just as good or better than glimmer's. We need a 16GB Vram race to happen.
+
+2
+
+[u/Ok-Lengthiness-3988](https://redlib.catsarch.com/user/Ok-Lengthiness-3988)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3ntcli/?context=3#p3ntcli "Aug 14 2026, 15:07:37 UTC")
+
+Nobody has posted GGUFs yet. What's taking so long?
+
+> 3
+> 
+> 
+> 
+> [u/-Cubie-](https://redlib.catsarch.com/user/-Cubie-)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3ntpwa/?context=3#p3ntpwa "Aug 14 2026, 15:09:16 UTC")
+> 
+> [https://huggingface.co/unsloth/Qwen3.8-27B-GGUF](https://huggingface.co/unsloth/Qwen3.8-27B-GGUF)
+> 
+> 
+> 
+> 3
+> 
+> 
+> 
+> [u/Ok-Lengthiness-3988](https://redlib.catsarch.com/user/Ok-Lengthiness-3988)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nv244/?context=3#p3nv244 "Aug 14 2026, 15:15:12 UTC")
+> 
+> I was meaning that as a joke but I now see that they actually appeared on Huggingface, published by unsloth, 3 minutes before the official release!
+
+1
+
+[u/Ok-Shower7286](https://redlib.catsarch.com/user/Ok-Shower7286)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mantg/?context=3#p3mantg "Aug 14 2026, 10:17:26 UTC")edited 4d ago
+
+Holy moly, same exact topology, they just slapped 'reasoning_effort' on it. I guess it seems difficult to huge improvement on same architecture. If the benchmarks don't show a massive leap, I'll pretty underwhelming f̶o̶r̶ ̶a̶ ̶m̶a̶j̶o̶r̶ ̶v̶e̶r̶s̶i̶o̶n̶ ̶b̶u̶m̶p̶.
+
+> 28
+> 
+> 
+> 
+> [u/-Cubie-](https://redlib.catsarch.com/user/-Cubie-)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mbg9m/?context=3#p3mbg9m "Aug 14 2026, 10:23:10 UTC")
+> 
+> It's a minor version bump though right? A major version bump would be Qwen4.
+> 
+> 
+> > 3
+> > 
+> > 
+> > 
+> > [u/Ok-Lengthiness-3988](https://redlib.catsarch.com/user/Ok-Lengthiness-3988)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mzdmn/?context=3#p3mzdmn "Aug 14 2026, 12:48:32 UTC")
+> > 
+> > According to the version number benchmark, yes.
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/ANR2ME](https://redlib.catsarch.com/user/ANR2ME)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mz1st/?context=3#p3mz1st "Aug 14 2026, 12:46:50 UTC")
+> > 
+> > Qwen3 vs Qwen3.5 use a different architecture isn't 🤔 even though it's not a major version jump.
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/florinandrei](https://redlib.catsarch.com/user/florinandrei)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nd0d8/?context=3#p3nd0d8 "Aug 14 2026, 13:54:23 UTC")
+> > 
+> > They decided the version bump is major based on social media hype.
+
+1
+
+[u/Every-Fortune-3151](https://redlib.catsarch.com/user/Every-Fortune-3151)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mbzkb/?context=3#p3mbzkb "Aug 14 2026, 10:27:05 UTC")
+
+Context window of 1M, does that mean they are confident 27B will hold up in such deep context? They are hyping this up so much. I just hope they made KV size more optimized
+
+> 5
+> 
+> 
+> 
+> [u/Confident_Ideal_5385](https://redlib.catsarch.com/user/Confident_Ideal_5385)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mftsg/?context=3#p3mftsg "Aug 14 2026, 10:54:21 UTC")
+> 
+> ``` For frameworks that support separate token limits for internal reasoning and final outputs, we suggest the following configuration within the 1M context length:
+> 
+> 
+> ```
+> Reasoning Content: Set the maximum output length to 262,144 tokens.
+> Final Response: Set the maximum output length to 131,072 tokens.
+> ```
+> 
+> ```
+> 
+> 
+> They seem pretty happy to suggest letting it think past the end of its trained max sequence length, at any rate.
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/YourNightmar31](https://redlib.catsarch.com/user/YourNightmar31)llama.cpp[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nq6ge/?context=3#p3nq6ge "Aug 14 2026, 14:53:40 UTC")
+> 
+> I dont think we get 1M context. It said they only have a special version on their api service with 1M context.
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Every-Fortune-3151](https://redlib.catsarch.com/user/Every-Fortune-3151)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nxsqc/?context=3#p3nxsqc "Aug 14 2026, 15:27:21 UTC")
+> > 
+> > You caught it correcty. It is still 256k context
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Foreign_Risk_2031](https://redlib.catsarch.com/user/Foreign_Risk_2031)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3q9tzh/?context=3#p3q9tzh "Aug 14 2026, 21:39:30 UTC")
+> > 
+> > > In particular, **Qwen3.8-27B** will be available as a hosted version with more production features, e.g., 1M context length by default, official built-in tools. For more information, please refer to the [Qwen3.8-27B Overview](https://www.qwencloud.com/models/qwen3.8-27b). The service is coming soon. Stay tuned for updates.
+> > 
+> > 
+> > By default the api will be 1M. Its the same as we have.
+
+1
+
+[u/AppealSame4367](https://redlib.catsarch.com/user/AppealSame4367)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mcllj/?context=3#p3mcllj "Aug 14 2026, 10:31:32 UTC")
+
+This is soo sexy.
+
+1
+
+[u/FoxFXMD](https://redlib.catsarch.com/user/FoxFXMD)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mcxo1/?context=3#p3mcxo1 "Aug 14 2026, 10:33:57 UTC")
+
+> Context Length: 262,144 natively and extensible up to 1,000,000 tokens.
+
+Can someone smart explain what this means?
+
+> 3
+> 
+> 
+> 
+> [u/N34257](https://redlib.catsarch.com/user/N34257)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mh3wu/?context=3#p3mh3wu "Aug 14 2026, 11:02:56 UTC")
+> 
+> It means you can extend the context beyond 256k using YaRN, for example for 512k the model's .ini section would contain this:
+> 
+> 
+> ```
+> rope-scaling=yarn
+> rope-scale=2
+> yarn-orig-ctx=262144
+> override-kv="qwen35moe.context_length=int:1000000"
+> ```
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/banana_slurp_jug](https://redlib.catsarch.com/user/banana_slurp_jug)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mdhrp/?context=3#p3mdhrp "Aug 14 2026, 10:38:00 UTC")
+> 
+> You can set the context window up to 1000000 tokens but anything above 262144 tokens is ymmv
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/FoxFXMD](https://redlib.catsarch.com/user/FoxFXMD)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mf1fm/?context=3#p3mf1fm "Aug 14 2026, 10:48:56 UTC")
+> > 
+> > oh that's amazing
+
+1
+
+[u/hay-yo](https://redlib.catsarch.com/user/hay-yo)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mews4/?context=3#p3mews4 "Aug 14 2026, 10:48:04 UTC")
+
+Release of the year!
+
+> 4
+> 
+> 
+> 
+> [u/YearnMar10](https://redlib.catsarch.com/user/YearnMar10)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mglj2/?context=3#p3mglj2 "Aug 14 2026, 10:59:32 UTC")
+> 
+> Year is not over yet - maybe they’ll release their next model in 4 months
+
+1
+
+[u/Zaic](https://redlib.catsarch.com/user/Zaic)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mj176/?context=3#p3mj176 "Aug 14 2026, 11:15:21 UTC")
+
+Anticipating the release with my 4070s 12gb vram... I know I can get 7-10tps on 3.6 27b. My system is ddr4 with 48gb ram. Just curious if anyone succeded to get more tps (like 15+) and would care to share their setup?. Also considering adding 3060 12gb card. Just so id hit the 50 tps in q3 or q4 quants .. or its unrealistic?
+
+> 2
+> 
+> 
+> 
+> [u/PeterPorox](https://redlib.catsarch.com/user/PeterPorox)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mn7il/?context=3#p3mn7il "Aug 14 2026, 11:41:14 UTC")
+> 
+> I get 14 tok/s with dual Nvidia P104-100 8GB (mining version of GTX1070). These are very old cards, so adding RTX3060 will definitely give you 25+ with mtp
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/brakeline](https://redlib.catsarch.com/user/brakeline)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mpbc8/?context=3#p3mpbc8 "Aug 14 2026, 11:53:44 UTC")
+> 
+> I have 2 3060 12gb. I can't get past 30 tk/s
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Zaic](https://redlib.catsarch.com/user/Zaic)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mpslh/?context=3#p3mpslh "Aug 14 2026, 11:56:29 UTC")
+> > 
+> > Q4 quants?
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Zaic](https://redlib.catsarch.com/user/Zaic)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mpt0r/?context=3#p3mpt0r "Aug 14 2026, 11:56:32 UTC")
+> > 
+> > Q4 quants?
+> > 
+> > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/brakeline](https://redlib.catsarch.com/user/brakeline)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mrenx/?context=3#p3mrenx "Aug 14 2026, 12:05:41 UTC")
+> > > 
+> > > Yep
+
+1
+
+[u/jhnnassky](https://redlib.catsarch.com/user/jhnnassky)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mo7y6/?context=3#p3mo7y6 "Aug 14 2026, 11:47:21 UTC")
+
+Do you know guys, will they release a 35B-A3B like model?
+
+> 3
+> 
+> 
+> 
+> [u/Borkato](https://redlib.catsarch.com/user/Borkato)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mpwlv/?context=3#p3mpwlv "Aug 14 2026, 11:57:06 UTC")
+> 
+> They haven’t confirmed or denied that. Unfortunately you’ll just have to wait. If you’re using it for coding I highly recommend Kat Coder. You can also use Nail’s prompt template.
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/k_rol](https://redlib.catsarch.com/user/k_rol)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nao9u/?context=3#p3nao9u "Aug 14 2026, 13:43:34 UTC")
+> > 
+> > I noticed you mentioned Nail prompt template a couple times in this thread, what is that? I couldn't find much other than actual nails pictures made by AI.
+> > 
+> > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/Borkato](https://redlib.catsarch.com/user/Borkato)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3niwie/?context=3#p3niwie "Aug 14 2026, 14:21:20 UTC")
+> > > 
+> > > Lol! Here: [https://huggingface.co/peculiar-ragdoll/Nail-Qwen3.6-35B-A3B-GGUF](https://huggingface.co/peculiar-ragdoll/Nail-Qwen3.6-35B-A3B-GGUF)
+> > > 
+> > > 
+> > > Note that the only difference between this model and the original unsloth is the chat template; you can just copy the chat template and call it with the chat-template-file parameter in llama cpp if you don’t care to have the template built into the GGUF and so you don’t have to download their gguf hosted at the link
+> > > 
+> > > 
+> > > Also note there’s a dagger version for 27b!
+> > > 
+> > > 
+> > > > 1
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/k_rol](https://redlib.catsarch.com/user/k_rol)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3o0c8b/?context=3#p3o0c8b "Aug 14 2026, 15:38:34 UTC")
+> > > > 
+> > > > thanks! much appreciated
+
+1
+
+[u/Muted-Celebration-47](https://redlib.catsarch.com/user/Muted-Celebration-47)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mzy8m/?context=3#p3mzy8m "Aug 14 2026, 12:51:29 UTC")
+
+It is built on qwen3.5?
+
+1
+
+[u/SirLordBoss](https://redlib.catsarch.com/user/SirLordBoss)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n19k0/?context=3#p3n19k0 "Aug 14 2026, 12:58:05 UTC")
+
+How I yearn for a 9B...
+
+1
+
+[u/OddUnderstanding2309](https://redlib.catsarch.com/user/OddUnderstanding2309)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n1l4r/?context=3#p3n1l4r "Aug 14 2026, 12:59:41 UTC")
+
+2h togo.
+
+ Pogopogo up, pogogo down…
+
+ Shimmyyyyy
+
+1
+
+[u/Sevealin_](https://redlib.catsarch.com/user/Sevealin_)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3n2gcm/?context=3#p3n2gcm "Aug 14 2026, 13:04:03 UTC")
+
+What do you guys think support will look like with llama.cpp and vLLM on drop in 2 hours? Will the 3.6 support kind-of carry over since they are similar architectures? Of course there might be bugs (chat templates etc.) as that comes with any new model. What about context size? I see it's 262k natively and can be expanded up to 1M. Pretty sure 3.8 Max can push 1M context with just a few GB extra KV.
+
+I have two 3090s and love the parallelism to pull 262k at fp8 with two concurrent streams with 3.6. Excited to see what performance can be squeezed out!
+
+> 2
+> 
+> 
+> 
+> [u/Otherwise-Director17](https://redlib.catsarch.com/user/Otherwise-Director17)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nr4xm/?context=3#p3nr4xm "Aug 14 2026, 14:57:51 UTC")
+> 
+> It'll load and run fine. Same exact Qwen3.5 architecture
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Sevealin_](https://redlib.catsarch.com/user/Sevealin_)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nys1s/?context=3#p3nys1s "Aug 14 2026, 15:31:41 UTC")
+> > 
+> > Thank you!
+
+1
+
+[u/Scared_Basket_7183](https://redlib.catsarch.com/user/Scared_Basket_7183)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nps45/?context=3#p3nps45 "Aug 14 2026, 14:51:54 UTC")
+
+Hi could you please help me to run qwen 3.6 27b model on tpu v5e ?
+
+1
+
+[u/YourNightmar31](https://redlib.catsarch.com/user/YourNightmar31)llama.cpp[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nq21e/?context=3#p3nq21e "Aug 14 2026, 14:53:07 UTC")
+
+"Based on Qwen 3.5"????
+
+1
+
+[u/Desperate-Bad-2339](https://redlib.catsarch.com/user/Desperate-Bad-2339)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nrusx/?context=3#p3nrusx "Aug 14 2026, 15:01:01 UTC")
+
+Qwen/Qwen3.8-27B is out on hf
+
+1
+
+[u/cowinabadplace](https://redlib.catsarch.com/user/cowinabadplace)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3ocy25/?context=3#p3ocy25 "Aug 14 2026, 16:33:22 UTC")
+
+Does anyone know if AWQ/INT4/GPTQ releases are coming?
+
+0
+
+u/[deleted][4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m4va2/?context=3#p3m4va2 "Aug 14 2026, 09:32:51 UTC")
+
+[deleted]
+
+> 7
+> 
+> 
+> 
+> [u/-Cubie-](https://redlib.catsarch.com/user/-Cubie-)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m5ijc/?context=3#p3m5ijc "Aug 14 2026, 09:38:05 UTC")
+> 
+> I think 3.6 also supported video. Usually image and video are both supported as their implementation is very similar (both use 'grid_thw': time, height, width, and images just auto-set the time to 1 while videos use higher values).
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Infinite100p](https://redlib.catsarch.com/user/Infinite100p)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m6pyf/?context=3#p3m6pyf "Aug 14 2026, 09:47:34 UTC")
+> > 
+> > Do they sample the vid into still frames and read those, or do they "understand" the stream itself natively?
+
+0
+
+[u/nofaceD3](https://redlib.catsarch.com/user/nofaceD3)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m6tsp/?context=3#p3m6tsp "Aug 14 2026, 09:48:25 UTC")
+
+What are the requirements to run this model in local?
+
+> 9
+> 
+> 
+> 
+> [u/Neither_Garage_758](https://redlib.catsarch.com/user/Neither_Garage_758)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m82jq/?context=3#p3m82jq "Aug 14 2026, 09:58:07 UTC")
+> 
+> Probably similar to the previous one: [https://huggingface.co/unsloth/Qwen3.6-27B-MTP-GGUF](https://huggingface.co/unsloth/Qwen3.6-27B-MTP-GGUF)
+> 
+> 
+> If you look at the various sizes in GB and add a few GB's more for context, this gives you the amount of (V)RAM needed. With llama.cpp you can run inference with CPU-RAM and GPU-VRAM combined, but the more CPU involved the slower compared to GPU.
+> 
+> 
+> For a decent quality, probably it's better to not go under Q4 (quantization to 4-bit).
+> 
+> 
+> > -5
+> > 
+> > 
+> > 
+> > [u/YearnMar10](https://redlib.catsarch.com/user/YearnMar10)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mgqhd/?context=3#p3mgqhd "Aug 14 2026, 11:00:26 UTC")
+> > 
+> > You probably meant Q6
+> > 
+> > 
+> > > 2
+> > > 
+> > > 
+> > > 
+> > > [u/mikael110](https://redlib.catsarch.com/user/mikael110)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mk543/?context=3#p3mk543 "Aug 14 2026, 11:22:21 UTC")edited 4d ago
+> > > 
+> > > No, he certainly meant Q4. That has been the most agreed upon lowest quant size that's still pretty decent for years now. Once you go below that things degrade a lot, especially for smallish models like this.
+> > > 
+> > > 
+> > > Obviously running at Q6 or higher would be ideal if you have the hardware for it, especially when doing coding. but Q4 is still the point that most people with limited hardware will land.
+> > > 
+> > > 
+> > > > 1
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/YearnMar10](https://redlib.catsarch.com/user/YearnMar10)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mmfrw/?context=3#p3mmfrw "Aug 14 2026, 11:36:33 UTC")
+> > > > 
+> > > > Ja, but if you check with the folks here that use the 27b model, they all agree that q6 is far superior and q4 is looping too much.
+> > > 
+> > > 
+> > > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/Neither_Garage_758](https://redlib.catsarch.com/user/Neither_Garage_758)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mr9sw/?context=3#p3mr9sw "Aug 14 2026, 12:04:55 UTC")
+> > > 
+> > > I meant probably as we don't know yet.
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/Guna1260](https://redlib.catsarch.com/user/Guna1260)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3m6zvm/?context=3#p3m6zvm "Aug 14 2026, 09:49:44 UTC")
+> 
+> perhaps ... a running track
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/johnzadok](https://redlib.catsarch.com/user/johnzadok)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mmyj6/?context=3#p3mmyj6 "Aug 14 2026, 11:39:42 UTC")
+> 
+> You need a card with 24GB VRAM, like 7900 XTX or 3090, or dual 5060.
+
+0
+
+[u/DivideHorror3217](https://redlib.catsarch.com/user/DivideHorror3217)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mbgzc/?context=3#p3mbgzc "Aug 14 2026, 10:23:19 UTC")
+
+Spoiler: It is between Inkling and Minimax-M3
+
+> 2
+> 
+> 
+> 
+> [u/AppealSame4367](https://redlib.catsarch.com/user/AppealSame4367)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mcojp/?context=3#p3mcojp "Aug 14 2026, 10:32:07 UTC")
+> 
+> That would be the best case, I expect 42.
+> 
+> 
+> > 3
+> > 
+> > 
+> > 
+> > [u/DivideHorror3217](https://redlib.catsarch.com/user/DivideHorror3217)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3meihc/?context=3#p3meihc "Aug 14 2026, 10:45:18 UTC")
+> > 
+> > 3.6 27b has 92% of the score of it's Max version. In theory, we could get a 3.8 27b with 53 score, parring with GLM 5.2 and deepseek v4. I would buy a gpu at that point
+> > 
+> > 
+> > > 9
+> > > 
+> > > 
+> > > 
+> > > [u/AppealSame4367](https://redlib.catsarch.com/user/AppealSame4367)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mewq0/?context=3#p3mewq0 "Aug 14 2026, 10:48:03 UTC")
+> > > 
+> > > I think that would be too good to be true and it would cause chaos. It would kill off Antrophic much faster.
+> > > 
+> > > 
+> > > Can't imagine it, but let's see
+> > > 
+> > > 
+> > > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/thatcodingboi](https://redlib.catsarch.com/user/thatcodingboi)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3mzw7c/?context=3#p3mzw7c "Aug 14 2026, 12:51:11 UTC")
+> > > 
+> > > yes but 3.6 max less than half the parameters of 3.8, I expect uplifts, but you can't just keep compressing larger and larger models into the same size and expect the same improvements.
+> > > 
+> > > 
+> > > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/Borkato](https://redlib.catsarch.com/user/Borkato)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/p3nj591/?context=3#p3nj591 "Aug 14 2026, 14:22:24 UTC")
+> > > 
+> > > stop, I can only get so erect
+
+v0.36.0 [ⓘ View instance info](https://redlib.catsarch.com/info "View instance information")[<> Code](https://github.com/redlib-org/redlib "View code on GitHub")

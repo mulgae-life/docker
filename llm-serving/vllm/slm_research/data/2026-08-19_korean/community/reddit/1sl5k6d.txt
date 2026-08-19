@@ -1,0 +1,49 @@
+Title: We benchmarked TranslateGemma-12b against 5 frontier LLMs on subtitle translation - it won across the board, with one significant catch - r/LocalLLaMA
+
+URL Source: https://redlib.catsarch.com/r/LocalLLaMA/comments/1sl5k6d/
+
+Markdown Content:
+As part of our ongoing translation quality research at Alconost, we put six models through subtitle translation into six language pairs. At first glance the numbers told a clean story. Then human QA added a chapter.
+
+**Models:**
+
+*   TranslateGemma-12b
+*   gemini-3.1-flash-lite-preview
+*   deepseek-v3.2
+*   claude-sonnet-4-6
+*   gpt-5.4-mini
+*   gpt-5.4-nano
+
+**Languages:** EN to Spanish, Japanese, Korean, Thai, Chinese Simplified, Chinese Traditional
+
+**Results (avg TQI - our combined metric, higher = better)**
+
+| Rank | Model | Avg TQI |
+| --- | --- | --- |
+| #1 | TranslateGemma-12b | 0.6335 |
+| #2 | gemini-3.1-flash-lite-preview | 0.5981 |
+| #3 | deepseek-v3.2 | 0.5946 |
+| #4 | claude-sonnet-4-6 | 0.5811 |
+| #5 | gpt-5.4-mini | 0.5785 |
+| #6 | gpt-5.4-nano | 0.5562 |
+
+TQI = COMETKiwi × exp(−MetricX/10) - details in the report.
+
+The pattern held across every individual language. Draw your own conclusions, but the consistency is hard to ignore: a 12B task-specific model outperformed every general-purpose frontier model on translation fidelity across all six language pairs.
+
+Second notable result: gemini-3.1-flash-lite-preview - a lite model - consistently finished #2-3, ahead of full-weight Claude Sonnet and both GPT-5.4 variants.
+
+All models scored 0.75-0.79 on COMETKiwi (fluency). Models diverged significantly on MetricX-24 fidelity - TranslateGemma averaged 2.18 vs 3.06 for gpt-5.4-nano.
+
+**The catch**
+
+TranslateGemma ranked #1 across all languages. Then our linguists reviewed the Traditional Chinese output.
+
+The model was outputting Simplified Chinese for both zh-CN and zh-TW language codes. We investigated community reports suggesting zh-Hant as the correct explicit tag for Traditional Chinese and retested. Still didn't fix it: 76% of segments came back Simplified, 14% Traditional, 10% ambiguous (segments too short or script-neutral to classify). MetricX-24 and COMETKiwi gave top scores throughout and showed no sign of an issue.
+
+[![Image 1](https://redlib.catsarch.com/preview/pre/0f18kzv1p4vg1.jpg?width=773&format=pjpg&auto=webp&s=3ce537b8ad1a1a33461a478fe634a9f616682d1c)](https://redlib.catsarch.com/preview/pre/0f18kzv1p4vg1.jpg?width=773&format=pjpg&auto=webp&s=3ce537b8ad1a1a33461a478fe634a9f616682d1c)
+As it turns out, this is a confirmed, publicly documented issue caused by training data bias - TranslateGemma's fine-tuning corpus is heavily skewed toward Simplified Chinese. The locale tags are accepted without error but not honored by the model's weights. This affects all model sizes (4B, 12B, 27B) - upgrading to a larger model size won't resolve it, since the root cause is training data composition, not capacity. The documented workaround is OpenCC s2twp post-processing.
+
+The part most relevant to anyone building pipelines: your QE scores will look fine the whole time. The failure is completely invisible to automated metrics.
+
+The full report with per-language breakdowns, segment-level examples, and methodology (tabs are clickable): [https://files.alconost.com/r_DbyQKw3ZXKWUVvxpN5t](https://files.alconost.com/r_DbyQKw3ZXKWUVvxpN5t)

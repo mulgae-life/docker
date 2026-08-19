@@ -315,6 +315,7 @@ chatbot-poc는 현재 Qwen 3.6로 운영 중이며, Mamba-hybrid 전용 방어�
 
 ## 부록: 원본 조사 문서
 
+- [korean.md](korean.md) — 한국어 능력 전용 비교 (Gemma 4 26B/31B vs Qwen3.8 27B, 2026-08-19)
 - [qwen36.md](qwen36.md) — Qwen 3.6 벤치마크·아키텍처·서빙·알려진 이슈 전문
 - [qwen35.md](qwen35.md) — Qwen 3.5 전 라인업 (Qwen 3.6 전신)
 - [gemma4.md](gemma4.md) — Gemma 4 전 라인업·Thinking 모드·운영 플래그

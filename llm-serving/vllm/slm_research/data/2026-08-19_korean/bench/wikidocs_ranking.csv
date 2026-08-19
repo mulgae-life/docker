@@ -1,0 +1,63 @@
+모델,점수,순위,참고,RTX 4090
+Gemini 3.0 Pro (Thinking),99.25,1,[https://wikidocs.net/309823](https://wikidocs.net/309823),FALSE
+Gemini 2.5 Pro,98.25,2,[https://wikidocs.net/292639](https://wikidocs.net/292639),FALSE
+ChatGPT 4.5,95.57,3,[https://wikidocs.net/277775](https://wikidocs.net/277775),FALSE
+Claude Sonnet 4,88.65,4,[https://wikidocs.net/292642](https://wikidocs.net/292642),FALSE
+Grok 4,88.60,5,[https://wikidocs.net/301280](https://wikidocs.net/301280),FALSE
+ChatGPT o4-mini,84.08,6,[https://wikidocs.net/282149](https://wikidocs.net/282149),FALSE
+GPT-5,81.90,7,[https://wikidocs.net/292636](https://wikidocs.net/292636),FALSE
+Claude 3.7 Sonnet,81.31,8,[https://wikidocs.net/277152](https://wikidocs.net/277152),FALSE
+Gemini 1.5 Pro,80.80,9,[https://wikidocs.net/273168](https://wikidocs.net/273168),FALSE
+Claude 3.5 Sonnet,80.74,10,[https://wikidocs.net/274583](https://wikidocs.net/274583),FALSE
+Claude Opus 4.1,80.03,11,[https://wikidocs.net/293117](https://wikidocs.net/293117),FALSE
+Claude 3 Opus,79.60,12,[https://wikidocs.net/232992](https://wikidocs.net/232992),FALSE
+ChatGPT 4o,78.46,13,[https://wikidocs.net/239517](https://wikidocs.net/239517),FALSE
+ChatGPT o3-mini,76.40,14,[https://wikidocs.net/274756](https://wikidocs.net/274756),FALSE
+Gemini 2.0 Flash,76.29,15,[https://wikidocs.net/274763](https://wikidocs.net/274763),FALSE
+Gemma 4 (26B),76.20,16,[https://wikidocs.net/340029](https://wikidocs.net/340029),TRUE
+Grok 4 Fast,74.88,17,[https://wikidocs.net/301261](https://wikidocs.net/301261),FALSE
+Grok 2,73.74,18,[https://wikidocs.net/276582](https://wikidocs.net/276582),FALSE
+ChatGPT 4o mini,71.89,19,[https://wikidocs.net/273425](https://wikidocs.net/273425),FALSE
+gemma-3-27b-it@q4_k_m,71.71,20,[https://wikidocs.net/278454](https://wikidocs.net/278454),TRUE
+Gemini 2.0 Flash Experimental,71.66,21,[https://wikidocs.net/274581](https://wikidocs.net/274581),FALSE
+ChatGPT 4.1,71.60,22,[https://wikidocs.net/285456](https://wikidocs.net/285456),FALSE
+CLOVA X,70.51,23,[https://wikidocs.net/226117](https://wikidocs.net/226117),FALSE
+DeepSeek-V3,69.03,24,[https://wikidocs.net/274578](https://wikidocs.net/274578),FALSE
+Grok 3,67.97,25,[https://wikidocs.net/276589](https://wikidocs.net/276589),FALSE
+Qwen3-32B-GGUF,65.97,26,[https://wikidocs.net/284013](https://wikidocs.net/284013),TRUE
+gemma-3-27b-it@q6_k,65.60,27,[https://wikidocs.net/278457](https://wikidocs.net/278457),FALSE
+GPT-OSS-120B-T,64.54,28,[https://wikidocs.net/292635](https://wikidocs.net/292635),FALSE
+ChatGPT(GPT-4),63.43,29,[https://wikidocs.net/226091](https://wikidocs.net/226091),FALSE
+ChatGPT o1-mini,62.69,30,[https://wikidocs.net/273419](https://wikidocs.net/273419),FALSE
+Microsoft Copilot,62.17,31,[https://wikidocs.net/275109](https://wikidocs.net/275109),FALSE
+gemma-3-27b-it@q3_k_l,61.89,32,[https://wikidocs.net/278453](https://wikidocs.net/278453),TRUE
+Claude 2,61.54,33,[https://wikidocs.net/226357](https://wikidocs.net/226357),FALSE
+Solar Pro2 Preview,61.31,34,[https://wikidocs.net/285368](https://wikidocs.net/285368),FALSE
+gpt-oss-20b,60.28,35,[https://wikidocs.net/292634](https://wikidocs.net/292634),TRUE
+EXAONE-4.0.1-32B,60.00,36,[https://wikidocs.net/301142](https://wikidocs.net/301142),FALSE
+Bard,59.37,37,[https://wikidocs.net/226057](https://wikidocs.net/226057),FALSE
+Meta-Llama-3-70B-Instruct (시스템 프롬프트 사용),55.57,38,[https://wikidocs.net/237685](https://wikidocs.net/237685),FALSE
+Solar-Pro,55.46,39,[https://wikidocs.net/274767](https://wikidocs.net/274767),FALSE
+Llama-3.3-70B-Instruct,55.40,40,[https://wikidocs.net/274775](https://wikidocs.net/274775),FALSE
+A.X 4.0,52.95,41,[https://wikidocs.net/300747](https://wikidocs.net/300747),FALSE
+뤼튼(GPT-3.5),52.43,42,[https://wikidocs.net/226062](https://wikidocs.net/226062),FALSE
+Qwen3 8B,50.98,43,[https://wikidocs.net/290878](https://wikidocs.net/290878),TRUE
+EXAONE-3.5-7.8B-Instruct-GGUF,50.89,44,[https://wikidocs.net/274703](https://wikidocs.net/274703),TRUE
+aya-expanse-8b-GGUF,49.74,45,[https://wikidocs.net/275824](https://wikidocs.net/275824),FALSE
+Qwen2.5-14B-Instruct-GGUF,49.26,46,[https://wikidocs.net/274002](https://wikidocs.net/274002),TRUE
+Phi 4 (Q4),48.60,47,[https://wikidocs.net/273153](https://wikidocs.net/273153),TRUE
+HyperCLOVAX-SEED-Text-Instruct-1.5B-gguf-bf16,47.66,48,[https://wikidocs.net/283455](https://wikidocs.net/283455),TRUE
+Solar-Mini,46.54,49,[https://wikidocs.net/229911](https://wikidocs.net/229911),FALSE
+Phi 4 (FP16),44.52,50,[https://wikidocs.net/273307](https://wikidocs.net/273307),TRUE
+perplexity,43.51,51,[https://wikidocs.net/226919](https://wikidocs.net/226919),FALSE
+Gemma 3 1B,43.03,52,[https://wikidocs.net/301178](https://wikidocs.net/301178),TRUE
+Bing 채팅,41.23,53,[https://wikidocs.net/226110](https://wikidocs.net/226110),FALSE
+DeepSeek-R1-Distill-Qwen-14B-GGUF,40.57,54,[https://wikidocs.net/274497](https://wikidocs.net/274497),TRUE
+ChatGPT(GPT-3.5),38.22,55,[https://wikidocs.net/226053](https://wikidocs.net/226053),FALSE
+A.X-4.0-Light-gguf,37.60,56,[https://wikidocs.net/291059](https://wikidocs.net/291059),TRUE
+Meta-Llama-3-70B-Instruct,36.97,57,[https://wikidocs.net/237683](https://wikidocs.net/237683),FALSE
+42dot_LLM,25.83,58,[https://wikidocs.net/226029](https://wikidocs.net/226029),FALSE
+KULLM(구름) 5.8B,23.03,59,[https://wikidocs.net/226090](https://wikidocs.net/226090),TRUE
+Meta-Llama-3-8B-Instruct-GGUF,22.89,60,[https://wikidocs.net/249312](https://wikidocs.net/249312),TRUE
+DeepSeek R1 Distill (Qwen 7B),12.66,61,[https://wikidocs.net/276624](https://wikidocs.net/276624),FALSE
+DeepSeek DeepThink (R1),7.14,62,[https://wikidocs.net/274770](https://wikidocs.net/274770),FALSE

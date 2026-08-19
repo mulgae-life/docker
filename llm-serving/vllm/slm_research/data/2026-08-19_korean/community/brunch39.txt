@@ -1,0 +1,170 @@
+Title: [1부] Gemma4 31B vs E4B(8B)
+
+URL Source: https://brunch.co.kr/@6280ce27834d483/39
+
+Published Time: 2026-04-05T13:08:00+09:00
+
+Markdown Content:
+![Image 1: gemma4_banner.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/aMetg1a8XcOGy5VnzgY8tTUCCn8.png)
+
+**들어가며**
+
+저는 개인적으로 데이터 라벨링 작업을 굉장히 많이 진행하고 있습니다. 그렇다 보니 항상 '라벨링에 최적화된 모델'을 찾는 게 숙원 사업이었습니다. 대량의 라벨링 자동화를 위해 가성비가 좋고 자유롭게 다룰 수 있는 모델이 절실했기 때문입니다.
+
+그동안 여러 오픈소스 모델들을 사용해 봤지만, 매번 미묘한 품질 저하나 한계점 때문에 실전에 투입하기엔 너무 부족해서 결국 사용을 포기하곤 했습니다. 그러다 이번에 Gemma 4가 출시되었고, "이번엔 정말 쓸만해졌을까?" 하는 기대감으로 직접 테스트를 진행해 보았습니다.
+
+이전부터 테스트 해오던게 있어서 그냥 한번에 돌렸습니다. 양이 많아서 3부로 나눠서 포스팅할 예정입니다.
+
+이 글에서는 **큰 모델(31B) + 다중 GPU** vs **작은 모델(E4B) + 단일 GPU** 구도로 실전 업무 시나리오와 제 주력 작업인 라벨링 성능을 벤치마크한 결과를 공유합니다.
+
+![Image 2: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/NSCE8lwfgdyByutfEF58CXy_RpM.png)
+
+**핵심 질문: 월 비용을 더 쓰더라도 31B를 돌릴 가치가 있을까? 아니면 E4B로 충분할까?**
+
+## **1. 속도 벤치마크: 얼마나 빠른가?**
+
+**부하 테스트 프롬프트**
+
+![Image 3: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/6DwmM39CrZdIDmsJj7T9yrBFfhY.png)
+
+**설정: max_tokens=256, temperature=0.7, stream=True, 동시 유저 수별(1/10/50/100명) 측정**
+
+### **1.1 단일 요청 성능**
+
+![Image 4: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/9B_zhon5UnzJBCLw_K8A7rDtuSA.png)
+
+> E4B가 단일 요청에서 75% 더 빠릅니다. 31B는 4개의 GPU에 모델을 나눠 올리면서 발생하는 통신 오버헤드 때문입니다.
+
+### **1.2 동시 접속 부하 테스트**
+
+![Image 5: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/Riq_3zIogn0O4V6m_TAREj_z43c.png)
+
+> 100명 동시 요청 시 E4B의 처리량이 3.5배 높습니다. 비용 대비로 보면 E4B가 훨씬 효율적입니다.
+
+**속도 요약**
+
+속도와 가성비만 보면 무조건 E4B입니다. 하지만 라벨링 같은 작업에서는 **'품질'** 이 가장 중요하죠. 과연 똑똑한 정도도 차이가 날까요?
+
+## **2. 실무 품질 테스트: 누가 더 똑똑한가?**
+
+### **2.1 JSON 추출 (장애 보고서 → 구조화)**
+
+![Image 6: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/3JUVNBpSrce9Vta4OHBiS71JyD8.png)
+
+**결과: 둘 다 PASS**
+
+**31b 응답**
+
+![Image 7: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/fmrYkm_jACuxspVzj6HJcof1iQg.png)
+
+**E4B 응답**
+
+![Image 8: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/BiqMShlOaaQW_y65DTAd9heKndE.png)
+
+31B: 원문의 맥락("백엔드 이전 작업 중")을 정확히 잡아내어 충실하게 반영.
+
+E4B: 핵심만 간결하게 추출.
+
+둘 다 유효한 JSON을 생성했지만, 디테일에서 31B가 앞섭니다.
+
+### **2.2 RAG 환각 방어 (없는 정보 질문)**
+
+**테스트 프롬프트**
+
+![Image 9: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/fZ0Nl2S46Qdu11B4uKytBwD_76w.png)
+
+![Image 10: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/iZ2dXYo_sXliQm4DU_ltBPhgUFA.png)
+
+**결과: 둘 다 PASS**
+
+8B 모델인 E4B도 환각 방어를 훌륭하게 해냈습니다.
+
+### **2.3 복합 지시어 준수 (3문단 + 이모지 + 90일 + 마지막 문장 고정)**
+
+**테스트 프롬프트**
+
+![Image 11: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/NPTYeB-MGuJGy3XaeqwN5hCroco.png)
+
+31b 응답
+
+![Image 12: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/0SzehVi2zrw1fGKC6Oo9h7KYddo.png)
+
+E4B 응답
+
+![Image 13: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/RzgbILAFW2FEydrpGaDF6hPuq9A.png)
+
+**결과: 둘 다 PASS**
+
+31B: 간결하고 프로페셔널한 톤 유지.
+
+E4B: 볼드체와 소제목을 활용해 조금 길게 작성되었으나 지시사항은 완벽히 준수.
+
+### **2.4 한국어 비즈니스 이메일 (법인카드 독촉)**
+
+**테스트 프롬프트**
+
+![Image 14: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/S3ad7XdNgui63Mmr1PXz90RyzIk.png)
+
+**31B**
+
+![Image 15: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/Zf7zIeaV4sVEcZZV8A339blQOBc.png)
+
+**E4B**
+
+![Image 16: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/s8ZeUbmFq8A-xIFuUhPK17jlwEg.png)
+
+**결과: 31B 우세**
+
+31B: 친밀도에 따른 3가지 톤(정중함/친근함/간결함) 제시 및 마감기한 강조 팁까지 제공. 한국 직장 문화에 대한 이해도가 높음.
+
+E4B: 2가지 옵션 제공. 훌륭하지만 31B에 비해 디테일이 부족.
+
+## **3. 엣지 케이스: 어려운 문제에서의 차이**
+
+### **3.1 Text-to-SQL (PostgreSQL 쿼리 생성)**
+
+**테스트 프롬프트**
+
+![Image 17: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/XrV_KIFQ5sS29gQEqHA689Imc7s.png)
+
+**31B SQL**
+
+![Image 18: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/YxO7m4R8bvWZzhkeRUiVN4AZt50.png)
+
+**E4B SQL**
+
+![Image 19: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/uEarMZRzfmfG3SvmutIEPGH1WaY.png)
+
+**결과: 둘 다 PASS (5/5 검증 항목 통과)****둘 다 정확한 SQL을 짰습니다.**
+
+31B는 user_id를 GROUP BY에 넣어 이름 중복을 방지했고, E4B는 날짜 범위(< '2026-11-01') 처리를 더 모범적으로 수행했습니다.
+
+### **3.2 Multi-turn 페르소나 유지 (까칠한 15년 차 시니어 개발자)**
+
+**테스트 프롬프트**
+
+![Image 20: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/9bVCl0koDlgH_O-GN2Wd1CXj9HI.png)
+
+**31B - Turn 1(리스트 중복제거)**
+
+![Image 21: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/oa9CJE3x8xlhJ8JwelfyV8dOvOc.png)
+
+**E4B - Turn 1(리스트 중복제거)**
+
+![Image 22: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/2HM2GQDVBsoQNqIgAc2skBW2xbo.png)
+
+**31B - Turn 3(화제 전환:점심)**
+
+![Image 23: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/KGRWYBTPtqtntustbIOzN_mI7ug.png)
+
+**E4B - Turn 3(화제 전환:점심)**
+
+![Image 24: image.png](https://img1.kakaocdn.net/thumb/R1280x0.fpng/?fname=http://t1.kakaocdn.net/brunch/service/user/hMcM/image/c1BmVx_E3JPZEGKibsV-KvXwjKo.png)
+
+**결과: 31B 우세**
+
+31B: 대화가 딴 길로 새도 "내일 오전까지 점심 메뉴 후보 3개 평점, 거리 정리해서 보고해. 가서 코드나 더 짜!"라며 시니어 개발자의 톤앤매너를 완벽히 유지했습니다.
+
+E4B: 3번째 턴에서 "나는 AI라고. 점심은 내가 먹는 게 아니라..."라며 페르소나가 완전히 깨졌습니다.
+
+이제 다음 2부에서 좀더 실무적인 시나리오로 테스트한걸 포스팅하겠습니다.

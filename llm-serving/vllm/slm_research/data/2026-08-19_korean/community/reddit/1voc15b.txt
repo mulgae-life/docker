@@ -1,0 +1,2266 @@
+Title: Alright, We got Qwen3.8-27B. Now it's community's turn to make it more better & faster - r/LocalLLaMA
+
+URL Source: https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/
+
+Markdown Content:
+[red lib.](https://redlib.catsarch.com/)
+
+Feeds
+
+MAIN FEEDS
+
+[Home](https://redlib.catsarch.com/)[Popular](https://redlib.catsarch.com/r/popular)[All](https://redlib.catsarch.com/r/all)
+
+- [x] in /r/LocalLLaMA 
+
+[reddit](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/#popup)
+
+# You are about to leave Redlib
+
+Do you want to continue?
+
+https://www.reddit.com/r/LocalLLaMA/comments/1voc15b/
+
+[No, go back!](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/#)[Yes, take me to Reddit](https://www.reddit.com/r/LocalLLaMA/comments/1voc15b/)
+
+[settings](https://redlib.catsarch.com/settings)
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/pmttyji](https://redlib.catsarch.com/user/pmttyji)•4d ago
+
+# [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on) Alright, We got Qwen3.8-27B. Now it's community's turn to make it more better & faster
+
+Facing any issues?
+
+Chat Template is fine?
+
+Looping issue?
+
+Too much reasoning thing?
+
+How's MTP with this one?
+
+Any other issues faced by Qwen3.6-27B & Qwen3.5-27B during release time?
+
+If I missed any other items, please mention in your comments.
+
+AND
+
+1.   Share comparison with Qwen3.6-27B. On Memory & t/s stats
+2.   How much memory takes for this model if you use full 256K context + unquantized KVCache + MTP? For Q4 & above quants. Particularly Q8 please, want to know it's possible to hold this in 32GB VRAM. Also share t/s stats.
+3.   How good is this model on Creative writing? Better than Qwen3.6-27B?
+
+ 292  Upvotes
+
+*   [perma link](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/)
+*   [reddit](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/#popup)# You are about to leave Redlib
+
+Do you want to continue?
+
+https://www.reddit.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/
+
+[No, go back!](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/#)[Yes, take me to Reddit](https://www.reddit.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/)  
+
+93% Upvoted
+
+259 comments sorted by
+
+54
+
+[u/ComplexType568](https://redlib.catsarch.com/user/ComplexType568)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oe8s2/?context=3#p3oe8s2 "Aug 14 2026, 16:39:00 UTC")
+
+Something interesting I noticed about 3.8 is that its thinking is completely overhauled. It used to think with lists and thought... trees? But now (at least in my limited use) it thinks more like DeepSeek R1-ish, but more caveman like. Grammar almost flies out of the window in its thinking traces. Though I am running it on LM Studio (I did set up the right params, just slightly pissed that I can't get ALL results from 3.8 regarding the thinking effort.
+
+> 32
+> 
+> 
+> 
+> [u/ea_man](https://redlib.catsarch.com/user/ea_man)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3olfzo/?context=3#p3olfzo "Aug 14 2026, 17:10:12 UTC")
+> 
+> That should be coz the default reasoning effort is set to xhight:
+> 
+> 
+> ```
+> {%- if resolved_reasoning_effort == 'xhigh' %}
+> {%- set reasoning_instructions =
+> 'Reasoning effort is set to xhigh. Please think carefully through the task,
+> validate key assumptions, consider plausible alternatives, and prioritize
+> correctness, consistency, and clarity in the final answer.' %}
+> ```
+> 
+> "unalterated" should be: medium
+> 
+> 
+> ```
+> xhigh
+>   -> inject system instruction:
+>      think carefully, validate assumptions, alternatives, correctness...
+> 
+> medium
+>   -> inject NOTHING
+> 
+> low
+>   -> inject system instruction:
+>      keep thinking brief, go directly to conclusion
+> ```
+> 
+> 
+> > 15
+> > 
+> > 
+> > 
+> > [u/TheOnlyBen2](https://redlib.catsarch.com/user/TheOnlyBen2)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oz8lw/?context=3#p3oz8lw "Aug 14 2026, 18:09:34 UTC")
+> > 
+> > Uh, I believed reasoning effort was more elaborated than that.
+> > 
+> > 
+> > Does it means it's just template based or that it also need specific training to properly support it ?
+> > 
+> > 
+> > > 25
+> > > 
+> > > 
+> > > 
+> > > [u/Fedor_Doc](https://redlib.catsarch.com/user/Fedor_Doc)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3p3erl/?context=3#p3p3erl "Aug 14 2026, 18:27:20 UTC")
+> > > 
+> > > I assume it was trained with these specific prompts
+> > 
+> > 
+> > 
+> > 2
+> > 
+> > 
+> > 
+> > [u/ComplexType568](https://redlib.catsarch.com/user/ComplexType568)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3scmbo/?context=3#p3scmbo "Aug 15 2026, 05:05:48 UTC")
+> > 
+> > Does this mean I can control it's thinking process? Can I say "steer your thinking to align with what an archer from the medieval times would think"?
+> 
+> 
+> 
+> 12
+> 
+> 
+> 
+> [u/Yeelyy](https://redlib.catsarch.com/user/Yeelyy)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oj65q/?context=3#p3oj65q "Aug 14 2026, 17:00:16 UTC")
+> 
+> I really enjoy the new thinking style. It is way more concise than 3.6 in the prompts i tested.
+> 
+> 
+> 
+> 10
+> 
+> 
+> 
+> [u/JMowery](https://redlib.catsarch.com/user/JMowery)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ofwkw/?context=3#p3ofwkw "Aug 14 2026, 16:46:10 UTC")
+> 
+> 3.8 overthinking wildly for me on thinking mode. For a simple question about a point of interest location on a map it took nearly 100 seconds to confirm which one was furthest north, vs ~15 seconds with 3.6 and 3.5 that I've tested it on previously. Also overthinking in the Nanobot harness.
+> 
+> 
+> > 14
+> > 
+> > 
+> > 
+> > [u/Lair98](https://redlib.catsarch.com/user/Lair98)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3okhal/?context=3#p3okhal "Aug 14 2026, 17:06:00 UTC")
+> > 
+> > Default thinking is set to xhigh. Reduce the thinking budget to low and you should see huge improvement.
+> > 
+> > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/Motor_Ad16](https://redlib.catsarch.com/user/Motor_Ad16)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ozf8v/?context=3#p3ozf8v "Aug 14 2026, 18:10:20 UTC")
+> > > 
+> > > I set it to "low" - nothing changed.
+> > > 
+> > > 
+> > > > [→ More replies (5)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ozf8v)
+> > > 
+> > > [→ More replies (2)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3okhal)
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Adventurous_Cat_1559](https://redlib.catsarch.com/user/Adventurous_Cat_1559)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ohyr7/?context=3#p3ohyr7 "Aug 14 2026, 16:55:02 UTC")
+> > 
+> > Yep, I just commented. Same here for me, I think I may tweak the reasoning budget and retry somethings. Will be curious if anyone else has a good solution
+> > 
+> > 
+> > > 13
+> > > 
+> > > 
+> > > 
+> > > [u/ea_man](https://redlib.catsarch.com/user/ea_man)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3olpeg/?context=3#p3olpeg "Aug 14 2026, 17:11:19 UTC")edited 4d ago
+> > > 
+> > > Reduce reasoning effort:
+> > > 
+> > > 
+> > > ```
+> > > xhigh
+> > >   -> inject system instruction:
+> > >      think carefully, validate assumptions, alternatives, correctness...
+> > > 
+> > > medium
+> > >   -> inject NOTHING
+> > > 
+> > > low
+> > >   -> inject system instruction:
+> > >      keep thinking brief, go directly to conclusion
+> > > ```
+> > > 
+> > > On launch time:
+> > > 
+> > > 
+> > > `--chat-template-kwargs '{"reasoning_effort":"medium"}'`
+> > > 
+> > > 
+> > > OMFG in xhight it did reason 5k tokens vs 1.5k "medium" :P
+> > > 
+> > > 
+> > > > 2
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/Adventurous_Cat_1559](https://redlib.catsarch.com/user/Adventurous_Cat_1559)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3om083/?context=3#p3om083 "Aug 14 2026, 17:12:39 UTC")
+> > > > 
+> > > > thanks! I'm testing this + some other jinja configs now :)
+> > > > 
+> > > > [→ More replies (2)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3olpeg)
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Cautious_Chicken_604](https://redlib.catsarch.com/user/Cautious_Chicken_604)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3puasn/?context=3#p3puasn "Aug 14 2026, 20:26:23 UTC")
+> > 
+> > What's the bet Qwen 3.9 is gonna be 'adaptive thinking'. I bet you. You watch. It will.
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/NaiveIdea344](https://redlib.catsarch.com/user/NaiveIdea344)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3of0wd/?context=3#p3of0wd "Aug 14 2026, 16:42:21 UTC")
+> 
+> Any notes with performance so far?
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/psychohistorian8](https://redlib.catsarch.com/user/psychohistorian8)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3p95hf/?context=3#p3p95hf "Aug 14 2026, 18:52:12 UTC")
+> 
+> > it thinks... more caveman like
+> 
+> 
+> Muse Glimmer does this for me too. Funny cause I thought it was just mimicking zuck's original reptilian language
+
+52
+
+[u/SarcasticBaka](https://redlib.catsarch.com/user/SarcasticBaka)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oju2r/?context=3#p3oju2r "Aug 14 2026, 17:03:12 UTC")
+
+Getting about 10 t/s less than 3.6-27B (45 t/s to 35 t/s on a 22GB RTX 2080ti), using the same "UD-Q4_K_XL.gguf" quant, same context, MTP with --spec-draft-n-max set to 3.
+
+With reasoning_effort et to "xHigh", asking for an HTML flappy bird clone results in 14k thinking tokens + 7k generated tokens so 21k tokens total. Compared to around 4.5k tokens end to end for the 3.6 version. Obviously that is not representative of any real workflow and setting reasoning level to high for that prompt is silly but this baby sure loves to think.
+
+> 11
+> 
+> 
+> 
+> [u/Ok_Law9839](https://redlib.catsarch.com/user/Ok_Law9839)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pluhs/?context=3#p3pluhs "Aug 14 2026, 19:48:21 UTC")
+> 
+> You should limit thinking tokens I saw others doing that
+> 
+> 
+> 
+> 6
+> 
+> 
+> 
+> [u/EbbNorth7735](https://redlib.catsarch.com/user/EbbNorth7735)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qxt2n/?context=3#p3qxt2n "Aug 14 2026, 23:44:30 UTC")
+> 
+> On rtx pro 6000 I'm getting absurdly low tps with mtp. Should see 60 to 120tps, getting 15 to 20.
+> 
+> 
+> > 3
+> > 
+> > 
+> > 
+> > [u/MeateaW](https://redlib.catsarch.com/user/MeateaW)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p45u37l/?context=3#p45u37l "Aug 17 2026, 04:59:06 UTC")
+> > 
+> > On A6000 q6k I'm getting 70tps with MTP (3)
+> > 
+> > 
+> > I'm about to try it with Tensor Paralell, but something strange going on with your config.
+> > 
+> > 
+> > > [→ More replies (4)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p45u37l)
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/vanbukin](https://redlib.catsarch.com/user/vanbukin)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3yzem1/?context=3#p3yzem1 "Aug 16 2026, 04:52:23 UTC")
+> > 
+> > Here is my vllm 0.27.1 results:
+> > 
+> > 
+> > ============ Serving Benchmark Result ============
+> > 
+> >  Successful requests: 128
+> > 
+> >  Failed requests: 0
+> > 
+> >  Maximum request concurrency: 4
+> > 
+> >  Benchmark duration (s): 79.84
+> > 
+> >  Total input tokens: 27582
+> > 
+> >  Total generated tokens: 23688
+> > 
+> >  Request throughput (req/s): 1.60
+> > 
+> >  Output token throughput (tok/s): 296.69
+> > 
+> >  Peak output token throughput (tok/s): 92.00
+> > 
+> >  Peak concurrent requests: 9.00
+> > 
+> >  Total token throughput (tok/s): 642.16
+> > 
+> >  ---------------Time to First Token----------------
+> > 
+> >  Mean TTFT (ms): 164.08
+> > 
+> >  Median TTFT (ms): 159.03
+> > 
+> >  P50 TTFT (ms): 159.03
+> > 
+> >  P90 TTFT (ms): 193.69
+> > 
+> >  P99 TTFT (ms): 211.13
+> > 
+> >  -----Time per Output Token (excl. 1st token)------
+> > 
+> >  Mean TPOT (ms): 12.25
+> > 
+> >  Median TPOT (ms): 12.03
+> > 
+> >  P50 TPOT (ms): 12.03
+> > 
+> >  P90 TPOT (ms): 13.36
+> > 
+> >  P99 TPOT (ms): 15.64
+> > 
+> >  ---------------Inter-token Latency----------------
+> > 
+> >  Mean ITL (ms): 44.30
+> > 
+> >  Median ITL (ms): 43.68
+> > 
+> >  P50 ITL (ms): 43.68
+> > 
+> >  P90 ITL (ms): 44.71
+> > 
+> >  P99 ITL (ms): 85.92
+> > 
+> >  ----------------End-to-end Latency----------------
+> > 
+> >  Mean E2EL (ms): 2452.00
+> > 
+> >  Median E2EL (ms): 2014.20
+> > 
+> >  P50 E2EL (ms): 2014.20
+> > 
+> >  P90 E2EL (ms): 4611.55
+> > 
+> >  P99 E2EL (ms): 7448.94
+> > 
+> >  ---------------Speculative Decoding---------------
+> > 
+> >  Acceptance rate (%): 88.82
+> > 
+> >  Acceptance length: 3.66
+> > 
+> >  Drafts: 6482
+> > 
+> >  Draft tokens: 19446
+> > 
+> >  Accepted tokens: 17272
+> > 
+> >  Per-position acceptance (%):
+> > 
+> >  Position 0: 94.62
+> > 
+> >  Position 1: 88.83
+> > 
+> > 
+> > # Position 2: 83.01
+> 
+> 
+> 
+> 4
+> 
+> 
+> 
+> [u/TheyCallMeDozer](https://redlib.catsarch.com/user/TheyCallMeDozer)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pwrz2/?context=3#p3pwrz2 "Aug 14 2026, 20:37:34 UTC")
+> 
+> 10 t/s... im on a 5090 on LMStudio getting 1 t/s, switch to Unsloth 3 t/s ... its not my side because with 3.6 getting 195-205 t/s ... im amazed how slow it is
+> 
+> 
+> > 14
+> > 
+> > 
+> > 
+> > [u/fgk55555](https://redlib.catsarch.com/user/fgk55555)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3q44va/?context=3#p3q44va "Aug 14 2026, 21:11:52 UTC")
+> > 
+> > Pull latest llama.cpp and try it with whatever your old 3.6 llama-server command was. Those speeds sound like you're running off CPU.
+> > 
+> > 
+> > > 2
+> > > 
+> > > 
+> > > 
+> > > [u/TheyCallMeDozer](https://redlib.catsarch.com/user/TheyCallMeDozer)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qog95/?context=3#p3qog95 "Aug 14 2026, 22:53:45 UTC")
+> > > 
+> > > So have cofirmed latest llama pulls, restart, loading and trying a test command, the run max's out the 5090 1t 100% and cpu sits in the idle levels, turning off the thinking its still slow with the unsloth
+> > > 
+> > > 
+> > > > 2
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/EbbNorth7735](https://redlib.catsarch.com/user/EbbNorth7735)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qxzqh/?context=3#p3qxzqh "Aug 14 2026, 23:45:31 UTC")
+> > > > 
+> > > > Same results on rtx pro 6000. Windows, latest main commit of llama server freshly compiled. Somethings wrong
+> > > > 
+> > > > 
+> > > > > [→ More replies (5)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qxzqh)
+> > 
+> > 
+> > 
+> > 4
+> > 
+> > 
+> > 
+> > [u/eulataguhw](https://redlib.catsarch.com/user/eulataguhw)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3s6i2k/?context=3#p3s6i2k "Aug 15 2026, 04:20:52 UTC")
+> > 
+> > Interestingly AMD has better day 0 support? Hahahaha. My 7900xt using IQ4_NL with spec token 3 ON unsloth desktop gets me 48t/s on 45k ctx and 24t/s on 65k ctx
+> > 
+> > 
+> > > [→ More replies (2)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3s6i2k)
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Right-Law1817](https://redlib.catsarch.com/user/Right-Law1817)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3r4sbl/?context=3#p3r4sbl "Aug 15 2026, 00:23:40 UTC")
+> > 
+> > You must be running full precision model
+> > 
+> > 
+> > > 2
+> > > 
+> > > 
+> > > 
+> > > [u/TheyCallMeDozer](https://redlib.catsarch.com/user/TheyCallMeDozer)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3rbyrk/?context=3#p3rbyrk "Aug 15 2026, 01:05:07 UTC")
+> > > 
+> > > nope not full precision unless LMStudios in app downloader is ending the full precsion and marking it as Q4_K_M .... even using the unsloth pull from today, still crazy slow, only maybe as i said 2 t/s more. Even turning off Thinking and reasoning to low, still pretty dead. And its not CPU, checked gave it a prompt was 100% on the 5090 usage, cpu was sitting idel. Must be something in the guess ill wait a day or for a new llama.cpp update hopefully that fix's it
+> > > 
+> > > [![Image 1](https://redlib.catsarch.com/preview/pre/tpcn25i4ufjh1.png?width=678&format=png&auto=webp&s=aca59672f5e556d89295bd4cc59ab4776bf91ad3)](https://redlib.catsarch.com/preview/pre/tpcn25i4ufjh1.png?width=678&format=png&auto=webp&s=aca59672f5e556d89295bd4cc59ab4776bf91ad3)
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/MuDotGen](https://redlib.catsarch.com/user/MuDotGen)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3s0ujj/?context=3#p3s0ujj "Aug 15 2026, 03:41:21 UTC")
+> 
+> I'm in the new Unsloth Desktop app, downloaded Qwen3.8-27B-GGUF. How do I use MTP?
+> 
+> 
+> > 2
+> > 
+> > 
+> > 
+> > [u/Past-Chain-7377](https://redlib.catsarch.com/user/Past-Chain-7377)[1d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p48ljfu/?context=3#p48ljfu "Aug 17 2026, 15:44:35 UTC")
+> > 
+> > it should automatically be enabled as unsloth's qwen3.8 27b gguf has MTP build in.
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/jack-35](https://redlib.catsarch.com/user/jack-35)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3q5eg2/?context=3#p3q5eg2 "Aug 14 2026, 21:17:52 UTC")edited 4d ago
+> 
+> Could you say what context you can afford on 22GB 2080 with Qwen 27b Q4_K_XL and MTP enabled?
+> 
+> 
+> Also, did you try Glimmer 30b on this card?
+> 
+> 
+> It looks pretty sweet, twice cheaper than 3090 with almost same VRAM. But i doubt does it worth if we have Lucebox for 3090 with 120 t/s.
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/TheIncarnated](https://redlib.catsarch.com/user/TheIncarnated)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3utmi1/?context=3#p3utmi1 "Aug 15 2026, 15:26:08 UTC")
+> 
+> Set temp to 1.2, saw it in another comment
+> 
+> [→ More replies (11)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oju2r)
+
+35
+
+[u/Technical_Ad_6106](https://redlib.catsarch.com/user/Technical_Ad_6106)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oedne/?context=3#p3oedne "Aug 14 2026, 16:39:35 UTC")
+
+[![Image 2](https://redlib.catsarch.com/preview/pre/xe352vxfcdjh1.png?width=1835&format=png&auto=webp&s=b3d51387218565a37b60894dd4c3b233795c98a8)](https://redlib.catsarch.com/preview/pre/xe352vxfcdjh1.png?width=1835&format=png&auto=webp&s=b3d51387218565a37b60894dd4c3b233795c98a8)
+close to the deepseek flash :) i can run 256k context q8 with 3090.
+
+> 24
+> 
+> 
+> 
+> [u/CloggedBathtub](https://redlib.catsarch.com/user/CloggedBathtub)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3olflo/?context=3#p3olflo "Aug 14 2026, 17:10:08 UTC")
+> 
+> How? The q8 is ~29gb.
+> 
+> 
+> > 7
+> > 
+> > 
+> > 
+> > [u/Technical_Ad_6106](https://redlib.catsarch.com/user/Technical_Ad_6106)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ompjj/?context=3#p3ompjj "Aug 14 2026, 17:15:39 UTC")
+> > 
+> > i meant the kvkache in q8 altho i actually used q5 for the kvache. used just normal q4_m version or something. but seems way to slow to
+> > 
+> > 
+> > > [→ More replies (1)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ompjj)
+> 
+> 
+> 
+> 6
+> 
+> 
+> 
+> [u/MensaProdigy](https://redlib.catsarch.com/user/MensaProdigy)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oemwf/?context=3#p3oemwf "Aug 14 2026, 16:40:41 UTC")
+> 
+> Love to see that!
+> 
+> 
+> 
+> 7
+> 
+> 
+> 
+> [u/jbro1985](https://redlib.catsarch.com/user/jbro1985)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ofckw/?context=3#p3ofckw "Aug 14 2026, 16:43:45 UTC")
+> 
+> Config?
+> 
+> 
+> 
+> 3
+> 
+> 
+> 
+> [u/Technical-Earth-3254](https://redlib.catsarch.com/user/Technical-Earth-3254)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oit4q/?context=3#p3oit4q "Aug 14 2026, 16:58:43 UTC")
+> 
+> But this is probably full BF16 with full precision KV, right? And what quant are you running to get that context on a 3090? 4 Bit and using the 3090 purely as compute and not as output device?
+> 
+> 
+> > [→ More replies (2)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oit4q)
+> 
+> 
+> 
+> 3
+> 
+> 
+> 
+> [u/luedtek](https://redlib.catsarch.com/user/luedtek)vllm[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3om9a5/?context=3#p3om9a5 "Aug 14 2026, 17:13:44 UTC")
+> 
+> [https://huggingface.co/lued/Qwen3.8-27B-INT8-W8A16-MTP](https://huggingface.co/lued/Qwen3.8-27B-INT8-W8A16-MTP) using 2x3090
+> 
+> 
+> > 3
+> > 
+> > 
+> > 
+> > [u/robertpro01](https://redlib.catsarch.com/user/robertpro01)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pjhqz/?context=3#p3pjhqz "Aug 14 2026, 19:37:54 UTC")
+> > 
+> > I am getting this error in a sub-agent within opencode:
+> > 
+> > 
+> > Expected 'function.name' to be a string.
+> > 
+> > 
+> > Is that something related to your model?
+> > 
+> > 
+> > > [→ More replies (2)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pjhqz)
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/Individual-Dot5488](https://redlib.catsarch.com/user/Individual-Dot5488)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ol7yo/?context=3#p3ol7yo "Aug 14 2026, 17:09:14 UTC")
+> 
+> nice!
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/Gianniarrenzetti](https://redlib.catsarch.com/user/Gianniarrenzetti)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qqxpe/?context=3#p3qqxpe "Aug 14 2026, 23:07:07 UTC")
+> 
+> What is that graph? Deepseek pro is better than qwen 3.8 max?
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/Etroarl55](https://redlib.catsarch.com/user/Etroarl55)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qyuq1/?context=3#p3qyuq1 "Aug 14 2026, 23:50:18 UTC")
+> 
+> That chart and ranking looks suspicious ngl
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Technical_Ad_6106](https://redlib.catsarch.com/user/Technical_Ad_6106)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3s61k8/?context=3#p3s61k8 "Aug 15 2026, 04:17:36 UTC")
+> > 
+> > [llm-stats.com](http://llm-stats.com/) is the website
+> 
+> [→ More replies (1)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oedne)
+
+31
+
+[u/milpster](https://redlib.catsarch.com/user/milpster)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ocpx3/?context=3#p3ocpx3 "Aug 14 2026, 16:32:23 UTC")
+
+We have this: [https://www.reddit.com/r/LocalLLaMA/comments/1vnm7le/fixed_jinja_chat_template_for_qwen_35_36_and_the/](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vnm7le/fixed_jinja_chat_template_for_qwen_35_36_and_the/)
+
+not sure how required it is.
+
+> 12
+> 
+> 
+> 
+> [u/MensaProdigy](https://redlib.catsarch.com/user/MensaProdigy)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oejzq/?context=3#p3oejzq "Aug 14 2026, 16:40:20 UTC")
+> 
+> There is actually a better newer template from the Dagger/Nail developer!
+> 
+> 
+> > 30
+> > 
+> > 
+> > 
+> > [u/peculiar-ragdoll](https://redlib.catsarch.com/user/peculiar-ragdoll)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3of2hg/?context=3#p3of2hg "Aug 14 2026, 16:42:33 UTC")
+> > 
+> > Hello! :) I already uploaded Qwen3.8-27b with my new template, actually! Check it out: [https://huggingface.co/peculiar-ragdoll/Dirk-Qwen3.8-27B-GGUF](https://huggingface.co/peculiar-ragdoll/Dirk-Qwen3.8-27B-GGUF)
+> > 
+> > 
+> > > 6
+> > > 
+> > > 
+> > > 
+> > > [u/MensaProdigy](https://redlib.catsarch.com/user/MensaProdigy)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3on0mu/?context=3#p3on0mu "Aug 14 2026, 17:16:59 UTC")
+> > > 
+> > > Yes I saw but it’s GGUF and I’m an mlx guy so I uploaded one as well!
+> > > 
+> > > [https://huggingface.co/mensaprodigy/Qwen3.8-27B-oQ6e-mtp](https://huggingface.co/mensaprodigy/Qwen3.8-27B-oQ6e-mtp)
+> > > 
+> > > 
+> > > > 3
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/peculiar-ragdoll](https://redlib.catsarch.com/user/peculiar-ragdoll)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ouxxq/?context=3#p3ouxxq "Aug 14 2026, 17:51:02 UTC")
+> > > > 
+> > > > Nice :)
+> > > 
+> > > 
+> > > 
+> > > 3
+> > > 
+> > > 
+> > > 
+> > > [u/Adventurous_Cat_1559](https://redlib.catsarch.com/user/Adventurous_Cat_1559)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oj0ok/?context=3#p3oj0ok "Aug 14 2026, 16:59:37 UTC")
+> > > 
+> > > maybe I'm misisng it, but have you shared the jinja itself?
+> > > 
+> > > 
+> > > > 21
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/peculiar-ragdoll](https://redlib.catsarch.com/user/peculiar-ragdoll)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ojoqn/?context=3#p3ojoqn "Aug 14 2026, 17:02:33 UTC")
+> > > > 
+> > > > Yup! Here ya go: [https://huggingface.co/peculiar-ragdoll/Qwen-Sharp-Chat-Templates](https://huggingface.co/peculiar-ragdoll/Qwen-Sharp-Chat-Templates) :)
+> > > > 
+> > > > 
+> > > > > 6
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > [u/IainKay](https://redlib.catsarch.com/user/IainKay)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3piyqc/?context=3#p3piyqc "Aug 14 2026, 19:35:32 UTC")
+> > > > > 
+> > > > > How does this improve upon the Froggeric Qwen chat templates?
+> > > > > 
+> > > > > 
+> > > > > Edit: used my eyes and got the answer!
+> > > > > 
+> > > > > 
+> > > > > > 5
+> > > > > > 
+> > > > > > 
+> > > > > > 
+> > > > > > [u/peculiar-ragdoll](https://redlib.catsarch.com/user/peculiar-ragdoll)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pjpk3/?context=3#p3pjpk3 "Aug 14 2026, 19:38:53 UTC")
+> > > > > > 
+> > > > > > Heheh, no worries :) love talking about my little projects, but happy you found the info.
+> > > > > 
+> > > > > [→ More replies (2)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ojoqn)
+> > > 
+> > > 
+> > > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/rockman12x](https://redlib.catsarch.com/user/rockman12x)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3rgedw/?context=3#p3rgedw "Aug 15 2026, 01:31:23 UTC")
+> > > 
+> > > Hey, do you have a non xl 6 quant?
+> > > 
+> > > 
+> > > > [→ More replies (2)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3rgedw)
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/FireFearing](https://redlib.catsarch.com/user/FireFearing)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3s0760/?context=3#p3s0760 "Aug 15 2026, 03:37:00 UTC")
+> > 
+> > that guys gotta make a dagger model of 3.8!
+> > 
+> > 
+> > W random dev
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/Chromix_](https://redlib.catsarch.com/user/Chromix_)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qj09t/?context=3#p3qj09t "Aug 14 2026, 22:25:09 UTC")
+> 
+> That template has some issues, I've posted a detailed list and an update [here](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voha70/fixedimproved_jinja_chat_template_for_qwen_38/).
+
+17
+
+[u/s133p1355](https://redlib.catsarch.com/user/s133p1355)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3poj6g/?context=3#p3poj6g "Aug 14 2026, 20:00:18 UTC")
+
+If you want a laugh... I gave it (for fun) this task. This is it's reasoning, totaling 22 minutes, I was laughing pretty hard actually and thought it will never end 😅
+
+[https://pastebin.com/mXXXT1uD](https://pastebin.com/mXXXT1uD)
+
+[![Image 3](https://redlib.catsarch.com/preview/pre/zv9mf2vkcejh1.jpeg?width=416&format=pjpg&auto=webp&s=86adf1e872425339b2b7b73f48c5e509566b8810)](https://redlib.catsarch.com/preview/pre/zv9mf2vkcejh1.jpeg?width=416&format=pjpg&auto=webp&s=86adf1e872425339b2b7b73f48c5e509566b8810)
+
+> 8
+> 
+> 
+> 
+> [u/Cautious_Chicken_604](https://redlib.catsarch.com/user/Cautious_Chicken_604)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3px3zk/?context=3#p3px3zk "Aug 14 2026, 20:39:07 UTC")
+> 
+> This is wild. I only skimmed it but wow.
+> 
+> 
+> Qwen 3.9 gonna be 'adaptive thinking' that's my prediction. Seems like the obvious move.
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/cezarducatti](https://redlib.catsarch.com/user/cezarducatti)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qc5qp/?context=3#p3qc5qp "Aug 14 2026, 21:50:54 UTC")
+> 
+> The child is too thoughtful.
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/FireFearing](https://redlib.catsarch.com/user/FireFearing)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3s0vde/?context=3#p3s0vde "Aug 15 2026, 03:41:31 UTC")
+> 
+> it sure isnt lazy like claude models, ill give it that
+> 
+> 
+> cant wait until people figure out how to reduce its thinking tokens while maintaining or even slightly enhancing its output quality
+
+10
+
+[u/Odd_Error_6736](https://redlib.catsarch.com/user/Odd_Error_6736)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oezm9/?context=3#p3oezm9 "Aug 14 2026, 16:42:12 UTC")
+
+Props to [u/VoidAlchemy](https://redlib.catsarch.com/u/VoidAlchemy) for the ubergarm/Qwen3.8-27B-GGUF magic
+
+> 7
+> 
+> 
+> 
+> [u/pmttyji](https://redlib.catsarch.com/user/pmttyji)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ohmbo/?context=3#p3ohmbo "Aug 14 2026, 16:53:33 UTC")
+> 
+> Link for lazy hands
+> 
+> 
+> [https://huggingface.co/ubergarm/Qwen3.8-27B-GGUF](https://huggingface.co/ubergarm/Qwen3.8-27B-GGUF)
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/VoidAlchemy](https://redlib.catsarch.com/user/VoidAlchemy)llama.cpp[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3waweb/?context=3#p3waweb "Aug 15 2026, 19:35:58 UTC")
+> 
+> Aww, thanks! I've been out of the game a couple months, but was able to make my perfect 24GB VRAM quant on my gaming rig for daily driving a 3090 haha... Glad y'all also can enjoy it! Cheers!
+> 
+> 
+> > 2
+> > 
+> > 
+> > 
+> > [u/MerePotato](https://redlib.catsarch.com/user/MerePotato)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p42fvzj/?context=3#p42fvzj "Aug 16 2026, 17:52:22 UTC")
+> > 
+> > Heya, I recently made an IQ5_KS quant of 3.8 27B based on your 3.6 recipe, but I'm curious. Do you still consider quanting ssm alpha/beta to Q8 to be worthwhile? I'm worried about compounding errors at longer context windows.
+> > 
+> > 
+> > > 2
+> > > 
+> > > 
+> > > 
+> > > [u/VoidAlchemy](https://redlib.catsarch.com/user/VoidAlchemy)llama.cpp[15h ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p4g1dj7/?context=3#p4g1dj7 "Aug 18 2026, 16:24:20 UTC")
+> > > 
+> > > Its a good question, but I don't have any definitive data myself. In my new 3.8 MTP IQ4_KS i did increase ssm alpha/beta from q6_0 to q8_0 as the size increase miniscule. I left the ssm output at q6_0 as it is larger. Definitely want to keep size low as 128k context is important given this new one thinks more thoroughly.
+> > > 
+> > > 
+> > > While keeping attn q/k/v same size can have a very small performance benefit through merging them, I don't think that applies to ssm? (tho to be honest I am a couple months behind on ik_llama.cpp's latest updates and optimizations).
+> > > 
+> > > 
+> > > Honestly, you're probably good either way, I wouldn't lose sleep about it if you made them q6_0.
+> > > 
+> > > 
+> > > > [→ More replies (1)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p4g1dj7)
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/2atlas](https://redlib.catsarch.com/user/2atlas)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3orva7/?context=3#p3orva7 "Aug 14 2026, 17:37:53 UTC")
+> 
+> this is for 16gb vram users?
+> 
+> 
+> > 3
+> > 
+> > 
+> > 
+> > [u/Odd_Error_6736](https://redlib.catsarch.com/user/Odd_Error_6736)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oszdm/?context=3#p3oszdm "Aug 14 2026, 17:42:37 UTC")
+> > 
+> > I'm afraid not. It's for those exceeding 16GB wanting to maximize the context size/kv quality.
+
+9
+
+[u/Long_comment_san](https://redlib.catsarch.com/user/Long_comment_san)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ordj9/?context=3#p3ordj9 "Aug 14 2026, 17:35:45 UTC")
+
+I'm gonna bet myself a nickel that chat template is gonna get updates
+
+6
+
+[u/Jarery](https://redlib.catsarch.com/user/Jarery)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3od4fx/?context=3#p3od4fx "Aug 14 2026, 16:34:08 UTC")edited 4d ago
+
+AMD gpu issues :
+
+ Have a 7900 xtx and have tried running qwen3.8 Q5 in llama.cpp with a vulkan backend and in Ollama with a Rocm backend.
+
+Both load and run but at 1t/s where i get 35 t/s (Q6) or 75 t/s (Q4 MTP) with the comparable Qwen3.6 model.
+
+ Issue appears to be no current support for the GATED_DELTA_NET so it is falling back to CPU instead of all in vram.
+
+Edit : issue was i had used ComfyUI yesterday to generate an image and it never unloaded from Vram so new models were splitting to CPU, and Claude Code came to wrong conclusion on troubleshooting the issue.
+
+Edit 2 : now works
+
+[![Image 4](https://redlib.catsarch.com/preview/pre/vl2cs1sq9ejh1.png?width=1174&format=png&auto=webp&s=095873ebb7c17a266a0691160567e37e3d63301b)](https://redlib.catsarch.com/preview/pre/vl2cs1sq9ejh1.png?width=1174&format=png&auto=webp&s=095873ebb7c17a266a0691160567e37e3d63301b)
+
+> 2
+> 
+> 
+> 
+> [u/koriwi](https://redlib.catsarch.com/user/koriwi)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ojdkr/?context=3#p3ojdkr "Aug 14 2026, 17:01:10 UTC")
+> 
+> Same setup on linux for me and no issues
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Jarery](https://redlib.catsarch.com/user/Jarery)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ojwnz/?context=3#p3ojwnz "Aug 14 2026, 17:03:31 UTC")
+> > 
+> > I'm running an ollama docker in Linux with rocm backend, and a Llama.cpp docker with vulkan backend. Which are you running and what quantization did you try?
+> > 
+> > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/koriwi](https://redlib.catsarch.com/user/koriwi)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3okmmu/?context=3#p3okmmu "Aug 14 2026, 17:06:39 UTC")
+> > > 
+> > > Llamacpp in docker with vulkan. Q5_k_s
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/EmPips](https://redlib.catsarch.com/user/EmPips)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3omxqc/?context=3#p3omxqc "Aug 14 2026, 17:16:38 UTC")
+> 
+> I have a 7900 xtx and do not have this issue. Latest main branch llama-cpp, vulkan backend.
+> 
+> 
+> Q5 is _REALLY_ tight and context is expensive for this model on 24GB. Are you 100% positive you didn't max out your VRAM and the card is choking rather than spilling into CPU?
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/james_pic](https://redlib.catsarch.com/user/james_pic)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3puxtx/?context=3#p3puxtx "Aug 14 2026, 20:29:15 UTC")
+> 
+> Now it's fixed, do you get better performance in ROCm or Vulkan?
+> 
+> 
+> > 2
+> > 
+> > 
+> > 
+> > [u/Jarery](https://redlib.catsarch.com/user/Jarery)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qko3v/?context=3#p3qko3v "Aug 14 2026, 22:33:46 UTC")
+> > 
+> > cloned the container, changed backend to latest rocm, and exact samne tests on the 3 models, q4,q5,q6.
+> > 
+> > 
+> > Conclusion : Bottom line: for this card (7900 XTX) and this model family (Qwen3.8 hybrid Gated-DeltaNet), Vulkan wins clearly on speed (30-46% faster across all three quants), while ROCm offers marginally cleaner VRAM/GTT accounting but not meaningfully more headroom.
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Jarery](https://redlib.catsarch.com/user/Jarery)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qc026/?context=3#p3qc026 "Aug 14 2026, 21:50:08 UTC")
+> > 
+> > i didnt spin up a Llama.cpp with rocm yet, the only rocm i had is ollama which uses up more headroom. Once i get everythign nailed down i'll do a llama.cpp test with both backends.
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/soyalemujica](https://redlib.catsarch.com/user/soyalemujica)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pxelp/?context=3#p3pxelp "Aug 14 2026, 20:40:28 UTC")
+> 
+> thats a very low context for 7900xtx
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Jarery](https://redlib.catsarch.com/user/Jarery)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qbrd9/?context=3#p3qbrd9 "Aug 14 2026, 21:48:57 UTC")
+> > 
+> > I run a script that loads the model and raises context till it drops performance, where it offloads to cpu, and keep a 1gb or so buffer for headroom. Those are the max contexts that meet that condition for those models.
+> > 
+> > 
+> > Goal is to have 2 models, one highest quality with low context and one with lower quality and higher context for crap thats not as important.
+> > 
+> > 
+> > I could drop the UD on the Q4 and gain more context. On Qwen3.6 it was Q4 at 103,680 and Q6 at 58,368.
+
+5
+
+[u/willeyh](https://redlib.catsarch.com/user/willeyh)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3or3vt/?context=3#p3or3vt "Aug 14 2026, 17:34:36 UTC")edited 4d ago
+
+Only had about a minute to test. Did my usual check with Hi. And then «Write a generic Vue component with defineModel using its type».
+
+It thought for 3minutes and 45 seconds before it stopped. Reaching its max output something. So I got nothing. 35-ish t/s on a 9070 XT.
+
+ Non-reasoning did fine but gave me two examples, one of them wrong.
+
+ MTP off.
+
+Update: With the updated jinja template. Same prompt. 38 t/s. Thought for 7.9 seconds.
+
+ Correct result, bar the Vue version which it thought were 3.7. Which stems from the low quant.
+
+[https://huggingface.co/peculiar-ragdoll/Qwen-Sharp-Chat-Templates](https://huggingface.co/peculiar-ragdoll/Qwen-Sharp-Chat-Templates)
+
+Mind you this was a UD-IQ3 something from unsloth. So I could fit it all in VRAM with 80K + context. Not expecting rocket science at that quant. Should be interesting to check the different reasoning efforts and its output. Should probably also check the max output tokens.
+
+6
+
+[u/unseenmarscai](https://redlib.catsarch.com/user/unseenmarscai)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3owyhw/?context=3#p3owyhw "Aug 14 2026, 17:59:44 UTC")
+
+Hey we (SGLang) got **200+ tok/s on a single 5090** with **NVFP4 + DSpark**
+
+Cookbook: [docs.sglang.io/cookbook/autoregressive/Qwen/Qwen3.8-27B](http://docs.sglang.io/cookbook/autoregressive/Qwen/Qwen3.8-27B)
+
+Let me what I can help to run this. Would love your feedbacks as well!
+
+> 1
+> 
+> 
+> 
+> [u/sniperczar](https://redlib.catsarch.com/user/sniperczar)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3p5267/?context=3#p3p5267 "Aug 14 2026, 18:34:22 UTC")
+> 
+> Got any cookbooks for a pair of 5060ti... or 4x... or 8x? :D
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/Danmoreng](https://redlib.catsarch.com/user/Danmoreng)llama.cpp[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3q99aa/?context=3#p3q99aa "Aug 14 2026, 21:36:38 UTC")
+> 
+> How about for 16GB cards? UD_IQ3_XXS 12GB quant fits, but is only supported by llama.cpp I guess? Getting 30 t/s with MTP already enabled.
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/Nicks2408](https://redlib.catsarch.com/user/Nicks2408)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3s41rg/?context=3#p3s41rg "Aug 15 2026, 04:03:29 UTC")
+> 
+> 200+ tok/s is fantastic! Is there something similar for mac / mlx? Getting dismal speeds on m4 pro 48gb MacBook pro.
+
+4
+
+[u/Dismal-Effect-1914](https://redlib.catsarch.com/user/Dismal-Effect-1914)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ogier/?context=3#p3ogier "Aug 14 2026, 16:48:47 UTC")
+
+I had a really weird thought trace where it thought it saw a system prompt instructing it to use the persona "Gigi" and to be ""sharp but warm," but it regarded that as an injection attack and ignored it. I dont have any trace of this persona anywhere on my system and have never used such verbs in my prompt. Im using Hermes. When I asked it to figure out where that thought came from it ultimately couldnt find any material evidence of this persona anywhere and concluded I must be lying about its initial thought trace. No other weird issues beyond that.
+
+> 3
+> 
+> 
+> 
+> [u/Several-Tax31](https://redlib.catsarch.com/user/Several-Tax31)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oyia3/?context=3#p3oyia3 "Aug 14 2026, 18:06:26 UTC")
+> 
+> In pi, it thinks it's "Kido", whoever this is.
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Dismal-Effect-1914](https://redlib.catsarch.com/user/Dismal-Effect-1914)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oz19h/?context=3#p3oz19h "Aug 14 2026, 18:08:41 UTC")
+> > 
+> > Weird. I wonder if this is some prompt injection prevention technique that harnesses use?
+> > 
+> > 
+> > > [→ More replies (2)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oz19h)
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/Then-Topic8766](https://redlib.catsarch.com/user/Then-Topic8766)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3okczi/?context=3#p3okczi "Aug 14 2026, 17:05:29 UTC")
+> 
+> Do you run it with `--chat-template-kwargs '{"preserve_thinking": true}'`?
+> 
+> 
+> > 7
+> > 
+> > 
+> > 
+> > [u/Dismal-Effect-1914](https://redlib.catsarch.com/user/Dismal-Effect-1914)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oykq5/?context=3#p3oykq5 "Aug 14 2026, 18:06:44 UTC")
+> > 
+> > You can just use '--reasoning-preserve' now, but yes
+> > 
+> > 
+> > > [→ More replies (1)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oykq5)
+
+5
+
+[u/KvAk_AKPlaysYT](https://redlib.catsarch.com/user/KvAk_AKPlaysYT)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ohk90/?context=3#p3ohk90 "Aug 14 2026, 16:53:18 UTC")
+
+I recently made SOTA quants for Muse-30B and 3.5 9B for fun.
+
+I'm currently getting it through the same quant pipeline!
+
+> 1
+> 
+> 
+> 
+> [u/pmttyji](https://redlib.catsarch.com/user/pmttyji)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oumdi/?context=3#p3oumdi "Aug 14 2026, 17:49:38 UTC")
+> 
+> Do it!
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/Icy-Degree6161](https://redlib.catsarch.com/user/Icy-Degree6161)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pcw9n/?context=3#p3pcw9n "Aug 14 2026, 19:08:41 UTC")
+> 
+> How do they compare to APEX quants
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/matte808](https://redlib.catsarch.com/user/matte808)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qkjqq/?context=3#p3qkjqq "Aug 14 2026, 22:33:08 UTC")
+> 
+> Links please? Could be interesting.
+> 
+> 
+> > 2
+> > 
+> > 
+> > 
+> > [u/KvAk_AKPlaysYT](https://redlib.catsarch.com/user/KvAk_AKPlaysYT)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qsqqw/?context=3#p3qsqqw "Aug 14 2026, 23:16:49 UTC")
+> > 
+> > Profile :)
+
+3
+
+[u/Adventurous_Bus_437](https://redlib.catsarch.com/user/Adventurous_Bus_437)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3opcdd/?context=3#p3opcdd "Aug 14 2026, 17:27:01 UTC")
+
+My setup up thinks in normal english not in caveman as some are reporting. how come lol
+
+3
+
+[u/Adventurous_Cat_1559](https://redlib.catsarch.com/user/Adventurous_Cat_1559)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ohrt8/?context=3#p3ohrt8 "Aug 14 2026, 16:54:12 UTC")
+
+Using unsloth, only tested q4 so far. Using llama-swap to serve on my 96gb mac studio m3 ultra. It seems fine? ~20t/s. But the default thinking of 'xhigh' is having it do thousands of tokens in thinking before actioning. I've asked it to build a tetris clone as a quick test, but its basically written all the logic and code in a single think block. Wondering if I've done something wrong or need to limit it / change jinja. Anyone else expericing this?
+
+> 6
+> 
+> 
+> 
+> [u/peculiar-ragdoll](https://redlib.catsarch.com/user/peculiar-ragdoll)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3otq3o/?context=3#p3otq3o "Aug 14 2026, 17:45:47 UTC")
+> 
+> If you want a better template that does not set xhigh default and that keeps the outputs clean, I got you fam: [https://huggingface.co/peculiar-ragdoll/Qwen-Sharp-Chat-Templates](https://huggingface.co/peculiar-ragdoll/Qwen-Sharp-Chat-Templates)
+> 
+> 
+> > 2
+> > 
+> > 
+> > 
+> > [u/Adventurous_Cat_1559](https://redlib.catsarch.com/user/Adventurous_Cat_1559)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ouniw/?context=3#p3ouniw "Aug 14 2026, 17:49:46 UTC")
+> > 
+> > You replied to me in another comment here :) I'm testing yours at the moment. Along with the [https://huggingface.co/froggeric/Qwen-Fixed-Chat-Templates](https://huggingface.co/froggeric/Qwen-Fixed-Chat-Templates) ones.
+> > 
+> > 
+> > > 2
+> > > 
+> > > 
+> > > 
+> > > [u/peculiar-ragdoll](https://redlib.catsarch.com/user/peculiar-ragdoll)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3owk48/?context=3#p3owk48 "Aug 14 2026, 17:58:01 UTC")
+> > > 
+> > > oh hahah my bad :) Cool, I'd love feedback on your experience after!
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/--Spaci--](https://redlib.catsarch.com/user/--Spaci--)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ok8e1/?context=3#p3ok8e1 "Aug 14 2026, 17:04:57 UTC")
+> 
+> small local models are extremely reasoning dependent for high quality answers
+> 
+> 
+> > 2
+> > 
+> > 
+> > 
+> > [u/Adventurous_Cat_1559](https://redlib.catsarch.com/user/Adventurous_Cat_1559)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3olw22/?context=3#p3olw22 "Aug 14 2026, 17:12:08 UTC")
+> > 
+> > I understand that, the reason I'm flagging is because it's excessive
+> > 
+> > 
+> > > [→ More replies (3)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3olw22)
+> 
+> [→ More replies (1)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ohrt8)
+
+2
+
+[u/ea_man](https://redlib.catsarch.com/user/ea_man)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3okqeq/?context=3#p3okqeq "Aug 14 2026, 17:07:07 UTC")
+
+Hey I got a patch for llama.cp to get more ctx with 27B and MTP with GPU: [https://store.piffa.net/lm/bug/](https://store.piffa.net/lm/bug/) .
+
+Disclaimer: I made it for AMD , dunno how good it is for NVIDIA.
+
+3
+
+[u/Individual-Dot5488](https://redlib.catsarch.com/user/Individual-Dot5488)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3okzc7/?context=3#p3okzc7 "Aug 14 2026, 17:08:11 UTC")
+
+Going to work on attaining medical benchmarks! Will update here when they are ready :)
+
+> 1
+> 
+> 
+> 
+> [u/Valuable_Heron_4492](https://redlib.catsarch.com/user/Valuable_Heron_4492)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ubgnn/?context=3#p3ubgnn "Aug 15 2026, 13:55:34 UTC")
+> 
+> I asked Qwen3.8-27B UD-Q4_K_XL in Unsloth desktop with web search to research RTCP for telephony and how it can be used, and I had Claude Opus 5 fact check its output. Am I missing something here? You're really going to consider using this for medical in any way?
+> 
+> 
+> TLDR: The error density is about 2.5× higher in the part of the document that tells you what to do than in the part that tells you how the protocol works.
+> 
+> 
+> `"By raw claim count: ~60 discrete checkable assertions in the doc. 5 are flat wrong", ~8%`
+> 
+> 
+> `+4 "shaky" instead of outright wrong`
+> 
+> 
+> what I found interesting was:
+> 
+> 
+> `By section, which is the number that actually matters:`
+> 
+> 
+> `Protocol fundamentals (RFC refs, packet types, field semantics, RTT math, unit conversions, diagnostic patterns): ~33 claims, ~2 wrong. Roughly 94% accurate. This part you can trust.`
+> 
+> 
+> `Implementation guidance (Tiers 1–3): ~15 claims, 3 wrong. ~20% error rate, and all three are in code or commands you'd actually type.`
+> 
+> 
+> `Payoff and caveats: ~12 claims, 1 wrong (the arithmetic). ~92%.`
+> 
+> 
+> `So: the error density is about 2.5× higher in the part of the document that tells you what to do than in the part that tells you how the protocol works.`
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Individual-Dot5488](https://redlib.catsarch.com/user/Individual-Dot5488)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3uc5zr/?context=3#p3uc5zr "Aug 15 2026, 13:59:16 UTC")
+> > 
+> > posted my findings here: [https://www.reddit.com/r/LocalLLM/comments/1voqrm7/comment/p3ttqxx/?screen_view_count=2&ext-referrer=DIRECT](https://redlib.catsarch.com/r/LocalLLM/comments/1voqrm7/comment/p3ttqxx/?screen_view_count=2&ext-referrer=DIRECT)
+> > 
+> > 
+> > > [→ More replies (1)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3uc5zr)
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/Individual-Dot5488](https://redlib.catsarch.com/user/Individual-Dot5488)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3uc8cx/?context=3#p3uc8cx "Aug 15 2026, 13:59:37 UTC")
+> 
+> posted my initial findings here: [https://www.reddit.com/r/LocalLLM/comments/1voqrm7/comment/p3ttqxx/?screen_view_count=2&ext-referrer=DIRECT](https://redlib.catsarch.com/r/LocalLLM/comments/1voqrm7/comment/p3ttqxx/?screen_view_count=2&ext-referrer=DIRECT)
+
+4
+
+[u/Sibbaboda](https://redlib.catsarch.com/user/Sibbaboda)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3om8rs/?context=3#p3om8rs "Aug 14 2026, 17:13:40 UTC")
+
+Any chance of running on a 5070?
+
+> 8
+> 
+> 
+> 
+> [u/pmttyji](https://redlib.catsarch.com/user/pmttyji)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3otvtb/?context=3#p3otvtb "Aug 14 2026, 17:46:28 UTC")
+> 
+> Found these, suitable for you
+> 
+> 
+> *   [Qwen3.8-27B running on a 12GB RTX 5070 Ti laptop — around 4.5 tok/s with 80% MTP acceptance](https://redlib.catsarch.com/r/LocalLLaMA/s/r2S7GkGyfW)
+> *   [Qwen3.8-27B only 5 tk/s - What's the best config for 8GB VRAM + 32GB RAM?](https://redlib.catsarch.com/r/LocalLLaMA/s/JhynDSBhd3)
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Sibbaboda](https://redlib.catsarch.com/user/Sibbaboda)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ovfcg/?context=3#p3ovfcg "Aug 14 2026, 17:53:08 UTC")
+> > 
+> > Super helpful, thanks!
+> > 
+> > 
+> > > 7
+> > > 
+> > > 
+> > > 
+> > > [u/pmttyji](https://redlib.catsarch.com/user/pmttyji)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3owg6m/?context=3#p3owg6m "Aug 14 2026, 17:57:32 UTC")
+> > > 
+> > > But for 12GB VRAM, wait for MOQ quants which's better so you could run near 4bpw level.
+> > > 
+> > > 
+> > > For example,[https://huggingface.co/kaitchup/Qwen3.6-27B-GGUF-MoQ](https://huggingface.co/kaitchup/Qwen3.6-27B-GGUF-MoQ)so check his page later for 3.8 version.
+> > > 
+> > > 
+> > > Also check[w-ahmad](https://huggingface.co/w-ahmad/models?sort=created&search=moq)'s page who came with MOQ.
+> > > 
+> > > 
+> > > > 4
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/pmttyji](https://redlib.catsarch.com/user/pmttyji)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3p3pw7/?context=3#p3p3pw7 "Aug 14 2026, 18:28:39 UTC")
+> > > > 
+> > > > Adding MOQ quants' bpw & size for reference
+> > > > 
+> > > > [![Image 5](https://redlib.catsarch.com/preview/pre/5cjj6hlwvdjh1.png?width=687&format=png&auto=webp&s=73eed6507ca2d7a6373dda197a217fbc286eca47)](https://redlib.catsarch.com/preview/pre/5cjj6hlwvdjh1.png?width=687&format=png&auto=webp&s=73eed6507ca2d7a6373dda197a217fbc286eca47)
+
+3
+
+[u/aanzeijar](https://redlib.catsarch.com/user/aanzeijar)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oqwwm/?context=3#p3oqwwm "Aug 14 2026, 17:33:46 UTC")
+
+> Share comparison with Qwen3.6-27B. On Memory & t/s stats
+
+rx9070 (16GB), llama-cpp vulkan backend. unsloth IQ3-XXS quant. With q8_0 kv, 128k context I get 800pp/32tg. With 64k context I can enable mtp with draft num 2, and get 700pp/51tg.
+
+And yeah, it completely goes overboard with thinking, but it did oneshot a maths test where much larger models failed in one gigantic 53k tokens thinking trip.
+
+2
+
+[u/adam444555](https://redlib.catsarch.com/user/adam444555)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3opcit/?context=3#p3opcit "Aug 14 2026, 17:27:02 UTC")
+
+Qwen 3.8 27B is basically the same size and same model architecture of Qwen 3.6 27B; So you should be able to use same config for 3.6 on 3.8. AFAIK the difference is the training data, and 3.8 by default enable **preserve_thinking,** with xhigh reasoning.
+
+2
+
+[u/giveen](https://redlib.catsarch.com/user/giveen)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ot69d/?context=3#p3ot69d "Aug 14 2026, 17:43:25 UTC")
+
+Without setting reasoning low , it never shut up for me and did its job
+
+```
+chat-template-kwargs = {"reasoning_effort": "low"}
+```
+
+> 4
+> 
+> 
+> 
+> [u/giveen](https://redlib.catsarch.com/user/giveen)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3otetk/?context=3#p3otetk "Aug 14 2026, 17:44:26 UTC")
+> 
+> Also MTP , while at 70-80% draft acceptece actually slowed me down by 20tks of gen
+> 
+> 
+> > 3
+> > 
+> > 
+> > 
+> > [u/Motor_Ad16](https://redlib.catsarch.com/user/Motor_Ad16)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oyxpm/?context=3#p3oyxpm "Aug 14 2026, 18:08:16 UTC")
+> > 
+> > mtp is definitely slower than Qwen3.6
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/beyondthem00n](https://redlib.catsarch.com/user/beyondthem00n)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3wjlrs/?context=3#p3wjlrs "Aug 15 2026, 20:18:52 UTC")
+> > 
+> > What MTP setting were you using? Are you in parallel using prefix caching?
+> > 
+> > 
+> > > [→ More replies (1)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3wjlrs)
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/Motor_Ad16](https://redlib.catsarch.com/user/Motor_Ad16)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oyqyj/?context=3#p3oyqyj "Aug 14 2026, 18:07:27 UTC")
+> 
+> I tried "low", "medium" and "xhigh" and they all feel the same 😄
+
+2
+
+[u/4bitben](https://redlib.catsarch.com/user/4bitben)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3otvq3/?context=3#p3otvq3 "Aug 14 2026, 17:46:27 UTC")
+
+don't you mean more faster
+
+> 3
+> 
+> 
+> 
+> [u/pmttyji](https://redlib.catsarch.com/user/pmttyji)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3p2io3/?context=3#p3p2io3 "Aug 14 2026, 18:23:30 UTC")
+> 
+> Yep. more better & more faster
+
+2
+
+[u/chr0n1x](https://redlib.catsarch.com/user/chr0n1x)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pahjs/?context=3#p3pahjs "Aug 14 2026, 18:58:02 UTC")edited 4d ago
+
+I keep getting the following error message (even after removing `--jinja`):
+
+```
+Aug 14 14:41:39 cachyos llm.bash[51641]: 2.08.796.793
+W srv    operator(): got exception:
+{"error":{"code":500,"message":"\n------------\nWhile executing CallExpression at line 110, column 28 in source:\n...eveloper\" %}↵        {{- raise_exception('System message must be at the beginnin...\n                                           ^\nError:
+Jinja Exception: System message must be at the beginning.","type":"server_error"}}
+```
+
+has anyone found a fix or any insight?
+
+EDIT: Background context - Im using claude-code (need it for work, I know I should be using pi/codex/whatever) with llama.cpp.
+
+That being said - here's a temporary fix that Im using until the out-of-the-box template is fixed, in case it helps anyone - [the default chat template that unsloth provides with the model seems to be broken for claude](https://huggingface.co/unsloth/Qwen3.8-27B-GGUF?chat_template=default).
+
+I downloaded/copied that chat template into a file (didn't want to use someone else's). Say - `./path/to/edited/template.jinja`. Commented out the `if` statement starting around line `109` with some revert comments
+
+```
+109   │   {# NOTE: this breaks things, not sure why they shipped this #}
+  110   │   {#       make sure to turn the if statement below into elif #}
+  111   │   {#       also the else statement @ end is commented out #}
+  112   │   {# %- if message.role == "system" or message.role == "developer" % #}
+  113   │ │ │   {# {- raise_exception('System message must be at the beginning. Given message.role: ' + message.role) } #}
+  114   │ │ {%- if message.role == "user" %}
+```
+
+and commented out the exception line in the `else` clause around line `170`
+
+```
+174   │ │ {%- else %}
+  175   │ │ │   {# {- raise_exception('Unexpected message role.' + message.content) } #}
+  176   │ │ {%- endif %}
+```
+
+Finally updated my llama.cpp command/script to run with `--chat-template-file ./path/to/edited/template.jinja`
+
+The message that claude sends and results in a 5xx is a system prompt which includes tool invocation instructions if I'm reading the llama.cpp server logs right.
+
+> 2
+> 
+> 
+> 
+> [u/CyDef_Unicorn](https://redlib.catsarch.com/user/CyDef_Unicorn)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pjdsd/?context=3#p3pjdsd "Aug 14 2026, 19:37:25 UTC")
+> 
+> [This](https://huggingface.co/froggeric/Qwen-Fixed-Chat-Templates) fixed/updated template for 3.8 is supposed to be good
+
+2
+
+[u/IainKay](https://redlib.catsarch.com/user/IainKay)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ph053/?context=3#p3ph053 "Aug 14 2026, 19:26:51 UTC")edited 4d ago
+
+Just got this running on my rig. 5090 on Ubuntu Linux with no desktop (GUI). 480 watts power limit.
+
+Qwen3.8-27B MTP
+
+Unsloth Q6_K
+
+ 225,000 context
+
+ 95-120 tok/s
+
+Unsloth UD-Q5_K_XL
+
+ 262,144 context
+
+ 100-120 tok/s
+
+> 1
+> 
+> 
+> 
+> [u/Asane](https://redlib.catsarch.com/user/Asane)llama.cpp[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qdda0/?context=3#p3qdda0 "Aug 14 2026, 21:56:50 UTC")
+> 
+> Are you running headless?
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/IainKay](https://redlib.catsarch.com/user/IainKay)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3t6ozg/?context=3#p3t6ozg "Aug 15 2026, 09:16:06 UTC")
+> > 
+> > Yeah, headless on Ubuntu Linux.
+
+2
+
+[u/BS_BlackScout](https://redlib.catsarch.com/user/BS_BlackScout)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3psqt9/?context=3#p3psqt9 "Aug 14 2026, 20:19:19 UTC")
+
+The only advice I can give on my 3060 12GB + 32GB DDR4 is:
+
+ I could only get DECENT speeds (e.g: 10-20t/s) with IQ2M from Unsloth, q8_0 cache and MTP Off (go figure), also, keep parallel tasks to 1.
+
+2
+
+[u/lukistellar](https://redlib.catsarch.com/user/lukistellar)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qmu53/?context=3#p3qmu53 "Aug 14 2026, 22:45:14 UTC")
+
+For the 16GB folks: A IQ4_XS-pure Quant seems to be already in the making, let's see if it will arrive.
+
+[https://huggingface.co/jpetrina/Qwen3.8-27B-IQ4_XS-pure-GGUF](https://huggingface.co/jpetrina/Qwen3.8-27B-IQ4_XS-pure-GGUF)
+
+> 2
+> 
+> 
+> 
+> [u/PavelPivovarov](https://redlib.catsarch.com/user/PavelPivovarov)llama.cpp[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ss0qi/?context=3#p3ss0qi "Aug 15 2026, 07:09:30 UTC")
+> 
+> I'm currently using bartowski IQ4XS with MTP (n-max=2) and Q5/Q5 context... was able to fit it with mmproj and 64k context window in my RX6800/16Gb, and getting ~35tps.
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/lukistellar](https://redlib.catsarch.com/user/lukistellar)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3uewv8/?context=3#p3uewv8 "Aug 15 2026, 14:13:30 UTC")
+> > 
+> > Withe the mmproj in VRAM? Sounds great! Can you share your config with us?
+> > 
+> > 
+> > > [→ More replies (1)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3uewv8)
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/NickCanCode](https://redlib.catsarch.com/user/NickCanCode)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3so2eo/?context=3#p3so2eo "Aug 15 2026, 06:36:58 UTC")
+> 
+> Unsloth has IQ4:
+> 
+> [https://huggingface.co/unsloth/Qwen3.8-27B-GGUF/tree/main](https://huggingface.co/unsloth/Qwen3.8-27B-GGUF/tree/main)
+
+2
+
+[u/kalimatamijai](https://redlib.catsarch.com/user/kalimatamijai)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3s16sy/?context=3#p3s16sy "Aug 15 2026, 03:43:40 UTC")
+
+I'm curious which hardware are you guys using? I have a MBP M4Pro, 48G it's already a very high-end PC for normal people, running Qwen3.8-27B locally is unbearably slow, basically not usable for daily work.
+
+> 1
+> 
+> 
+> 
+> [u/FireFearing](https://redlib.catsarch.com/user/FireFearing)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3s2wv1/?context=3#p3s2wv1 "Aug 15 2026, 03:55:31 UTC")
+> 
+> whats your tok/s? im getting ~30 on a 64gb m1 max lol
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Nicks2408](https://redlib.catsarch.com/user/Nicks2408)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3s479y/?context=3#p3s479y "Aug 15 2026, 04:04:34 UTC")
+> > 
+> > Can you share you setup / config? Are you running via mlx?
+> > 
+> > 
+> > > 3
+> > > 
+> > > 
+> > > 
+> > > [u/FireFearing](https://redlib.catsarch.com/user/FireFearing)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3s7bd0/?context=3#p3s7bd0 "Aug 15 2026, 04:26:45 UTC")
+> > > 
+> > > still doing tests. so far omlx is WAY faster than llama, which is what i first tried earlier today because gpt told me it might be more stable. settings are just what the qwen team recommends i didnt mess with that yet
+> > > 
+> > > 
+> > > not getting any issues so far though, qwen 3.8 27b is definitely living up to the hype, at least for my expectations
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Dstrydd](https://redlib.catsarch.com/user/Dstrydd)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3s4h4n/?context=3#p3s4h4n "Aug 15 2026, 04:06:29 UTC")
+> > 
+> > I have the same mac good know it's around 30tps, downloading the 8bit now.
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/Bulky-Priority6824](https://redlib.catsarch.com/user/Bulky-Priority6824)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3s6bqu/?context=3#p3s6bqu "Aug 15 2026, 04:19:36 UTC")
+> 
+> Use MTP
+> 
+> 
+> > 2
+> > 
+> > 
+> > 
+> > [u/kalimatamijai](https://redlib.catsarch.com/user/kalimatamijai)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3tsf83/?context=3#p3tsf83 "Aug 15 2026, 12:05:59 UTC")
+> > 
+> > MTP can help improve generation speed, but not for prefilling which is actually the bottleneck for daily work, as it needs to read a lot of codes.
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/Stooovie](https://redlib.catsarch.com/user/Stooovie)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3su2vx/?context=3#p3su2vx "Aug 15 2026, 07:26:41 UTC")
+> 
+> On my 36GB M4 Max Studio, a 4bit quant only fits ~32k context, and fills it REALLY slowly (100-200 t/s).
+> 
+> 
+> > 2
+> > 
+> > 
+> > 
+> > [u/kalimatamijai](https://redlib.catsarch.com/user/kalimatamijai)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3tsmgp/?context=3#p3tsmgp "Aug 15 2026, 12:07:16 UTC")
+> > 
+> > Yes, prefill is the real bottleneck, not gen.
+
+1
+
+[u/Sbaff98](https://redlib.catsarch.com/user/Sbaff98)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3omtja/?context=3#p3omtja "Aug 14 2026, 17:16:08 UTC")
+
+[![Image 6](https://redlib.catsarch.com/preview/pre/en0swsgmidjh1.png?width=2416&format=png&auto=webp&s=675d91965f038f472cd3612ccff570594dfb8e2f)](https://redlib.catsarch.com/preview/pre/en0swsgmidjh1.png?width=2416&format=png&auto=webp&s=675d91965f038f472cd3612ccff570594dfb8e2f)
+With unsloth studio i am having issue on the allocation, as soon as i start up the q6 xl (around 27gb) with 256k context, only 24gb goes on GPU and my ram skyrocket form 16gb to 32gb capped, should i be able to fit all model+kv (or almost all) on 40GB of VRAM?
+
+> 1
+> 
+> 
+> 
+> [u/gpuz_dev](https://redlib.catsarch.com/user/gpuz_dev)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oyswj/?context=3#p3oyswj "Aug 14 2026, 18:07:41 UTC")
+> 
+> 256k fp16 kv cache on a 27b model takes way over 20gb by itself, so model + kv will easily blow past your 40gb vram. enable flash attention and quantize your kv cache to q8_0 or q4_0 (-ctk q8_0 / -ctv q8_0) to keep it all on gpu.
+
+1
+
+[u/volleyneo](https://redlib.catsarch.com/user/volleyneo)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3on3fw/?context=3#p3on3fw "Aug 14 2026, 17:17:19 UTC")
+
+Hey, should I use the indicated 1 value for temp on coding? --temp 0.6 --top-k 20 --top-p 0.95 --min-p 0.0 \
+
+> 1
+> 
+> 
+> 
+> [u/Tpyn](https://redlib.catsarch.com/user/Tpyn)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ooa70/?context=3#p3ooa70 "Aug 14 2026, 17:22:26 UTC")
+> 
+> Unsloth:
+> 
+> [![Image 7](https://redlib.catsarch.com/preview/pre/zwy5q3z3kdjh1.jpeg?width=1080&format=pjpg&auto=webp&s=cde542a4a14f1f0dc8590eaf224c457eea311ae6)](https://redlib.catsarch.com/preview/pre/zwy5q3z3kdjh1.jpeg?width=1080&format=pjpg&auto=webp&s=cde542a4a14f1f0dc8590eaf224c457eea311ae6)
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/volleyneo](https://redlib.catsarch.com/user/volleyneo)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3or45m/?context=3#p3or45m "Aug 14 2026, 17:34:38 UTC")
+> > 
+> > yeah but was asking, from usage experrience
+
+1
+
+[u/Adventurous_Bus_437](https://redlib.catsarch.com/user/Adventurous_Bus_437)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3onkyh/?context=3#p3onkyh "Aug 14 2026, 17:19:25 UTC")edited 4d ago
+
+[![Image 8](https://redlib.catsarch.com/preview/pre/hc0wyrhkjdjh1.png?width=803&format=png&auto=webp&s=e19b487a8817b87f815b565c1db11a0a267384f6)](https://redlib.catsarch.com/preview/pre/hc0wyrhkjdjh1.png?width=803&format=png&auto=webp&s=e19b487a8817b87f815b565c1db11a0a267384f6)
+Dual A40s
+
+--dataset-path ./ShareGPT_V3_unfiltered_cleaned_split.json
+
+1
+
+[u/Adventurous_Bus_437](https://redlib.catsarch.com/user/Adventurous_Bus_437)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3oorw3/?context=3#p3oorw3 "Aug 14 2026, 17:24:33 UTC")
+
+[![Image 9](https://redlib.catsarch.com/preview/pre/wazf53agkdjh1.png?width=724&format=png&auto=webp&s=99a91b24bbb4f64ea964f67819b0f30ad945f4cb)](https://redlib.catsarch.com/preview/pre/wazf53agkdjh1.png?width=724&format=png&auto=webp&s=99a91b24bbb4f64ea964f67819b0f30ad945f4cb)
+Dual A40, n=5 concurrency
+
+ --dataset-path ./ShareGPT_V3_unfiltered_cleaned_split.json
+
+1
+
+[u/grabber4321](https://redlib.catsarch.com/user/grabber4321)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ort55/?context=3#p3ort55 "Aug 14 2026, 17:37:37 UTC")
+
+so far so good, opencode works, hermes works. day 1 support on ollama if you just download direct.
+
+no looping yet that i noticed
+
+> 1
+> 
+> 
+> 
+> [u/grabber4321](https://redlib.catsarch.com/user/grabber4321)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ou6aw/?context=3#p3ou6aw "Aug 14 2026, 17:47:42 UTC")
+> 
+> hmmm hermes its sort of worse - i am using Q4 though. maybe i need to go up to Q5.
+> 
+> 
+> the research side of qwen3.8 is worse - its creating tools instead of using tools that already exist
+> 
+> 
+> > 2
+> > 
+> > 
+> > 
+> > [u/Qcgreywolf](https://redlib.catsarch.com/user/Qcgreywolf)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pah7v/?context=3#p3pah7v "Aug 14 2026, 18:58:00 UTC")
+> > 
+> > I am test-driving Q5_K_M right now, and so far it is doing well. More verbose, but doing well.
+> > 
+> > 
+> > > [→ More replies (3)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pah7v)
+
+1
+
+[u/meca23](https://redlib.catsarch.com/user/meca23)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3otxzv/?context=3#p3otxzv "Aug 14 2026, 17:46:43 UTC")
+
+Does anyone know the knowledge cut of date for this model?
+
+1
+
+[u/Exact-Macaroon5582](https://redlib.catsarch.com/user/Exact-Macaroon5582)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ovs6k/?context=3#p3ovs6k "Aug 14 2026, 17:54:41 UTC")
+
+i just got some benchs from my Strix Point (HX370) with 128Go SODIMMs with 256k context ( i ran the tests with IA/cursor in this case, with unsloth models in lemonade (not super up to date)):
+
+Same protocol for all three: 256k ctx, thinking on, Vulkan, MTP, 1 warmup + 3 runs, same “print 1 to 80” prompt.
+
+| Quant | Size | Decode | Prefill | TTFT | Wall | vs Q8 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| UD-Q8_K_XL(default) | 30.2 GB | 5.48 tok/s | 23.0 | 1.22 s | 57 s | — |
+| UD-Q6_K_XL | 25.9 GB | 6.79 tok/s | 22.6 | 1.24 s | 48 s | +24% |
+| UD-Q4_K_XL | 17.9 GB | 8.92 tok/s | 28.3 | 0.99 s | 38 s | +63% |
+
+So i don't know where it brings me and us, apart that perhaps my computer is not up to the task despite the RAM :-)
+
+1
+
+[u/andrewke](https://redlib.catsarch.com/user/andrewke)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3p1p2h/?context=3#p3p1p2h "Aug 14 2026, 18:20:00 UTC")
+
+I’m using an M1 Pro 32GB. Q8_0 KV cache. 57 tok/s prefill, 2.5 tok/s generation. A simple question in Roo Code takes 8 minutes to respond
+
+1
+
+[u/BullfrogScary8947](https://redlib.catsarch.com/user/BullfrogScary8947)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3p7a5s/?context=3#p3p7a5s "Aug 14 2026, 18:44:03 UTC")
+
+I noticed that when running Qwen3.8 27B, if the reasoning effort is set to MAX in llama server's webUI, then it thinks for a very very long time, depending on the context size set. I ran it with 90,000 context set and asked it to create a single HTML file of the following benchmark:
+
+> Write a single HTML file with a full-page canvas and no libraries. Simulate a realistic side-view of a moving car as the main subject. Keep the car visible in the foreground while the background landscape scrolls continuously to create the feeling that the car is driving forward. Use layered scenery for depth: nearby ground, roadside elements, trees, poles, and distant hills or mountains should move at different speeds for a natural parallax effect. Animate the wheels spinning realistically and add subtle body motion so the car feels connected to the road. Let the environment pass smoothly behind it, with repeating but varied scenery that makes the movement feel believable. Use cinematic lighting and a cohesive sky, such as sunset, dusk, or daylight, to enhance atmosphere. The overall motion should feel calm, immersive, and realistic, with a seamless looping animation.
+
+It was reasoning until it reached 45,000 tokens. Then it finally stopped reasoning and started outputting the code for the single HTML file.
+
+I have not noticed the same behavior with other models, like Qwen3.6 27B or Qwen3.6 35B A3B, or either with the Gemma 4 and Muse Glimmer models.
+
+1
+
+[u/Qcgreywolf](https://redlib.catsarch.com/user/Qcgreywolf)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3p9cis/?context=3#p3p9cis "Aug 14 2026, 18:53:03 UTC")edited 4d ago
+
+AMD Processor PC w/ a 5060 and 5070 (28gb VRAM) 100,000k context q5_k_m
+
+I am seeing about 600-700 p/s and 32 t/s
+
+ Anecdotally, it is much more verbose than Qwen3.6. Running it through my amature paces today. I am seeing more warning and errors in the llama.cpp stream than normal, but nothing that crashes out.
+
+Output feels higher quality than what I am used to from 3.6, how it presents the data I am seeking feels like it is presenting better. Tables are cleaner.
+
+Again, all anecdotal from just a couple of hours so far.
+
+Edit: So it ignored a “This is a read only planning session” prompt. It started the process of going off the rails and making changes to cron jobs and created some documents. Not a fan of that.
+
+Holy buckets, tried MTP, and I get 60 t/s! But it wrecks my context, only 67k on my setup.
+
+1
+
+[u/Munna_one](https://redlib.catsarch.com/user/Munna_one)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3p9cpd/?context=3#p3p9cpd "Aug 14 2026, 18:53:04 UTC")
+
+My RTX3060 12gb with 32GB ram gives 15t/s for q4_k_m
+
+> 1
+> 
+> 
+> 
+> [u/Severino-Alterra](https://redlib.catsarch.com/user/Severino-Alterra)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qa1ks/?context=3#p3qa1ks "Aug 14 2026, 21:40:32 UTC")
+> 
+> Please share your llama.cpp configuration!
+
+1
+
+[u/curleys](https://redlib.catsarch.com/user/curleys)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3p9zwe/?context=3#p3p9zwe "Aug 14 2026, 18:55:52 UTC")
+
+And to shrink it so it fits on my 3060ti 8gb please and thanks
+
+1
+
+[u/Large-Measurement420](https://redlib.catsarch.com/user/Large-Measurement420)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3paqxw/?context=3#p3paqxw "Aug 14 2026, 18:59:10 UTC")
+
+On Strix halo I get about 20-25 t/s in a single session and 15-20 t/s per session when running two session simultaneously using Q8_0.gguf MTP with spec-draft-n-max 5
+
+1
+
+[u/Naiw80](https://redlib.catsarch.com/user/Naiw80)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pb0b8/?context=3#p3pb0b8 "Aug 14 2026, 19:00:18 UTC")
+
+I get about 16 t/s (same as 3.6), not using any custom jinja template and its been behaving fine so far....
+
+(Haven't run it long enough to make any judgement about quality etc, but so far it seems no worse than 3.6, if it's improved that's just a bonus)
+
+1
+
+[u/Trowaway-11445](https://redlib.catsarch.com/user/Trowaway-11445)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pbwam/?context=3#p3pbwam "Aug 14 2026, 19:04:15 UTC")
+
+How good is the 3-bit quant?
+
+1
+
+[u/Wide-Ad-1349](https://redlib.catsarch.com/user/Wide-Ad-1349)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pie6w/?context=3#p3pie6w "Aug 14 2026, 19:32:58 UTC")
+
+Macbook Pro M4 48gb getting around 11.45 tok/s Q4. It is fine so far and safe. I will say this my MacBook is running very hot.
+
+1
+
+[u/Turbulent_Dot3764](https://redlib.catsarch.com/user/Turbulent_Dot3764)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pl2hu/?context=3#p3pl2hu "Aug 14 2026, 19:44:55 UTC")
+
+Testing yet , issues noted is overthinking with the default reasoning effort ( default is xhigh ).
+
+Getting around 50tks with 92k of context on a single rtx 5060 to 16Gb.
+
+Using llama serve as backend.
+
+[![Image 10](https://redlib.catsarch.com/preview/pre/br3p5c3j9ejh1.png?width=1748&format=png&auto=webp&s=08d371514c3535630267fef576c86f8bd11865da)](https://redlib.catsarch.com/preview/pre/br3p5c3j9ejh1.png?width=1748&format=png&auto=webp&s=08d371514c3535630267fef576c86f8bd11865da)
+
+> 1
+> 
+> 
+> 
+> [u/brakeline](https://redlib.catsarch.com/user/brakeline)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pn416/?context=3#p3pn416 "Aug 14 2026, 19:54:00 UTC")
+> 
+> Would help to know the quant
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/Turbulent_Dot3764](https://redlib.catsarch.com/user/Turbulent_Dot3764)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pnkx6/?context=3#p3pnkx6 "Aug 14 2026, 19:56:05 UTC")
+> > 
+> > My full start command
+> > 
+> > 
+> > llama serve -hf unsloth/Qwen3.8-27B-GGUF:UD-IQ3_XXS --no-mmproj --gpu-layers-draft all --spec-type draft-mtp --spec-draft-n-max 3 --n-gpu-layers all --threads 6 --fit off --load-mode none --no-mmap --no-warmup --flash-attn on --ctx-size 94208 --parallel 1 --cache-type-k q4_0 --cache-type-v q4_0 --batch-size 512 --ubatch-size 512 --jinja --temp 1 --top-p 0.95 --top-k 20 --min-p 0.0 --presence-penalty 0.0 --repeat-penalty 1.0 --reasoning auto --reasoning-preserve --chat-template-kwargs '{"preserve-thinking": true, "reasoning_effort": "medium"}' --host 0.0.0.0 --port 1234
+
+1
+
+[u/DerTomsn](https://redlib.catsarch.com/user/DerTomsn)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3pusbz/?context=3#p3pusbz "Aug 14 2026, 20:28:34 UTC")
+
+[![Image 11](https://redlib.catsarch.com/preview/pre/ap3lym09hejh1.png?width=1247&format=png&auto=webp&s=aec8df68f605a339510336a8a6808ec731b8fd90)](https://redlib.catsarch.com/preview/pre/ap3lym09hejh1.png?width=1247&format=png&auto=webp&s=aec8df68f605a339510336a8a6808ec731b8fd90)
+These are the results for my setup.
+
+1
+
+[u/mikewagnercmp](https://redlib.catsarch.com/user/mikewagnercmp)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3q3b28/?context=3#p3q3b28 "Aug 14 2026, 21:07:54 UTC")
+
+I wish I could figure out why it just stops in vllm. Though 3.6 did too. Have not found a lever to make it finish a single session without me having g to tell it to continue over and over.
+
+1
+
+[u/Asane](https://redlib.catsarch.com/user/Asane)llama.cpp[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qci7s/?context=3#p3qci7s "Aug 14 2026, 21:52:37 UTC")
+
+| Workload | Qwen3.8 (current) | Qwen3.6 (before) |
+| :--- | :--- | :--- |
+| Agent turns through Hermes | **155–167 t/s** | ~154 |
+| Analytical prose / code review | **~93 t/s** | 114 |
+| Non-MTP baseline (reference) | ~60 | 58 |
+| Prefill | ~2,850 t/s | ~2,700 |
+
+Here's my stats. 5090 FE - Q6_K.gguf from Unsloth. Context at 131,072.
+
+1
+
+[u/Limp_Classroom_2645](https://redlib.catsarch.com/user/Limp_Classroom_2645)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qebuo/?context=3#p3qebuo "Aug 14 2026, 22:01:37 UTC")
+
+Too much reasoning but i had to quantize my kv cache
+
+1
+
+[u/Resident_Bell_4457](https://redlib.catsarch.com/user/Resident_Bell_4457)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qi1dj/?context=3#p3qi1dj "Aug 14 2026, 22:20:12 UTC")
+
+Would it be possible to run it on a macbook pro m5 16gb?
+
+1
+
+[u/HugeEntertainment820](https://redlib.catsarch.com/user/HugeEntertainment820)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qjvcm/?context=3#p3qjvcm "Aug 14 2026, 22:29:36 UTC")
+
+The thinking/reasoning has gotten a lot longer…at first glance, things take longer but could we optimize and still maintain quality?
+
+1
+
+[u/Puzzleheaded_Base302](https://redlib.catsarch.com/user/Puzzleheaded_Base302)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qlnmh/?context=3#p3qlnmh "Aug 14 2026, 22:38:58 UTC")
+
+there should not be any new reason to do anything. this is exact same model as qwen3.6. everything is the same, exact the weight. if qwen3.6 runs well, qwen3.8 runs well too.
+
+1
+
+[u/No_Chapter_7598](https://redlib.catsarch.com/user/No_Chapter_7598)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3qxq3x/?context=3#p3qxq3x "Aug 14 2026, 23:44:02 UTC")
+
+Anyone else running it on windows with vllm?
+
+1
+
+[u/liquidify](https://redlib.catsarch.com/user/liquidify)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3r0yzm/?context=3#p3r0yzm "Aug 15 2026, 00:02:11 UTC")
+
+On the DGX spark with BF16 unsloth via llmstudio, I'm getting between 1 and 4 tokens /s.
+
+The quality seems pretty good and better than 3.6, but definitely slow.
+
+1
+
+[u/StateSame5557](https://redlib.catsarch.com/user/StateSame5557)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3r1pdn/?context=3#p3r1pdn "Aug 15 2026, 00:06:19 UTC")
+
+I am running now baselines on MLX for the 3.8, and saw pretty much the same as the other people reporting their experience: slower, and lower arc numbers.
+
+To experiment, I merged my last model into the 3.8 base.
+
+[https://huggingface.co/nightmedia/Qwen3.6-27B-Seven-mxfp8-mlx](https://huggingface.co/nightmedia/Qwen3.6-27B-Seven-mxfp8-mlx)
+
+```
+arc   arc/e boolq hswag obkqa piqa  wino
+bf16      0.739,0.891,0.917
+mxfp8     0.743,0.893,0.915,0.829,0.530,0.832,0.796
+q8-hi     0.742,0.891,0.917
+q6-hi     0.736,0.891,0.917
+mxfp4     0.739,0.888,0.917,0.825,0.522,0.824,0.785
+
+Quant     Perplexity      Peak Memory   Tokens/sec
+bf16      3.779 ± 0.023   60.75 GB      230
+q8-hi     3.776 ± 0.023   37.26 GB      181
+mxfp8     3.834 ± 0.024   34.74 GB      175
+```
+
+I noticed the metrics falling somewhere between the models, which is perfectly fine
+
+Qwen3.8-27B
+
+```
+arc   arc/e boolq hswag obkqa piqa  wino
+mxfp8     0.591
+mxfp4     0.581,0.771,0.889
+
+Quant     Perplexity      Peak Memory   Tokens/sec
+mxfp8     6.090 ± 0.054   34.74 GB      138
+mxfp4     5.952 ± 0.051   21.30 GB      148
+```
+
+The resulting merge(simple NuSLERP) shows the 3.8 characteristics, and preserves the chatter from my model(caveman talk in think tags, output from the Seven). That's what I wanted, and for what it's worth, the resulting model is really pleasant, if you don't mind the caveman talk
+
+```
+arc   arc/e boolq hswag obkqa piqa  wino
+mxfp8     0.658
+q8-hi     0.660
+mxfp4     0.664
+
+Quant     Perplexity      Peak Memory   Tokens/sec
+mxfp8     4.420 ± 0.031   34.74 GB      130
+mxfp4     4.379 ± 0.031   21.30 GB      150
+```
+
+[https://huggingface.co/nightmedia/Qwen3.8-27B-Holodeck-mxfp4-mlx](https://huggingface.co/nightmedia/Qwen3.8-27B-Holodeck-mxfp4-mlx)
+
+I am adding metrics on the baseline and will update the model card page as it goes
+
+-G
+
+1
+
+[u/Gotxi](https://redlib.catsarch.com/user/Gotxi)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3r2u1y/?context=3#p3r2u1y "Aug 15 2026, 00:12:40 UTC")
+
+RX 9070 XT 16GB VRAM + 32GB DDR4 RAM
+
+ Using llama.cpp mainline with vulkan backend
+
+I ran my custom speed+intelligence benchmarks with different VRAM offload configs, batch/ubatch, speculative decoding options, etc...
+
+Using Unsloth version with IQ4_XS quantization ([https://huggingface.co/unsloth/Qwen3.8-27B-GGUF](https://huggingface.co/unsloth/Qwen3.8-27B-GGUF))
+
+This is what works best for me after trying different parameters:
+
+```
+[Qwen3.8-27B-IQ4_XS]
+model = /home/gotxi/models/qwen/Qwen3.8-27B-IQ4_XS.gguf
+ctx-size = 65535
+batch-size = 8192
+ubatch-size = 1024
+
+n-gpu-layers = 57
+
+cache-type-k = q8_0
+cache-type-v = q4_0
+
+spec-type = draft-mtp,ngram-mod
+spec-draft-n-max = 4
+
+temp = 1.0
+top-p = 0.95
+top-k = 20
+min-p = 0.0
+presence-penalty = 0.0
+repeat-penalty = 1.0
+```
+
+Lowering V to q4_0 didn't affect intelligence, best performance with MTP is 4 in my case.
+
+Stats:
+
+*   Prompt eval: 761.54 tok/s
+*   Generación/eval: 18.85 tok/s
+*   Draft acceptance: 81.08%
+*   Mean draft length: 4.24
+
+1
+
+[u/ichosetobehere](https://redlib.catsarch.com/user/ichosetobehere)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3r2yxb/?context=3#p3r2yxb "Aug 15 2026, 00:13:24 UTC")
+
+What’s good hardware to run this thing under 2-3k
+
+1
+
+[u/jayfraud](https://redlib.catsarch.com/user/jayfraud)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3ra1sj/?context=3#p3ra1sj "Aug 15 2026, 00:54:04 UTC")
+
+Getting 18.16t/s on Q4_K_M using 2x RTX 3060 12GB on Windows 11 running llama.cpp with the following:
+
+`--n-gpu-layers 99`
+
+`--split-mode layer`
+
+`-c 32768`
+
+`--flash-attn on`
+
+`-ctk q4_0`
+
+`-ctv q4_0`
+
+`-b 2048`
+
+`-ub 2048`
+
+`-np 1`
+
+`--reasoning-budget 2048`
+
+`--reasoning-budget-message "Wait, I'm overthinking this. Let's answer now."`
+
+`--cache-prompt`
+
+`--cache-ram 2048`
+
+> 1
+> 
+> 
+> 
+> [u/Gabriel83730](https://redlib.catsarch.com/user/Gabriel83730)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p43a1bk/?context=3#p43a1bk "Aug 16 2026, 20:10:22 UTC")
+> 
+> I think `--reasoning-budget-message "... Let's answer now."` is a better budget message. `"Wait, I'm overthinking this."` could be interpreted by the model as it coming to the conclusion that the reasoning process it just had is unnecessary, which then makes it give a less thought-out answer.
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/jayfraud](https://redlib.catsarch.com/user/jayfraud)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p43ey3i/?context=3#p43ey3i "Aug 16 2026, 20:33:18 UTC")
+> > 
+> > Oooh this is a good suggestion. Will give it a go and report back. Thanks!
+
+1
+
+[u/rodriwoh](https://redlib.catsarch.com/user/rodriwoh)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3rmcno/?context=3#p3rmcno "Aug 15 2026, 02:07:17 UTC")
+
+I'm blown away.
+
+24gb 7900xtx on llama.cpp
+
+Doing 30 tok/s Using Q4 XL 200k context
+
+Benchmarking slices and troubleshooting with DeepSeek v4 flash, sonnet and codex terra, outside of some minor tweaking, the only difference I'm finding is 3x time but this is fine by me.
+
+Never this smooth with 3.5 / 3.6.
+
+> 1
+> 
+> 
+> 
+> [u/johnzadok](https://redlib.catsarch.com/user/johnzadok)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3rozfv/?context=3#p3rozfv "Aug 15 2026, 02:23:42 UTC")
+> 
+> Please post llama.cpp setup! I have 7900xtx but only get 145k context at Q4_K_M. Q8 KV caches.
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/rodriwoh](https://redlib.catsarch.com/user/rodriwoh)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3rzggu/?context=3#p3rzggu "Aug 15 2026, 03:32:00 UTC")
+> > 
+> > Oh I'm doing 4k and 4v for now, hasn't failed me so far. I know I will probably be moving that around in the next few days .
+
+1
+
+[u/Complex_Reality_116](https://redlib.catsarch.com/user/Complex_Reality_116)[4d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3rwmsf/?context=3#p3rwmsf "Aug 15 2026, 03:13:07 UTC")
+
+This might be an unpopular opinion, but I’ll say it: I am NOT liking it.
+
+I was excited about its release (I even considered buying an R9700 to replace my current RX 7900 XTX); I’ve been testing it all day, and the results are, to put it mildly, 'mixed'.
+
+1) The model relies entirely on its reasoning level being set to 'xhigh' to unlock its full intelligence.
+
+2) Yes, you can adjust the model to think less, but you pay the price with poorer results.
+
+3) If you want peak intelligence, you MUST keep it set to 'xhigh' (the default), and the model ends up overthinking. It can take ages to complete certain tasks and rapidly consumes the context window (I get 100K on the 7900 XTX).
+
+4) I think Qwen3.8 27B is a bit of a gimmick. The model is objectively better than Qwen3.6 27B, but it achieves this through massive reasoning and higher token (and time) consumption. In other words, it’s essentially the 3.6 version but with double the reasoning rate and token usage, rather than a model that was better trained from scratch.
+
+Even though 3.8 is better, 3.6 'feels' better for day-to-day tasks and real-world use.
+
+These are just my initial impressions after 6 hours of use; I could be wrong, or the model might receive improvements in the future.
+
+1
+
+[u/MrGunny94](https://redlib.catsarch.com/user/MrGunny94)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3t6wr1/?context=3#p3t6wr1 "Aug 15 2026, 09:17:57 UTC")
+
+It’s working quite well in Medium thinking so far for me.
+
+I’m on a MacBook Pro M5 Pro 48GB, it runs pretty well but waiting to see MLX variant of it it comes out because it might work much better
+
+1
+
+[u/myownseo](https://redlib.catsarch.com/user/myownseo)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3u2ghj/?context=3#p3u2ghj "Aug 15 2026, 13:06:41 UTC")
+
+I am also seeing ridiculous thinking token usage. I am using lemonade app with both Q4 and Q8 quants with MTP spec draft-2. I am testing my benchmarks in opencode GUI and I have tried to set reasoning in the opencode.jsonc file so it shows as a dropdown in the GUI but it doesn't seem to work. Obviously I am doing something wrong here but the overthinking is making everything take a longgg time. I am on a strix halo 128gb btw. Anyone got any tips to be able to change thinking level or turn off thinking??
+
+1
+
+[u/beyondthem00n](https://redlib.catsarch.com/user/beyondthem00n)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3wh511/?context=3#p3wh511 "Aug 15 2026, 20:06:45 UTC")edited 3d ago
+
+On a 6000 pro Blackwell 96gb,I get around ~23 accepted avg t/s. I'm running it with full bf16, MTP3, xhigh thinking, 256k context, prefix-caching on, with LLM 0.27.0. GPU power averages at ~ 260W with prefix caching on, otherwise it's always maxing out at 600W. I'm keeping 10% VRAM unallocated for other tasks. Model fills ~ 85% of context before it auto compresses.
+
+1
+
+[u/SimShelby](https://redlib.catsarch.com/user/SimShelby)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3wqdkt/?context=3#p3wqdkt "Aug 15 2026, 20:52:23 UTC")
+
+On RTX 5060 with 16 GB VRAM, I am using IQ3SSS from Unsloth and getting 27 t/s. No issues. For the quality, it's better than qwen 3.6 30BA3b.
+
+ps : I am using PI agent
+
+1
+
+[u/hypercyberbatman](https://redlib.catsarch.com/user/hypercyberbatman)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3z8fom/?context=3#p3z8fom "Aug 16 2026, 06:02:30 UTC")
+
+Hmm...wait...Hmm ...wait...But wait ....
+
+ Damn this model is overthinking pro max, giving me headaches seeing its reasoning/thinking.
+
+1
+
+[u/mathew84](https://redlib.catsarch.com/user/mathew84)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p3zconu/?context=3#p3zconu "Aug 16 2026, 06:36:45 UTC")
+
+Is this optimised for Chinese hardware rather than western hardware
+
+1
+
+[u/quecosa65](https://redlib.catsarch.com/user/quecosa65)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p411obj/?context=3#p411obj "Aug 16 2026, 14:00:50 UTC")
+
+```
+PROMPT PROC · t/s
+339.7
+
+DECODE STAGE · t/s
+82.0
+```
+
+On 16gb vram rtx 5080, no offloading everything on vram MTP spec 1 under 123,904 context using unsloth/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-IQ3_XXS.gguf (serving on same hardware wsl/ubuntu).
+
+[![Image 12](https://redlib.catsarch.com/preview/pre/gswp3s2ttqjh1.png?width=1044&format=png&auto=webp&s=ff64a608da6213f21040684c35f0cd5772047d29)](https://redlib.catsarch.com/preview/pre/gswp3s2ttqjh1.png?width=1044&format=png&auto=webp&s=ff64a608da6213f21040684c35f0cd5772047d29)
+Copy paste
+
+./llama-server --hf-repo unsloth/Qwen3.8-27B-GGUF --hf-file Qwen3.8-27B-UD-IQ3_XXS.gguf --ctx-size 123904 --n-gpu-layers 999 --batch-size 512 --spec-type draft-mtp --spec-draft-n-max 1 --fit on -fa on --no-mmap --jinja -ctk q4_0 -ctv q4_0 --threads 16
+
+```
+category       samples  avg_prompt_t/s  avg_pred_t/s  avg_latency  accept_rate
+
+-------------  -------  --------------  ------------  -----------  -----------
+
+coding         1        227.76          86.63         6.543s       0.8264
+
+humanities     1        503.23          81.92         14.350s      0.7592
+
+math           1        160.80          80.30         7.172s       0.7393
+
+qa             1        128.15          79.54         7.146s       0.7567
+
+rag            1        814.42          79.41         9.334s       0.8366
+
+reasoning      1        164.01          81.26         7.094s       0.7393
+
+stem           1        49.76           78.98         6.768s       0.7393
+
+writing        1        417.46          78.94         10.605s      0.9058
+
+multilingual   1        292.46          88.93         2.902s       0.9000
+
+summarization  1        217.28          82.40         4.696s       0.7692
+
+roleplay       1        760.99          83.41         11.513s      0.8067
+
+overall        11       339.67          81.98         8.011s       0.7901
+```
+
+I hope it helps!
+
+By the way, i did/still developing LLM BENCH, works on linux, windows and if i find somebody that test it, on macOS too.
+
+This is the repo:
+
+[https://github.com/QUECOSITA/llmbench.git](https://github.com/QUECOSITA/llmbench.git)
+
+Any comment would be appreciated.
+
+1
+
+[u/Ok_Beginning9271](https://redlib.catsarch.com/user/Ok_Beginning9271)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p421sgq/?context=3#p421sgq "Aug 16 2026, 16:49:46 UTC")
+
+Im thinking about transplant the audio "tokenizer" from the 3VL model into the layers of the 3.8, theyre basically the same archtecture, the path im seeking is basically freeze + adapter, like they've did on LLaVA, the easy part is to cut it and put on place, make it work is a massive and boring shit to be done. And, dude, who the f with that capabilities has enough memory, storage, compute, training....?
+
+1
+
+[u/mrgreatheart](https://redlib.catsarch.com/user/mrgreatheart)[1d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/p48ud9r/?context=3#p48ud9r "Aug 17 2026, 16:25:00 UTC")
+
+Has anyone figured out how to solve the `Stream ended without finish_reason` errors? I am using the frogeric template and it doesn't seem to help with that.
+
+v0.36.0 [ⓘ View instance info](https://redlib.catsarch.com/info "View instance information")[<> Code](https://github.com/redlib-org/redlib "View code on GitHub")

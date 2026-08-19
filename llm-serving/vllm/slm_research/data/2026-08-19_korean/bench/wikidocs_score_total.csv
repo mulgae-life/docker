@@ -1,0 +1,64 @@
+모델,v2 배점의 SUM,v2 점수의 SUM,점수,순위
+42dot_LLM,61.6,15.91,25.83,58
+뤼튼(GPT-3.5),35,18.35,52.43,42
+A.X 4.0,37,19.59,52.95,41
+A.X-4.0-Light-gguf,40,15.04,37.60,56
+aya-expanse-8b-GGUF,35,17.41,49.74,45
+Bard,61.6,36.57,59.37,37
+Bing 채팅,35,14.43,41.23,53
+ChatGPT 4.1,35,25.06,71.60,22
+ChatGPT 4.5,35,33.45,95.57,3
+ChatGPT 4o,35,27.46,78.46,13
+ChatGPT 4o mini,35,25.16,71.89,19
+ChatGPT o1-mini,35,21.94,62.69,30
+ChatGPT o3-mini,35,26.74,76.40,14
+ChatGPT o4-mini,37,31.11,84.08,6
+ChatGPT(GPT-3.5),45.4,17.35,38.22,55
+ChatGPT(GPT-4),35,22.20,63.43,29
+Claude 2,35,21.54,61.54,33
+Claude 3 Opus,35,27.86,79.60,12
+Claude 3.5 Sonnet,35,28.26,80.74,10
+Claude 3.7 Sonnet,35,28.46,81.31,8
+Claude Opus 4.1,39,31.21,80.03,11
+Claude Sonnet 4,40,35.46,88.65,4
+CLOVA X,35,24.68,70.51,23
+DeepSeek DeepThink (R1),35,2.50,7.14,62
+DeepSeek R1 Distill (Qwen 7B),35,4.43,12.66,61
+DeepSeek-R1-Distill-Qwen-14B-GGUF,35,14.20,40.57,54
+DeepSeek-V3,35,24.16,69.03,24
+EXAONE-3.5-7.8B-Instruct-GGUF,70,35.62,50.89,44
+EXAONE-4.0.1-32B,40,24.00,60.00,36
+Gemini 1.5 Pro,35,28.28,80.80,9
+Gemini 2.0 Flash,35,26.70,76.29,15
+Gemini 2.0 Flash Experimental,35,25.08,71.66,21
+Gemini 2.5 Pro,40,39.30,98.25,2
+Gemini 3.0 Pro (Thinking),40,39.70,99.25,1
+Gemma 3 1B,39,16.78,43.03,52
+Gemma 4 (26B),40,30.48,76.20,16
+gemma-3-27b-it@q3_k_l,35,21.66,61.89,32
+gemma-3-27b-it@q4_k_m,35,25.10,71.71,20
+gemma-3-27b-it@q6_k,35,22.96,65.60,27
+GPT-5,40,32.76,81.90,7
+GPT-OSS-120B-T,35,22.59,64.54,28
+gpt-oss-20b,40,24.11,60.28,35
+Grok 2,35,25.81,73.74,18
+Grok 3,75,50.98,67.97,25
+Grok 4,40,35.44,88.60,5
+Grok 4 Fast,40,29.95,74.88,17
+HyperCLOVAX-SEED-Text-Instruct-1.5B-gguf-bf16,35,16.68,47.66,48
+KULLM(구름) 5.8B,35,8.06,23.03,59
+Llama-3.3-70B-Instruct,35,19.39,55.40,40
+Meta-Llama-3-70B-Instruct,35,12.94,36.97,57
+Meta-Llama-3-70B-Instruct (시스템 프롬프트 사용),35,19.45,55.57,38
+Meta-Llama-3-8B-Instruct-GGUF,35,8.01,22.89,60
+Microsoft Copilot,35,21.76,62.17,31
+perplexity,35,15.23,43.51,51
+Phi 4 (FP16),67,29.83,44.52,50
+Phi 4 (Q4),35,17.01,48.60,47
+Qwen2.5-14B-Instruct-GGUF,35,17.24,49.26,46
+Qwen3 8B,40,20.39,50.98,43
+Qwen3-32B-GGUF,35,23.09,65.97,26
+Solar Pro2 Preview,35,21.46,61.31,34
+Solar-Mini,35,16.29,46.54,49
+Solar-Pro,35,19.41,55.46,39
+총계,2407.6,1454.07,,

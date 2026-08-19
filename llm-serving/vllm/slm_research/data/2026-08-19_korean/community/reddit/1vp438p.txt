@@ -1,0 +1,1341 @@
+Title: If you would have told me half a year ago that a local model running in my office would be able to one-shot a Super Mario clone, I would have called you nuts. Qwen3.8-27B is a different beast. - r/LocalLLaMA
+
+URL Source: https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/
+
+Markdown Content:
+[red lib.](https://redlib.catsarch.com/)
+
+Feeds
+
+MAIN FEEDS
+
+[Home](https://redlib.catsarch.com/)[Popular](https://redlib.catsarch.com/r/popular)[All](https://redlib.catsarch.com/r/all)
+
+- [x] in /r/LocalLLaMA 
+
+[reddit](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/#popup)
+
+# You are about to leave Redlib
+
+Do you want to continue?
+
+https://www.reddit.com/r/LocalLLaMA/comments/1vp438p/
+
+[No, go back!](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/#)[Yes, take me to Reddit](https://www.reddit.com/r/LocalLLaMA/comments/1vp438p/)
+
+[settings](https://redlib.catsarch.com/settings)
+
+[r/LocalLLaMA](https://redlib.catsarch.com/r/LocalLLaMA)•[u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)•3d ago
+
+# [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on) If you would have told me half a year ago that a local model running in my office would be able to one-shot a Super Mario clone, I would have called you nuts. Qwen3.8-27B is a different beast.
+
+[![Image 1: Post image](https://redlib.catsarch.com/img/ew8ixbz3sjjh1.png)](https://redlib.catsarch.com/img/ew8ixbz3sjjh1.png)
+
+Running the Q8 GGUF on my Framework Desktop is not fast, but it's extremely smart for overnight batches and background jobs. Can't wait to play around with MTP and other quants.
+
+Have any of you found ways to improve speed while keeping accuracy?
+
+[https://mikeveerman.github.io/qwen38-27b-mario](https://mikeveerman.github.io/qwen38-27b-mario)
+
+Edit: to avoid copyright issues and to see how creative it would get, I asked Qwen3.8 to make it circus-themed instead of Mario-themed. It's technically no longer a one-shot.
+
+ 620  Upvotes
+
+*   [perma link](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/)
+*   [dup licat es](https://redlib.catsarch.com/r/LocalLLaMA/duplicates/1vp438p)
+*   [reddit](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/#popup)# You are about to leave Redlib
+
+Do you want to continue?
+
+https://www.reddit.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/
+
+[No, go back!](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/#)[Yes, take me to Reddit](https://www.reddit.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/)  
+*   [dl download](https://redlib.catsarch.com/img/ew8ixbz3sjjh1.png)
+
+94% Upvoted
+
+143 comments sorted by
+
+214
+
+[u/Infinite100p](https://redlib.catsarch.com/user/Infinite100p)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3uh73x/?context=3#p3uh73x "Aug 15 2026, 14:25:07 UTC")
+
+You'll be able to one shot GTA 6 before it comes out circa 2046.
+
+> 42
+> 
+> 
+> 
+> [u/TheBergerKing_](https://redlib.catsarch.com/user/TheBergerKing_)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3ul4gd/?context=3#p3ul4gd "Aug 15 2026, 14:44:41 UTC")
+> 
+> GThAllucinate 6 before GTA 6
+> 
+> 
+> > 24
+> > 
+> > 
+> > 
+> > [u/OttoRenner](https://redlib.catsarch.com/user/OttoRenner)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3utmzr/?context=3#p3utmzr "Aug 15 2026, 15:26:12 UTC")
+> > 
+> > GTAI
+> 
+> 
+> 
+> 12
+> 
+> 
+> 
+> [u/AdOne8437](https://redlib.catsarch.com/user/AdOne8437)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vqh55/?context=3#p3vqh55 "Aug 15 2026, 17:59:21 UTC")
+> 
+> Who cares about GTA, I need my Elder Scrolls fix! ;)
+> 
+> 
+> > 5
+> > 
+> > 
+> > 
+> > [u/Cool-Chemical-5629](https://redlib.catsarch.com/user/Cool-Chemical-5629)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3xq7ag/?context=3#p3xq7ag "Aug 16 2026, 00:06:25 UTC")
+> > 
+> > Meh, Fallout 5.
+> > 
+> > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/AdOne8437](https://redlib.catsarch.com/user/AdOne8437)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p40iaeo/?context=3#p40iaeo "Aug 16 2026, 12:10:47 UTC")
+> > > 
+> > > both.gif
+> 
+> 
+> 
+> 6
+> 
+> 
+> 
+> [u/markole](https://redlib.catsarch.com/user/markole)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3uzvg6/?context=3#p3uzvg6 "Aug 15 2026, 15:55:49 UTC")
+> 
+> Humans still exist by then? Nice.
+> 
+> 
+> > 9
+> > 
+> > 
+> > 
+> > [u/hIXhnWUmMvw](https://redlib.catsarch.com/user/hIXhnWUmMvw)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vhfp8/?context=3#p3vhfp8 "Aug 15 2026, 17:18:03 UTC")edited 3d ago
+> > 
+> > All named Peter Palantir that will be flocking around on some axons?
+> > 
+> > 
+> > > 2
+> > > 
+> > > 
+> > > 
+> > > [u/FrogsJumpFromPussy](https://redlib.catsarch.com/user/FrogsJumpFromPussy)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3w7f4u/?context=3#p3w7f4u "Aug 15 2026, 19:19:07 UTC")
+> > > 
+> > > I'm Peter Palantir look at me
+> > > 
+> > > 
+> > > No I'm Peter Palantir look at me
+> > > 
+> > > 
+> > > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/Sidran](https://redlib.catsarch.com/user/Sidran)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vithu/?context=3#p3vithu "Aug 15 2026, 17:24:19 UTC")
+> > > 
+> > > No, Jeff E
+> > > 
+> > > 
+> > > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/dododragon](https://redlib.catsarch.com/user/dododragon)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3yzbat/?context=3#p3yzbat "Aug 16 2026, 04:51:44 UTC")
+> > > 
+> > > Nerds of the nether flock together
+> 
+> 
+> 
+> 3
+> 
+> 
+> 
+> [u/feelspeaceman](https://redlib.catsarch.com/user/feelspeaceman)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3zeucn/?context=3#p3zeucn "Aug 16 2026, 06:54:15 UTC")
+> 
+> GTA 6 can be built using this harness: [https://github.com/ukanwat/aaabench](https://github.com/ukanwat/aaabench)
+> 
+> 
+> Result: [https://github.com/ukanwat/aaabench/blob/main/docs/media/film.gif](https://github.com/ukanwat/aaabench/blob/main/docs/media/film.gif)
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/_bani_](https://redlib.catsarch.com/user/_bani_)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3x3sw4/?context=3#p3x3sw4 "Aug 15 2026, 22:01:30 UTC")
+> 
+> what about one shot portal 3?
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/Independent_Pear4908](https://redlib.catsarch.com/user/Independent_Pear4908)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3xxxzg/?context=3#p3xxxzg "Aug 16 2026, 00:51:44 UTC")
+> 
+> I'm already one-shotting GTA 7, it will be released before GTA 6
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/Nabeel_Ahmed](https://redlib.catsarch.com/user/Nabeel_Ahmed)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vw8q2/?context=3#p3vw8q2 "Aug 15 2026, 18:26:06 UTC")
+> 
+> lol, at this rate ssd writes speeds are going to become the bottleneck for AI to generate massive games
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/iamzooook](https://redlib.catsarch.com/user/iamzooook)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3zaq79/?context=3#p3zaq79 "Aug 16 2026, 06:20:56 UTC")
+> 
+> for that you have to wait till qwen 3.8 35b a3b
+
+95
+
+[u/falconandeagle](https://redlib.catsarch.com/user/falconandeagle)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3upt2j/?context=3#p3upt2j "Aug 15 2026, 15:07:41 UTC")
+
+There is nothing beastly about this. It's in the training data. These prompts for benchmarking are just embarassing
+
+> 46
+> 
+> 
+> 
+> [u/mechkbfan](https://redlib.catsarch.com/user/mechkbfan)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3utj17/?context=3#p3utj17 "Aug 15 2026, 15:25:40 UTC")edited 3d ago
+> 
+> This is it to me. And there's likely heaps of example projects online to copy off
+> 
+> 
+> Basically when people are like "it drew a Pelican on a bike really well", or "it did the car wash prompt perfectly", I don't know why they're surprised.
+> 
+> 
+> (Edit: Pelican was a bad example. It seems it's been proven to not be the case) Once the authors see what's popular they'll train their next models around it
+> 
+> 
+> Do something different for a change. I'm sure it'll still do decently but it'll expose it's weaknesses a bit more
+> 
+> 
+> > 25
+> > 
+> > 
+> > 
+> > [u/m0j0m0j](https://redlib.catsarch.com/user/m0j0m0j)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vqky5/?context=3#p3vqky5 "Aug 15 2026, 17:59:50 UTC")
+> > 
+> > The “pelican on a bicycle” test inventor (Simon Willison) actually tested whether models benchmaxx his test. They don’t. They are not very good at it.
+> > 
+> > 
+> > > 13
+> > > 
+> > > 
+> > > 
+> > > [u/mechkbfan](https://redlib.catsarch.com/user/mechkbfan)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vvb89/?context=3#p3vvb89 "Aug 15 2026, 18:21:44 UTC")
+> > > 
+> > > There you go. Thankyou
+> > > 
+> > > 
+> > > Also found this
+> > > 
+> > > 
+> > > [https://dylancastillo.co/posts/pelicanmaxxing.html](https://dylancastillo.co/posts/pelicanmaxxing.html)
+> > > 
+> > > 
+> > > My bias has come from whenever a frontier prompt went viral, you come back a few days later and it's fixed.
+> > > 
+> > > 
+> > > > 3
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/m0j0m0j](https://redlib.catsarch.com/user/m0j0m0j)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3w49p7/?context=3#p3w49p7 "Aug 15 2026, 19:04:07 UTC")
+> > > > 
+> > > > Yeah, fair enough. My first instinct is also skepticism at this point. So much chicanery floating around
+> > 
+> > 
+> > 
+> > 10
+> > 
+> > 
+> > 
+> > [u/EvilPencil](https://redlib.catsarch.com/user/EvilPencil)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3w2lkb/?context=3#p3w2lkb "Aug 15 2026, 18:56:06 UTC")
+> > 
+> > Yup. The car wash gotcha just got added to training data, while all the fanboys are foaming at the mouth because it’s “so much smarter” 🙄
+> > 
+> > 
+> > I’m not a curmudgeon or anything, just show me how it does in a real codebase on an agentic harness.
+> > 
+> > 
+> > > 3
+> > > 
+> > > 
+> > > 
+> > > [u/thejacer](https://redlib.catsarch.com/user/thejacer)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3x856j/?context=3#p3x856j "Aug 15 2026, 22:24:47 UTC")
+> > > 
+> > > I plugged it into a well functioning app and asked it to add multi-user features, basic auth and user management and it did those things well enough. Could have done better with more shots but each aspect was a single shot.
+> > > 
+> > > 
+> > > It was about ~50,000 tokens context with pretty basic system prompts to get started and I compacted at 150,000. It ran for over 12 hours making use of my web search and playwright MCP server and I never noticed a failed tool call. It did explore my server quite a bit more than was needed so I had to deny access to directories it didn’t belong in.
+> > > 
+> > > 
+> > > Harness is opencode, Q8_0 Bartowski quant with MTP, no KV quantization. Started at ~260 tks pp and dropped all the way to 65 at length. TG was ~20. Run on 2xMi50 32GB.
+> 
+> 
+> 
+> 6
+> 
+> 
+> 
+> [u/Sadale-](https://redlib.catsarch.com/user/Sadale-)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3uymzn/?context=3#p3uymzn "Aug 15 2026, 15:49:59 UTC")
+> 
+> This. I might as well do a google search and find a Mario clone and just run it. Chances are that it'd be of better quality than an AI-generated one.
+> 
+> 
+> The true value that this kind of model brings is multi-shot interaction. You gotta ask it to replace Mario with another character, add new feature, fix bugs, etc. That's what the benchmarks should be after.
+> 
+> 
+> Tho I found that Qwen3.6 can do multi-shot interaction on this kind of game that it makes. It works well for like 5 shots but I haven't tested it further for now. I haven't tested Qwen3.8 yet.
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/LushHappyPie](https://redlib.catsarch.com/user/LushHappyPie)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3wgrjt/?context=3#p3wgrjt "Aug 15 2026, 20:04:54 UTC")
+> > 
+> > True. That's my main issue, adding new features without breaking stuff that already worked. Also not reusing stuff that model already created in past revisions.
+> 
+> 
+> 
+> 7
+> 
+> 
+> 
+> [u/CapsAdmin](https://redlib.catsarch.com/user/CapsAdmin)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vtd8v/?context=3#p3vtd8v "Aug 15 2026, 18:12:45 UTC")
+> 
+> What exactly is in the training data? I mean Mario obviously is, but "benchmark games" in general?
+> 
+> 
+> I don't know where to really draw the line between memorized and learned here. When I ask the model to create a short game in my own game engine (which is likely not in the training data) it seems to perform just as well.
+> 
+> 
+> > 4
+> > 
+> > 
+> > 
+> > [u/c--b](https://redlib.catsarch.com/user/c--b)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3w368o/?context=3#p3w368o "Aug 15 2026, 18:58:51 UTC")
+> > 
+> > yeah I'm not totally certain that there's a way to know whether something is *meaningfully* in the model or not. Its possible to have something in training data that isn't capable of being retrieved.
+> > 
+> > 
+> > I suppose that if it is in the training data, and not in the training data of other models then that says something else positive about the model...
+> > 
+> > 
+> > So is another model able to oneshot SMB??? or am I missing something.
+> > 
+> > 
+> > I think it's far more likely the the intelligence we're seeing from this model is contributing to its ability to oneshot SMB, even if it is in the training data in some way.
+> > 
+> > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/NightCulex](https://redlib.catsarch.com/user/NightCulex)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3we2bz/?context=3#p3we2bz "Aug 15 2026, 19:51:30 UTC")
+> > > 
+> > > model's don't store facts they store shapes? words are lossy encoding of human thought and ai models despite the noise picks up on these shadows of thought. atleast thats one theory as I understand it. human memory isn't a filing cabinet either. it reconstructs from fragments rather than retrieves.
+> > > 
+> > > 
+> > > > 1
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/rebuilt](https://redlib.catsarch.com/user/rebuilt)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3y4f0j/?context=3#p3y4f0j "Aug 16 2026, 01:30:17 UTC")
+> > > > 
+> > > > While LLMs can produce all sorts of novel outputs, they also memorize portions of their training data. For instance, you can pull out large portions of Harry Potter if you know the right incantations. [https://arxiv.org/pdf/2601.02671](https://arxiv.org/pdf/2601.02671)
+> > 
+> > 
+> > 
+> > 2
+> > 
+> > 
+> > 
+> > [u/NightCulex](https://redlib.catsarch.com/user/NightCulex)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3wc2kr/?context=3#p3wc2kr "Aug 15 2026, 19:41:44 UTC")
+> > 
+> > it's remixing patterns (loops, collision, events) it's seen a thousand times before. Think of it like stories and movies. Star was is basically Arthurian legend with a space backdrop.
+> 
+> 
+> 
+> 4
+> 
+> 
+> 
+> [u/OGScottingham](https://redlib.catsarch.com/user/OGScottingham)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vsz6h/?context=3#p3vsz6h "Aug 15 2026, 18:10:55 UTC")
+> 
+> You say that like it's a bad thing. I've taken the idea that it's been benchmaxxed on games and have been implementing a cyberpunk theme arcade of classic games with my son. It's been going great.
+> 
+> 
+> Now I never need to visit those horrible ad riddled game sites again when I want to play some god damn Tetris.
+> 
+> 
+> 
+> 3
+> 
+> 
+> 
+> [u/xienze](https://redlib.catsarch.com/user/xienze)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3uyx55/?context=3#p3uyx55 "Aug 15 2026, 15:51:18 UTC")
+> 
+> Yes, exactly. People are conflating the relative complexity of the task (a playable video game level) with how complex it is for a model to generate it (spoiler: it's not, there's lots of stuff like this in the training data). Pretty sure you could train a 2B model capable of doing this (and not much else).
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/mhb_11](https://redlib.catsarch.com/user/mhb_11)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3x2spo/?context=3#p3x2spo "Aug 15 2026, 21:56:10 UTC")
+> 
+> What it really comes down to is can it one-shot something totally original. But turns out, most humans aren't good at thinking up original stuff either.
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/Equivalent-Costumes](https://redlib.catsarch.com/user/Equivalent-Costumes)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3wiis1/?context=3#p3wiis1 "Aug 15 2026, 20:13:31 UTC")
+> 
+> I still think it's a beast. The training data is typically on the order of 10s to 100s of TB. The model is 27 GB at Q8. I think it is still quite insane that it can be this accurate despite the amount of compression. Older model of this size won't even be able to write code that run because they're not accurate enough with their syntax.
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/porkyminch](https://redlib.catsarch.com/user/porkyminch)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3y322g/?context=3#p3y322g "Aug 16 2026, 01:22:12 UTC")
+> 
+> It's pretty impressive for a 27B model, but yeah, there's probably a billion javascript mario clone projects for it to have cribbed from. I've found _original_ game/webtoy programming to actually be a task that LLMs have a hard time with. Until the most recent generations of frontier open weight models, I had a really hard time making this stuff with any open weight model.
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/decrement--](https://redlib.catsarch.com/user/decrement--)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p451qnu/?context=3#p451qnu "Aug 17 2026, 01:53:12 UTC")
+> 
+> Sure, might be in the training data, but still is a model with tons of other things in the training data, and it is small enough to run locally.
+
+97
+
+[u/Thin_Pollution8843](https://redlib.catsarch.com/user/Thin_Pollution8843)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3ugy44/?context=3#p3ugy44 "Aug 15 2026, 14:23:51 UTC")
+
+In a year you will be able to one shot gta vice city. Call me nuts if you want.
+
+> 35
+> 
+> 
+> 
+> [u/No_Lingonberry1201](https://redlib.catsarch.com/user/No_Lingonberry1201)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3v1l28/?context=3#p3v1l28 "Aug 15 2026, 16:04:00 UTC")
+> 
+> YOU'RE NUTS! Absolutely cashews, maybe even walnuts!
+> 
+> 
+> 
+> 35
+> 
+> 
+> 
+> [u/Intrepid_Travel_3274](https://redlib.catsarch.com/user/Intrepid_Travel_3274)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3ujww3/?context=3#p3ujww3 "Aug 15 2026, 14:38:39 UTC")
+> 
+> Connected to a GameEngine and a demo version but yeah, I believe it.
+> 
+> 
+> > 9
+> > 
+> > 
+> > 
+> > [u/vynulz](https://redlib.catsarch.com/user/vynulz)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3w9hyx/?context=3#p3w9hyx "Aug 15 2026, 19:29:08 UTC")
+> > 
+> > Right, not from first principles, but wiring up unreal or similar, sure, why not. The assets gen would be the biggest limit, followed by play test/qa
+> 
+> 
+> 
+> 17
+> 
+> 
+> 
+> [u/Guilty_Watercress_32](https://redlib.catsarch.com/user/Guilty_Watercress_32)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3uihq7/?context=3#p3uihq7 "Aug 15 2026, 14:31:35 UTC")
+> 
+> Yeah no.
+> 
+> 
+> > 21
+> > 
+> > 
+> > 
+> > [u/QuotableMorceau](https://redlib.catsarch.com/user/QuotableMorceau)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3uruj0/?context=3#p3uruj0 "Aug 15 2026, 15:17:37 UTC")
+> > 
+> > one shot in a llama-server no, but with a decent harness and a game engine ( unity/godot) ... maybe
+> > 
+> > 
+> > besides the limitation in "smartness" , there is also the unsolved problem of the needle-in-a-haystack/ agentic memory ... get those two solved and it does not matter how little intrinsic knowledge the model has, as long as it can search and digest external knowledge sources ...
+> > 
+> > 
+> > > 5
+> > > 
+> > > 
+> > > 
+> > > [u/masterlafontaine](https://redlib.catsarch.com/user/masterlafontaine)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3v210a/?context=3#p3v210a "Aug 15 2026, 16:06:07 UTC")
+> > > 
+> > > They do not possess the diachronicity needed to achieve this. A game like VC has more than 500 thousand hours of dev time. Many teams interacting. It won't happen, unfortunately.
+> > > 
+> > > 
+> > > > 8
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/Beneficial-Boot7479](https://redlib.catsarch.com/user/Beneficial-Boot7479)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3v6hck/?context=3#p3v6hck "Aug 15 2026, 16:27:12 UTC")
+> > > > 
+> > > > Same thing we were talking about will Smith eating spaghetti, will Will will? Obviously will, but what matters is when and how long does it take when we get there
+> > > > 
+> > > > 
+> > > > > 0
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > [u/masterlafontaine](https://redlib.catsarch.com/user/masterlafontaine)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3v9tam/?context=3#p3v9tam "Aug 15 2026, 16:42:44 UTC")
+> > > > > 
+> > > > > If Will Smith eats spaghetti inside a 900k DeepSeek context window, does Tommy Vercetti get heartburn? ​You’re talking about subagents like they’re a hive-mind of caffeinated Victorian orphans assembling a PS2 Emotion Engine out of pure vibes and next-token predictions. One-shotting Vice City it’s a summoning ritual. Wake me up when the subagents figure out memory leak exorcisms in MIPS assembly
+> > > > 
+> > > > 
+> > > > 
+> > > > 7
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/QuotableMorceau](https://redlib.catsarch.com/user/QuotableMorceau)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vgmaz/?context=3#p3vgmaz "Aug 15 2026, 17:14:19 UTC")
+> > > > 
+> > > > You are ignoring Brooks's Law when it comes to big projects, a lot of the work needed is because of management/communication overhead. For example HighFleet game was developed by one man over 5 years 2016-2021 ( it probably had a working test version within the first 3 years as it was picked up by a studio for publishing in 2019)
+> > > > 
+> > > >  I don't believe diachronicity is such a big issue, language models have been trained extensively on research papers, they should have the ability to emulate it already.
+> > > > 
+> > > > 
+> > > > PS: don't understand the downvotes ... you brought up a valid argument....
+> > > > 
+> > > > 
+> > > > 
+> > > > 1
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/Loose_Comparison368](https://redlib.catsarch.com/user/Loose_Comparison368)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3z1cm4/?context=3#p3z1cm4 "Aug 16 2026, 05:06:41 UTC")
+> > > > 
+> > > > I really would not bet on humans' ability to work together in large groups over long periods of time being all that difficult for a machine to accomplish.
+> > > > 
+> > > > 
+> > > > I mean, humans only really do that under duress to begin with. Management isn't able to coordinate large efforts between many people because of their _cunning intellect._
+> > > > 
+> > > > 
+> > > > It's because they have the ability to take away their workers' basic needs if they don't follow managements' frequently dumb as rocks orders.
+> 
+> 
+> 
+> 7
+> 
+> 
+> 
+> [u/Beneficial-Boot7479](https://redlib.catsarch.com/user/Beneficial-Boot7479)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3uow78/?context=3#p3uow78 "Aug 15 2026, 15:03:15 UTC")
+> 
+> Yep, we will be able to, been trying the new Deepseek and at +900k doesn't lose track of what must be accomplished and what has already been done, while at the same time his subagents are just BEASTS, they just don't give up, so yeah, I'm +100% sure that Deepseek is going to be the first with +1M kv context. And that's what's needed to one shot stuff like this. Obviously at 100tk/s or 200tk/s or 600tk/s still is going to need +2 or +3 days to accomplish its task, but it will be a "One shot". Dammm
+> 
+> 
+> 
+> 2
+> 
+> 
+> 
+> [u/MikePounce](https://redlib.catsarch.com/user/MikePounce)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3wje4n/?context=3#p3wje4n "Aug 15 2026, 20:17:47 UTC")
+> 
+> Calling you nuts, Nuts.
+> 
+> 
+> !RemindMe 1 year
+> 
+> 
+> > 2
+> > 
+> > 
+> > 
+> > [u/RemindMeBot](https://redlib.catsarch.com/user/RemindMeBot)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3wjjkw/?context=3#p3wjjkw "Aug 15 2026, 20:18:33 UTC")edited 3d ago
+> > 
+> > I will be messaging you in 1 year on [**2027-08-15 20:17:47 UTC**](http://www.wolframalpha.com/input/?i=2027-08-15%2020:17:47%20UTC%20To%20Local%20Time) to remind you of [**this link**](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3wje4n/?context=3)
+> > 
+> > 
+> > [**1 OTHERS CLICKED THIS LINK**](https://redlib.catsarch.com/message/compose/?to=RemindMeBot&subject=Reminder&message=%5Bhttps%3A%2F%2Fwww.reddit.com%2Fr%2FLocalLLaMA%2Fcomments%2F1vp438p%2Fif_you_would_have_told_me_half_a_year_ago_that_a%2Fp3wje4n%2F%5D%0A%0ARemindMe%21%202027-08-15%2020%3A17%3A47%20UTC) to send a PM to also be reminded and to reduce spam.
+> > 
+> > 
+> > Parent commenter can [delete this message to hide from others.](https://redlib.catsarch.com/message/compose/?to=RemindMeBot&subject=Delete%20Comment&message=Delete%21%201vp438p)
+> > 
+> > 
+> > **RemindMeBot is switching to username summons.** Instead of `!RemindMe 1 day`, use `u/RemindMeBot 1 day`. [More info.](https://redlib.catsarch.com/r/RemindMeBot/comments/1tskg07/remindmebot_is_switching_to_username_summons/)
+> > 
+> > 
+> > 
+> > * * *
+> > 
+> > 
+> > | [Info](https://redlib.catsarch.com/r/RemindMeBot/comments/e1bko7/remindmebot_info_v21/) | [Custom](https://redlib.catsarch.com/message/compose/?to=RemindMeBot&subject=Reminder&message=%5BLink%20or%20message%20inside%20square%20brackets%5D%0A%0ARemindMe%21%20Time%20period%20here) | [Your Reminders](https://redlib.catsarch.com/message/compose/?to=RemindMeBot&subject=List%20Of%20Reminders&message=MyReminders%21) | [Feedback](https://redlib.catsarch.com/message/compose/?to=Watchful1&subject=RemindMeBot%20Feedback) |
+> > | --- | --- | --- | --- |
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/LucidFir](https://redlib.catsarch.com/user/LucidFir)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3x5nbe/?context=3#p3x5nbe "Aug 15 2026, 22:11:19 UTC")
+> 
+> Remindme! 1 year
+> 
+> 
+> 
+> -8
+> 
+> 
+> 
+> [u/masterlafontaine](https://redlib.catsarch.com/user/masterlafontaine)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3unz6b/?context=3#p3unz6b "Aug 15 2026, 14:58:45 UTC")
+> 
+> There is no way. It's like expecting a great developer to build an OS alone. Yes, he could do it, in 10 thousand years
+> 
+> 
+> > 16
+> > 
+> > 
+> > 
+> > [u/biblecrumble](https://redlib.catsarch.com/user/biblecrumble)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3upsby/?context=3#p3upsby "Aug 15 2026, 15:07:35 UTC")
+> > 
+> > Terry Davis would have disagreed with that claim. And probably built a GTA clone in HolyC somehow.
+> > 
+> > 
+> > > 6
+> > > 
+> > > 
+> > > 
+> > > [u/thrownawaymane](https://redlib.catsarch.com/user/thrownawaymane)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3uyjf3/?context=3#p3uyjf3 "Aug 15 2026, 15:49:30 UTC")
+> > > 
+> > > Can you imagine if that guy had lived to see LLMs
+> > > 
+> > > 
+> > > I'd like to think they'd have done the opposite of what we'd expect and fixed how he saw the world
+> > > 
+> > > 
+> > > 
+> > > 0
+> > > 
+> > > 
+> > > 
+> > > [u/masterlafontaine](https://redlib.catsarch.com/user/masterlafontaine)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3utpkg/?context=3#p3utpkg "Aug 15 2026, 15:26:33 UTC")
+> > > 
+> > > LOL! You know what I meant
+> > 
+> > 
+> > 
+> > 6
+> > 
+> > 
+> > 
+> > [u/JimmyEatReality](https://redlib.catsarch.com/user/JimmyEatReality)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3uphov/?context=3#p3uphov "Aug 15 2026, 15:06:09 UTC")
+> > 
+> > Terry Davis did it
+> > 
+> > 
+> > > 2
+> > > 
+> > > 
+> > > 
+> > > [u/masterlafontaine](https://redlib.catsarch.com/user/masterlafontaine)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3utsbo/?context=3#p3utsbo "Aug 15 2026, 15:26:55 UTC")
+> > > 
+> > > Ok, sorry. Terry Davis, the beast aside, every other human
+> > 
+> > 
+> > 
+> > 7
+> > 
+> > 
+> > 
+> > [u/-dysangel-](https://redlib.catsarch.com/user/-dysangel-)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3uuyhq/?context=3#p3uuyhq "Aug 15 2026, 15:32:30 UTC")
+> > 
+> > 10,000 years is a pretty bold claim. Have you ever tried? And when you say OS, do you mean one with a window manager, drivers, advanced memory management etc, or just.. an OS for a single piece of hardware. It's not as hard as you think it is.
+> > 
+> > 
+> > > -2
+> > > 
+> > > 
+> > > 
+> > > [u/masterlafontaine](https://redlib.catsarch.com/user/masterlafontaine)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3uwlqn/?context=3#p3uwlqn "Aug 15 2026, 15:40:21 UTC")
+> > > 
+> > > What do you think I meant? Isn't is implicit?
+> > > 
+> > > 
+> > > > 6
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/-dysangel-](https://redlib.catsarch.com/user/-dysangel-)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3ux31z/?context=3#p3ux31z "Aug 15 2026, 15:42:37 UTC")
+> > > > 
+> > > > I don't think it is. Plus even to build all that stuff would not take 10,000 years...
+> > > > 
+> > > > 
+> > > > > 1
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > [u/masterlafontaine](https://redlib.catsarch.com/user/masterlafontaine)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3uxo9c/?context=3#p3uxo9c "Aug 15 2026, 15:45:26 UTC")
+> > > > > 
+> > > > > A single dev? Linux as a whole? Put a single distribution, any modern one. How many hours of development do you think there is on Linux?
+> > > > > 
+> > > > > 
+> > > > > > 5
+> > > > > > 
+> > > > > > 
+> > > > > > 
+> > > > > > [u/-dysangel-](https://redlib.catsarch.com/user/-dysangel-)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3v3czl/?context=3#p3v3czl "Aug 15 2026, 16:12:26 UTC")
+> > > > > > 
+> > > > > > you didn't say "build the entirety of modern linux", you said "build an OS"
+> > > > > > 
+> > > > > > 
+> > > > > > > 0
+> > > > > > > 
+> > > > > > > 
+> > > > > > > 
+> > > > > > > [u/masterlafontaine](https://redlib.catsarch.com/user/masterlafontaine)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3v45eb/?context=3#p3v45eb "Aug 15 2026, 16:16:12 UTC")
+> > > > > > > 
+> > > > > > > It’s classic pedantry, latching onto a technicality ("well, technically a bare-metal kernel on an Arduino is an OS!") to dodge the actual point about scale and complexity.
+> > > > > > > 
+> > > > > > > 
+> > > > > > > > 11
+> > > > > > > > 
+> > > > > > > > 
+> > > > > > > > 
+> > > > > > > > [u/-dysangel-](https://redlib.catsarch.com/user/-dysangel-)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3v5uqa/?context=3#p3v5uqa "Aug 15 2026, 16:24:13 UTC")
+> > > > > > > > 
+> > > > > > > > Tbh I think it's more like you said something without really considering it, and are just defensively digging a hole rather than rethink it. It doesn't take 10,000 years to "write an OS". Linux was an OS even when it was only Linus working on it, and I'm fairly sure (but not certain, of course) he's not 10,000 years old.
+> > > > > > > > 
+> > > > > > > > 
+> > > > > > > > > 1
+> > > > > > > > > 
+> > > > > > > > > 
+> > > > > > > > > 
+> > > > > > > > > [u/masterlafontaine](https://redlib.catsarch.com/user/masterlafontaine)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3v99tu/?context=3#p3v99tu "Aug 15 2026, 16:40:15 UTC")
+> > > > > > > > > 
+> > > > > > > > > Linus is one of the greatest, one of my heroes. But hype aside:
+> > > > > > > > > 
+> > > > > > > > > 
+> > > > > > > > > Linux 0.01 was a 10k-line terminal switcher hardcoded to the Intel 386 that couldn't even boot without borrowing the GNU userland and Minix filesystem. It wasn't a standalone OS stack, and Linus didn't build it in a vacuum. ​If your definition of 'writing an OS' is a 1991 toy kernel that can't render a GUI, support a network stack, or run without someone else's toolchain, then sure. But conflating a weekend terminal project with a modern software stack, or a multi-million-token, highly coupled 3D game engine, is why the 'one-shotting Vice City in a year' take is so detached from how engineering actually works.
+> > > > > > > > > 
+> > > > > > > > > 
+> > > > > > > > > > [→ More replies (0)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3v99tu)
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > -2
+> > > > > 
+> > > > > 
+> > > > > 
+> > > > > [u/masterlafontaine](https://redlib.catsarch.com/user/masterlafontaine)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3uy2gd/?context=3#p3uy2gd "Aug 15 2026, 15:47:17 UTC")
+> > > > > 
+> > > > > A toy hobby kernel running on a single known board isn't what anyone means by a usable OS. ​The Linux kernel alone sits at 30+ million lines of code. The Linux Foundation's own COCOMO analysis estimated the kernel at well over 70,000 person-years of effort—and that’s excluding Mesa, Wayland, systemd, the toolchains, and the desktop environment. '10,000 years' for a single dev to build a functional modern OS stack from scratch isn't an exaggeration; it's statistically conservative. ​That scale is exactly why expecting an LLM to 'one-shot' an entire 3D open-world game like Vice City (engine, physics, AI routines, mission scripting, audio pipeline, and assets) in a single prompt in 12 months is pure sci-fi.
+
+27
+
+[u/AnyNameFreeGiveIt](https://redlib.catsarch.com/user/AnyNameFreeGiveIt)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3v8myl/?context=3#p3v8myl "Aug 15 2026, 16:37:19 UTC")
+
+Knowing Nintendo I would not host that on Github lol.
+
+What was the prompt ?
+
+> 20
+> 
+> 
+> 
+> [u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vutnx/?context=3#p3vutnx "Aug 15 2026, 18:19:30 UTC")
+> 
+> Yeah, I'll adapt it (or take it down) later.
+> 
+> 
+> The prompt was "Create a Super Mario clone in JavaScript as a single HTML page. Make the game engaging and the graphics as beautiful as possible."
+> 
+> 
+> > 3
+> > 
+> > 
+> > 
+> > [u/nsartem](https://redlib.catsarch.com/user/nsartem)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p40d96a/?context=3#p40d96a "Aug 16 2026, 11:36:52 UTC")
+> > 
+> > And what agent harness did you use? Pi? Opencode? (I'm curious if there was any system prompt)
+> > 
+> > 
+> > > 3
+> > > 
+> > > 
+> > > 
+> > > [u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p41rqfs/?context=3#p41rqfs "Aug 16 2026, 16:04:11 UTC")
+> > > 
+> > > Plain vanilla OpenCode.
+> > 
+> > 
+> > 
+> > 1
+> > 
+> > 
+> > 
+> > [u/harrysteams](https://redlib.catsarch.com/user/harrysteams)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p43d6m3/?context=3#p43d6m3 "Aug 16 2026, 20:25:04 UTC")
+> > 
+> > Take a look at Radicle for a git forge if you want to keep the code available
+
+14
+
+[u/some_user_2021](https://redlib.catsarch.com/user/some_user_2021)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3urzxr/?context=3#p3urzxr "Aug 15 2026, 15:18:21 UTC")edited 3d ago
+
+If it is something already out there, then it could be in the training data. Create something new instead and surprise us.
+
+> 11
+> 
+> 
+> 
+> [u/cobbleplox](https://redlib.catsarch.com/user/cobbleplox)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3wk6d1/?context=3#p3wk6d1 "Aug 15 2026, 20:21:41 UTC")
+> 
+> Funny thing is, this is double hard. because suddenly you can't just throw big words like "make super mario" at it. Now you have to specify literally everything you don't want to be filled in by by basically "average". And at that point you usually discover that natural language is a pretty shitty way to define things. You'll start essentially writing elaborate code in your prompt because that's just how you can even define the things you want to define. Or of course endless iterative design based on insufficient specs, which is how the manager - engineer loop has been working since forever. Basically throwing resources at the incompetence of the manager or "designer".
+> 
+> 
+> > 3
+> > 
+> > 
+> > 
+> > [u/sheeshboi12345](https://redlib.catsarch.com/user/sheeshboi12345)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3woz8h/?context=3#p3woz8h "Aug 15 2026, 20:45:23 UTC")
+> > 
+> > 100%. “Make X” is a shortcut for the countless rounds of iteration that would occur given any novel task.
+
+8
+
+[u/SufficientPie](https://redlib.catsarch.com/user/SufficientPie)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vgzgq/?context=3#p3vgzgq "Aug 15 2026, 17:16:00 UTC")
+
+Getting an AI to write code for something it's seen a million times in training data is not impressive. Get it to do something novel.
+
+7
+
+[u/LordTamm](https://redlib.catsarch.com/user/LordTamm)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3uhiw0/?context=3#p3uhiw0 "Aug 15 2026, 14:26:45 UTC")
+
+The fact that this was a one-shot is actually genuinely impressive. How brief/extensive was the prompt and what kind of t/s does the Framework pull? I considered a strix halo box for a while, just never pulled the trigger because it looked like the speed for bigger (and dense) stuff was just rough.
+
+> 16
+> 
+> 
+> 
+> [u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3ui88p/?context=3#p3ui88p "Aug 15 2026, 14:30:16 UTC")
+> 
+> It was, on purpose, very succinct: "Create a Super Mario clone in JavaScript as a single HTML page. Make the game engaging and the graphics as beautiful as possible."
+> 
+> 
+> I'm getting around 7t/s on the Framework,which is reasonable, but the prefill is slow.
+> 
+> 
+> > 7
+> > 
+> > 
+> > 
+> > [u/edsonmedina](https://redlib.catsarch.com/user/edsonmedina)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3ujhkx/?context=3#p3ujhkx "Aug 15 2026, 14:36:34 UTC")
+> > 
+> > Have you tried MTP?
+> > 
+> > 
+> > > 2
+> > > 
+> > > 
+> > > 
+> > > [u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3um5me/?context=3#p3um5me "Aug 15 2026, 14:49:49 UTC")
+> > > 
+> > > Not yet
+> > 
+> > 
+> > 
+> > 3
+> > 
+> > 
+> > 
+> > [u/gladfelter](https://redlib.catsarch.com/user/gladfelter)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3usse8/?context=3#p3usse8 "Aug 15 2026, 15:22:07 UTC")
+> > 
+> > Did the agent had access to a research tool, or was all this from its training data? Because, honestly, the former would be more impressive.
+> > 
+> > 
+> > > 1
+> > > 
+> > > 
+> > > 
+> > > [u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3wt82g/?context=3#p3wt82g "Aug 15 2026, 21:06:50 UTC")
+> > > 
+> > > It's all based on training data. I think the focus on "it's all in the training data" is the wrong way to look at it. Try this with other models and see how much more shitty they all look. This is really impressive for a local model, even if the training data includes Mario.
+> > > 
+> > > 
+> > > > 1
+> > > > 
+> > > > 
+> > > > 
+> > > > [u/gladfelter](https://redlib.catsarch.com/user/gladfelter)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3xdgap/?context=3#p3xdgap "Aug 15 2026, 22:54:00 UTC")
+> > > > 
+> > > > I'm more concerned with Agents using this model working in a variety of circumstances. It's hard to get a clean read on capabilities when the problem and solution are likely to have many instances in the training data.
+
+7
+
+[u/neverbyte](https://redlib.catsarch.com/user/neverbyte)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3v6hl3/?context=3#p3v6hl3 "Aug 15 2026, 16:27:14 UTC")
+
+I have a couple examples of shockingly good one-shot prompts (no follow-up questions). These were on BF16. "create a matching game in html" [matching game](https://www.neverbyte.com/vibe/match-one-shot.html) and "create a pacman game in html" [pacman game](https://www.neverbyte.com/vibe/pacman-qwen3-8-one-shot.html)
+
+5
+
+[u/bymihaj](https://redlib.catsarch.com/user/bymihaj)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3ujubl/?context=3#p3ujubl "Aug 15 2026, 14:38:18 UTC")
+
+It generate FONT! Hard to believe
+
+4
+
+[u/BP041](https://redlib.catsarch.com/user/BP041)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3ves24/?context=3#p3ves24 "Aug 15 2026, 17:05:49 UTC")
+
+Yeah the 27B is legit for code. Been testing it against Claude on my Mac mini for one-shotting marketing landing pages — it's slower but nails the layout logic first try more often than you'd expect. Had it generate a full SVG animation from a single prompt last week. Kinda wild for a local 27B.
+
+5
+
+[u/Strange_Test7665](https://redlib.catsarch.com/user/Strange_Test7665)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vomja/?context=3#p3vomja "Aug 15 2026, 17:50:47 UTC")
+
+I suspect it’s able to do this as opposed to other projects as a 1 shot because this project and code concepts already exist. For example
+
+[https://github.com/iam-veeramalla/super-mario-mimic](https://github.com/iam-veeramalla/super-mario-mimic)
+
+But I’d be curious if it still succeeds on something more novel. Regardless though it’s still impressive even if it was in training
+
+> 2
+> 
+> 
+> 
+> [u/NandaVegg](https://redlib.catsarch.com/user/NandaVegg)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3wxy8s/?context=3#p3wxy8s "Aug 15 2026, 21:30:50 UTC")
+> 
+> I initially hated slop repos on github and alike, but those repos are actually contributing to future models (be it open or closed) as open dataset for both indirect distillation and RLing. Curiously the repo you mentioned only has 2 levels just like the OP's test, and has common pattern when those models "one-shotted" games (that each level is an unique function rather than generalized map data etc).
+
+3
+
+[u/jloverich](https://redlib.catsarch.com/user/jloverich)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3ulf7v/?context=3#p3ulf7v "Aug 15 2026, 14:46:09 UTC")
+
+I beat the game!
+
+2
+
+[u/Sabin_Stargem](https://redlib.catsarch.com/user/Sabin_Stargem)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3v8mln/?context=3#p3v8mln "Aug 15 2026, 16:37:17 UTC")
+
+I am hoping we get Qwen 3.8 122b, in Heretical format. It would be neat to see how far that can go for making original (if basic) games it manage.
+
+3
+
+[u/kemalios](https://redlib.catsarch.com/user/kemalios)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3xf9es/?context=3#p3xf9es "Aug 15 2026, 23:04:04 UTC")
+
+Prefill slowness is the usual culprit on desktop boxes. A few things that helped me with 27B-class models: drop to Q4_K_M, the quality hit is small and the speed gain large. Speculative decoding with a 1-1.5B draft model gives you 2-3x tokens/s with identical output, llama.cpp has it. Trim your context length, the default 32k is often overkill and slows prefill. And for overnight batches, increase batch size or switch to vLLM. MTP helps too but I haven't seen solid numbers on it yet.
+
+> 3
+> 
+> 
+> 
+> [u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3zprld/?context=3#p3zprld "Aug 16 2026, 08:25:28 UTC")
+> 
+> Thanks! I'm reading the Q6 quant with MTP is a good sweet spot. The context size is an interesting one. I was running it at the natural maximum of 256K. The Mario clone doesn't need that, but my other batch jobs do. Well worth playing with.
+
+3
+
+[u/Independent_Pear4908](https://redlib.catsarch.com/user/Independent_Pear4908)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3xxgw7/?context=3#p3xxgw7 "Aug 16 2026, 00:48:51 UTC")edited 2d ago
+
+How many days and how many millions of tokens did that prompt take tho?
+
+> 3
+> 
+> 
+> 
+> [u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3zp0yp/?context=3#p3zp0yp "Aug 16 2026, 08:19:07 UTC")
+> 
+> I didn't time it exactly, but I would estimate 3 to 5 hours. Perfectly fine for nightly batch processing.
+
+2
+
+[u/wgaca2](https://redlib.catsarch.com/user/wgaca2)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3uhvl4/?context=3#p3uhvl4 "Aug 15 2026, 14:28:31 UTC")
+
+No way, i was using a long multi prompt instruction to create a super mario like game as a benchmark for quite a while, didn't know someone else would do the same
+
+3
+
+[u/txoixoegosi](https://redlib.catsarch.com/user/txoixoegosi)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3ustuh/?context=3#p3ustuh "Aug 15 2026, 15:22:19 UTC")
+
+I’m sure one-shotting a 2D sprite platform game with assets and mechanics known for decades, is the golden standard any serious developer is after
+
+/s
+
+2
+
+[u/Tbhmaximillian](https://redlib.catsarch.com/user/Tbhmaximillian)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3ut55b/?context=3#p3ut55b "Aug 15 2026, 15:23:50 UTC")
+
+Crazy, did you use an agent harness like openhands or how was this coded by Qwen?
+
+> 4
+> 
+> 
+> 
+> [u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vuika/?context=3#p3vuika "Aug 15 2026, 18:18:04 UTC")
+> 
+> I used OpenCode.
+> 
+> 
+> > 2
+> > 
+> > 
+> > 
+> > [u/Tbhmaximillian](https://redlib.catsarch.com/user/Tbhmaximillian)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vx8fz/?context=3#p3vx8fz "Aug 15 2026, 18:30:44 UTC")
+> > 
+> > thx!
+
+2
+
+[u/jjpk976](https://redlib.catsarch.com/user/jjpk976)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3v7kc4/?context=3#p3v7kc4 "Aug 15 2026, 16:32:19 UTC")
+
+This is my one-shot game benchmark. It successfully made a fun tug of war game in a few hours on my p40. it has a bug where you have to reload the page after the first state to continue, but other than that I'm extremely impressed [https://muskwak.github.io/games/](https://muskwak.github.io/games/) I can share the prompt if anyone is curious.
+
+2
+
+[u/IllustriousFan3350](https://redlib.catsarch.com/user/IllustriousFan3350)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vuhqi/?context=3#p3vuhqi "Aug 15 2026, 18:17:58 UTC")
+
+wow does it have all the levels and mechanics?
+
+> 1
+> 
+> 
+> 
+> [u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vv6lb/?context=3#p3vv6lb "Aug 15 2026, 18:21:08 UTC")
+> 
+> No, just two levels and the basics.
+
+2
+
+[u/BrianScottGregory](https://redlib.catsarch.com/user/BrianScottGregory)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vyjv0/?context=3#p3vyjv0 "Aug 15 2026, 18:36:53 UTC")
+
+Wow pulling it down now. What's your GPU ram out of curiosity? I think I'm stuck on using the 4_K_M model, but I could be convinced otherwise... thoughts?
+
+> 1
+> 
+> 
+> 
+> [u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3wth7c/?context=3#p3wth7c "Aug 15 2026, 21:08:07 UTC")
+> 
+> I'm running it on a Strix Halo 128GB. I traded big memory for speed here.
+> 
+> 
+> > 2
+> > 
+> > 
+> > 
+> > [u/BrianScottGregory](https://redlib.catsarch.com/user/BrianScottGregory)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3wub1g/?context=3#p3wub1g "Aug 15 2026, 21:12:17 UTC")
+> > 
+> > Wow Nice. Yeah, my 6gb will have to stick with the smaller model with it taking a full night on yours.
+> > 
+> > 
+> > Thanks for getting back to me!
+
+2
+
+[u/seppe0815](https://redlib.catsarch.com/user/seppe0815)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3w6yln/?context=3#p3w6yln "Aug 15 2026, 19:16:56 UTC")
+
+why i see generated stuff mostly for browsers .. are the local model limited?
+
+> 1
+> 
+> 
+> 
+> [u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3wtkyz/?context=3#p3wtkyz "Aug 15 2026, 21:08:39 UTC")
+> 
+> Because it's the easiest way to share? I'm sure it can make desktop games too...
+> 
+> 
+> 
+> 1
+> 
+> 
+> 
+> [u/exographicskip](https://redlib.catsarch.com/user/exographicskip)[1d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p46xsji/?context=3#p46xsji "Aug 17 2026, 10:26:46 UTC")
+> 
+> Browser control is stellar (e.g., playwright, chrome devtools, etc). Combined with webdev's training ubiquity, it's not surprising honestly.
+> 
+> 
+> Re: desktop games, I've had good luck with pico-8, love2d, and even headless linux servers being able to play any library/engine via wayland.
+> 
+> 
+> Tbf Qwen et al haven't been as effective at gamedev vs. sota models. Hoping 3.8 27b changes that
+
+2
+
+[u/DRetherMD](https://redlib.catsarch.com/user/DRetherMD)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3wbs9a/?context=3#p3wbs9a "Aug 15 2026, 19:40:19 UTC")
+
+its still thinking for me...
+
+2
+
+[u/ichisay](https://redlib.catsarch.com/user/ichisay)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3wi4dy/?context=3#p3wi4dy "Aug 15 2026, 20:11:33 UTC")
+
+En serio un 27b hizo eso????
+
+2
+
+[u/snapo84](https://redlib.catsarch.com/user/snapo84)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3wj0p4/?context=3#p3wj0p4 "Aug 15 2026, 20:15:58 UTC")
+
+i think the next milestone will be a agentic framework with qwen 3.8 27B that can create a working multiplayer (4 screen on 1 screen) mario kart 64 clone with all original maps with all original players with the 2 game modes available.... that would be a realy cool task....
+
+> 2
+> 
+> 
+> 
+> [u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3wsnh0/?context=3#p3wsnh0 "Aug 15 2026, 21:03:55 UTC")
+> 
+> The one-shot test is just an easy way to see the power of the model. I'm convinced it can build a mario cart clone with the right guidance.
+> 
+> 
+> > 2
+> > 
+> > 
+> > 
+> > [u/Sabin_Stargem](https://redlib.catsarch.com/user/Sabin_Stargem)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3xe16j/?context=3#p3xe16j "Aug 15 2026, 22:57:12 UTC")
+> > 
+> > I am hoping to someday be able to ask an AI to analyze a game's files and reconstruct it with modern coding and controls. Sonic R, for example. It is a platformer footrace game, which is a pretty niche genre.
+
+2
+
+[u/runnahhh](https://redlib.catsarch.com/user/runnahhh)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3x0ci2/?context=3#p3x0ci2 "Aug 15 2026, 21:43:16 UTC")
+
+It’s incredible how far we’ve gone in such a short time. Ironic, how false that seems, considering how much this is built on.
+
+2
+
+[u/synystar](https://redlib.catsarch.com/user/synystar)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3yu4vm/?context=3#p3yu4vm "Aug 16 2026, 04:16:26 UTC")
+
+Regarding improving speed I suppose it depends on your configuration. A lot of people are saying that it "thinks too much" and this is probably a result of how they have it set up. If I don't **_explicitly_** configure it to limit the reasoning budget then it can get carried away and spend 20 minutes on something that should have taken 5. Of course, the longer you let it reason the more likely it is going to be to figure everything out in one go. My current settings look like:
+
+```
+exec "$HOME/src/llama.cpp/build/bin/llama-server" \
+    -m "$HOME/models/Qwen3.8-27B/Qwen3.8-27B-UD-Q4_K_XL.gguf" \
+    --mmproj "$HOME/models/Qwen3.8-27B/mmproj-F16.gguf" \
+    -c 65536 \
+    -ngl 99 \
+    -fa on \
+    -ctk q8_0 \
+    -ctv q8_0 \
+    -np 1 \
+    --spec-type draft-mtp \
+    --spec-draft-n-max 2 \
+    --spec-draft-type-k q8_0 \
+    --spec-draft-type-v q8_0 \
+    --reasoning on \
+    --reasoning-format deepseek \
+    --chat-template-kwargs '{"reasoning_effort":"xhigh"}' \
+    --reasoning-budget 16384 \
+    --reasoning-budget-message 'You have reached the reasoning budget. Stop reasoning now and provide the best final answer based on your work so far.' \
+    --host 127.0.0.1 \
+    --port 8080 \
+    --metrics \
+    --log-timestamps
+```
+
+Notice the "--reasoning-budget-message": if I don't put that there then it will hit the --reasoning-budget of 16384 and then break out of the "thinking box" and continue reasoning into the content stream.
+
+I'm using OpenWebUI and I usually keep it set at "Max Reasoning" but the real number come from your config. I've noticed that regardless of what you choose in that setting it follows the config. You can experiment with your reasoning budget to find a sweet spot that fits for your needs. I have 16K here but that's certainly not the max. For some task doubling the budget doesn't really improve quality of response. BUT there is one thing I've noticed about it's reasoning process:
+
+**Qwen is not spending X amount of tokens discovering X tokens’ worth of new ideas. It spends the early portion solving the problem, then a large fraction repeatedly refining implementation details, revisiting response-cleaning policy, and re-evaluating edge cases it has already mostly settled.**
+
+So I'm now experimenting now with system prompts. I'll let you know but my idea now is to add something like:
+
+```
+When performing reasoning steps before responding to any prompt/query analyze the requirements ONLY once
+Then:
+Identify the required architecture and interfaces.
+Identify the important failure modes and edge cases.
+Choose an implementation approach and commit to it.
+Perform one adversarial review against the original requirements.
+Correct concrete defects found during that review.
+Produce the final answer.
+Do not repeatedly reconsider settled implementation choices unless you discover a specific contradiction or requirement violation.
+```
+
+> 1
+> 
+> 
+> 
+> [u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3zo2ci/?context=3#p3zo2ci "Aug 16 2026, 08:10:56 UTC")
+> 
+> I had to put the reasoning budget to 8K for this because Qwen would indeed spend over 80 minutes thinking. That caused issues for OpenCode. 4K was too short; 8K feels like a good middle ground.
+> 
+> 
+> I haven't tweaked the system prompt yet. Did you have success with that?
+> 
+> 
+> The main performance improvements should come from MTP and the Q6 quant, I think.
+> 
+> 
+> > 1
+> > 
+> > 
+> > 
+> > [u/synystar](https://redlib.catsarch.com/user/synystar)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p42e43q/?context=3#p42e43q "Aug 16 2026, 17:44:34 UTC")edited 2d ago
+> > 
+> > I just started working on it again (had to sleep) but I have made an interesting discovery. I'm not sure if it's documented anywhere, maybe it is and I could have just researched before experimenting but so far it appears that the reasoning modes are just language and there may be no kind of switch or flag setting to go from medium reasoning to xhigh. As far as I can tell from my tests thus far the only difference is that if you set reasoning to xhigh it adds the following language to your prompt: "Reasoning effort is set to xhigh. Please think carefully through the task, validate key assumptions, consider plausible alternatives, and prioritize correctness, consistency, and clarity in the final answer."
+> > 
+> > 
+> > Also, in my limited testing medium reasoning which runs at a naive factor of about 0.1% of the time as xhigh has sometimes produced better code than xhigh. It's kind of interesting but I had one run on xhigh that actually introduced fatal syntax and the code would not have run properly and that hasn't been the case for any of the code generated on medium thinking so far. It used an extra ~26,700 tokens and the code was better in some ways - it bought bought more coverage and sophistication but also delivered bad quality on that sample.That only happened once but I think that overthinking for the model can sometimes be worse because it tries to micromanage things, add unnecessary machinery, etc.
+> > 
+> > 
+> > But this may be good news because if I'm right then knowing this would allow you to adjust thinking with language only so you could just leave thinking mode enabled, set it to medium, and then introduce your own "reasoning language" in the system prompt. This could be a way to fine-tune the way it reasons.
+> > 
+> > 
+> > We'll see. I'll let you know what I find out.
+
+2
+
+[u/DanielSReichenbach](https://redlib.catsarch.com/user/DanielSReichenbach)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3z5e4r/?context=3#p3z5e4r "Aug 16 2026, 05:37:56 UTC")
+
+I am a little disappointed nobody tried Giana Sisters. That was so much more fun 😊
+
+> 1
+> 
+> 
+> 
+> [u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3znlp0/?context=3#p3znlp0 "Aug 16 2026, 08:07:01 UTC")
+> 
+> I made it circus-themed, but I'm happy to hear that the Great Giana Sisters are not forgotten!
+
+2
+
+[u/anywhere88](https://redlib.catsarch.com/user/anywhere88)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3z5g8d/?context=3#p3z5g8d "Aug 16 2026, 05:38:25 UTC")
+
+I'm curious, which was the prompt? Did you have to describe each level? Or was it all common knowledge to it?
+
+> 3
+> 
+> 
+> 
+> [u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3zn7mc/?context=3#p3zn7mc "Aug 16 2026, 08:03:45 UTC")
+> 
+> The prompt was vague n purpose: "Create a Super Mario clone in JavaScript as a single HTML page. Make the game engaging and the graphics as beautiful as possible."
+
+2
+
+[u/msew](https://redlib.catsarch.com/user/msew)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3z7ipi/?context=3#p3z7ipi "Aug 16 2026, 05:55:05 UTC")
+
+If you told me a year ago that in a year the corpus would include the full mario and everything else, I would have told you of course it would!
+
+2
+
+[u/IrisColt](https://redlib.catsarch.com/user/IrisColt)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p40fv3p/?context=3#p40fv3p "Aug 16 2026, 11:54:54 UTC")
+
+_The circus is saved!_
+
+2
+
+[u/rookan](https://redlib.catsarch.com/user/rookan)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p40h85k/?context=3#p40h85k "Aug 16 2026, 12:03:52 UTC")
+
+great game! I love flying monsters on 2nd stage
+
+2
+
+[u/BeardAndBreadBoard](https://redlib.catsarch.com/user/BeardAndBreadBoard)[2d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p4371ze/?context=3#p4371ze "Aug 16 2026, 19:56:20 UTC")
+
+Everyone calls this a one-shot, but it's really not.
+
+There is are so many examples of this already, and so much documentation, that this is a prompt with effectively tens of thousands of lines of definition.
+
+Try one-shotting something that doesn't have so much information available on it. Like "Make me an original game that does XX YY ZZ" for a better measure of when the LLM can do with a short prompt.
+
+1
+
+[u/runvnc](https://redlib.catsarch.com/user/runvnc)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vki02/?context=3#p3vki02 "Aug 15 2026, 17:31:54 UTC")
+
+That's amazing for a local model. I am not that impressed with the clones though -- they have lots of clones of popular games etc. in their training dataset. More interesting is when people make something a little bit unique.
+
+1
+
+[u/Green-Ad-3964](https://redlib.catsarch.com/user/Green-Ad-3964)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3x4mst/?context=3#p3x4mst "Aug 15 2026, 22:05:56 UTC")
+
+best config for a 5090 + 32GB RAM?
+
+1
+
+[u/CryptographerLow6360](https://redlib.catsarch.com/user/CryptographerLow6360)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3y4ewj/?context=3#p3y4ewj "Aug 16 2026, 01:30:16 UTC")
+
+i had this idea for an atari game...
+
+-2
+
+[u/tvall_](https://redlib.catsarch.com/user/tvall_)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3uhn1g/?context=3#p3uhn1g "Aug 15 2026, 14:27:20 UTC")
+
+Mushrooms in the wrong ? Block. Fail
+
+> 4
+> 
+> 
+> 
+> [u/Bulky-Priority6824](https://redlib.catsarch.com/user/Bulky-Priority6824)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3ujkcv/?context=3#p3ujkcv "Aug 15 2026, 14:36:57 UTC")
+> 
+> Oh, how narrow-sighted thou must be.
+> 
+> 
+> > 0
+> > 
+> > 
+> > 
+> > [u/tvall_](https://redlib.catsarch.com/user/tvall_)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3vzb71/?context=3#p3vzb71 "Aug 15 2026, 18:40:30 UTC")
+> > 
+> > oh, how narrow-sighted thou must be, to possess eyes capable of parsing an entire AI-generated Mario clone, yet wholly blind to the most glaringly obvious implied /s in the kingdom
+
+-10
+
+[u/entsnack](https://redlib.catsarch.com/user/entsnack)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3ul5qb/?context=3#p3ul5qb "Aug 15 2026, 14:44:51 UTC")
+
+this is an ad
+
+> 7
+> 
+> 
+> 
+> [u/MikeNonect](https://redlib.catsarch.com/user/MikeNonect)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3um2dd/?context=3#p3um2dd "Aug 15 2026, 14:49:22 UTC")
+> 
+> For Qwen3.8-27b? You bet it is!
+> 
+> 
+> > -9
+> > 
+> > 
+> > 
+> > [u/entsnack](https://redlib.catsarch.com/user/entsnack)[3d ago](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/p3ummpg/?context=3#p3ummpg "Aug 15 2026, 14:52:08 UTC")
+> > 
+> > for your github repo bro, and I could do this with a Qwen from 3 years ago so you need to up your prompting game
+
+v0.36.0 [ⓘ View instance info](https://redlib.catsarch.com/info "View instance information")[<> Code](https://github.com/redlib-org/redlib "View code on GitHub")

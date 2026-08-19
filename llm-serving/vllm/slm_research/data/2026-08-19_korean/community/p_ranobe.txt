@@ -1,0 +1,235 @@
+Title: 로컬 LLM(젬마....) 라이트노벨 자동 작성기 v2 업데이트입니다. - Ai 언어모델 로컬 채널
+
+URL Source: https://arca.live/b/alpaca/180308256
+
+Markdown Content:
+[](https://arca.live/ "Arcalive")
+*   [Subscribe Channel](https://arca.live/b/alpaca/180308256# "Subscription Channel")[There are no channels you are subscribed to.](https://arca.live/b/alpaca/180308256#) 
+*   [Main Channel](https://arca.live/b/alpaca/180308256# "Channel")[Best live](https://arca.live/b/live)[Hot Deals](https://arca.live/b/hotdeal)[ideal article collection](https://arca.live/b/headline)[Comprehensive deliberation target](https://arca.live/b/replay)[Comprehensive breaking news](https://arca.live/b/breaking) [Notices](https://arca.live/b/notice)[Channel inquiry board](https://arca.live/b/whyiblocked) [Help](https://support.arca.live/)[Customer Service](https://arca.live/b/request) [주식 채널](https://arca.live/b/stock)[승리의 여신 니케 채널](https://arca.live/b/nikketgv)[KBO 채널](https://arca.live/b/baseball)[명조 채널](https://arca.live/b/wutheringwaves)[리그 오브 레전드 채널](https://arca.live/b/leagueoflegends)[붕괴 스타레일 채널](https://arca.live/b/hkstarrail)[블루 아카이브 채널](https://arca.live/b/bluearchive)[던전앤파이터 채널](https://arca.live/b/dunfa)[홀로라이브 채널](https://arca.live/b/holopro)[이환 채널](https://arca.live/b/nevernesstoeverness)[메이플스토리 채널](https://arca.live/b/maplestory)[로보토미 코퍼레이션 채널](https://arca.live/b/lobotomycoperation)[명일방주 엔드필드 채널](https://arca.live/b/akendfield)[원신 채널](https://arca.live/b/genshin)[소녀전선2: 망명 채널](https://arca.live/b/gilrsfrontline2exili)[트릭컬 RE:VIVE 채널](https://arca.live/b/trickcal)[이터널 리턴 채널](https://arca.live/b/bser)[로스트아크 채널](https://arca.live/b/lostark)[젠레스 존 제로 채널](https://arca.live/b/zenlesszonezero)[명일방주 채널](https://arca.live/b/arknights)[에픽세븐 채널](https://arca.live/b/epic7)[유희왕 채널](https://arca.live/b/yugioh)[에어소프트 채널](https://arca.live/b/airsoft2077)[장르소설 채널](https://arca.live/b/novelchannel)[브라운더스트2 채널](https://arca.live/b/browndust2)[마비노기 모바일 채널](https://arca.live/b/mabimobile)[AI 채팅 채널](https://arca.live/b/characterai)[메이플랜드 채널](https://arca.live/b/mapleland)[가이진 채널](https://arca.live/b/gaijin)[리버스 1999 채널](https://arca.live/b/arcalivebreverse)[포켓몬스터 채널](https://arca.live/b/pokemon)[컴퓨터 본체/견적 채널](https://arca.live/b/082tlqkfnomdeul)[헤드폰 채널](https://arca.live/b/headphones)[마비노기 블로니 채널](https://arca.live/b/mabi)[사이퍼즈 채널](https://arca.live/b/actioncyphers) [View More](https://arca.live/channels) 
+*    Loading...   Close  
+*   [Search](https://arca.live/b/alpaca/180308256)Loading...  Close  
+
+*   [](https://arca.live/u/login?goto=%2Fb%2Falpaca%2F180308256 "Login")
+
+[![Image 3: Channel icon](https://ac.arca.live/20230705sac/c94aac291344d182294637be53fa53aea42811326f4e139e8eb8906e0c852c23.png?expires=1787127193&key=m9o_HaAEqgMscKU4ROSitA)](https://arca.live/b/alpaca)
+
+[Ai 언어모델 로컬 채널](https://arca.live/b/alpaca)[](https://arca.live/b/alpaca/180308256#)
+
+[알림 알림 중 알림 취소](https://arca.live/b/alpaca/notificate?value=1&_csrf=P7rzNroB-FsxCpWM6HcwfD0CEaw778lH3qFk)[Subscribe Subscribed Unsubscribe](https://arca.live/b/alpaca/subscribe?value=1&_csrf=P7rzNroB-FsxCpWM6HcwfD0CEaw778lH3qFk)
+
+7152 subscribers 알림수신 346명[@바바리맨](https://arca.live/u/@%EB%B0%94%EB%B0%94%EB%A6%AC%EB%A7%A8)
+
+ 제한없는 언어모델을 위한 채널 
+
+일반 로컬 LLM(젬마....) 라이트노벨 자동 작성기 v2 업데이트입니다. 
+
+[Tttnew](https://arca.live/u/@Tttnew/74752429)
+
+![Image 4: User gravatar image](https://secure.gravatar.com/avatar/d9c33e94c40bf1c0cec7b064193e4a1f?d=retro&f=y)
+
+Like 6 Dislike 0 Comment 7 Views 613 Uploaded date 2026-08-18 23:23:42 Updated date 2026-08-19 00:41:59
+
+[https://arca.live/b/alpaca/180308256](https://arca.live/b/alpaca/180308256 "게시물 주소")
+
+![Image 5](https://ac.arca.live/20230322sac/2d1250c6486e5c57ccd90372bdb6987442593d422e690da413127ba59ca20aaa.jpg?expires=1788224400&key=7IRDRCRdvEM684qMwFp1sA)
+
+안녕하세요. 예전 만들었던 pseudo(!) 라이트노벨 전자동 작성기 v1을 조금 더 업데이트 하였습니다.
+
+gemma-4 31b fp8 128k context에서 가장 잘 됩니다.
+
+(예전 답변처럼 모든 내용은 오픈소스이며, 등장인물은 전부 성인입니다. 출력물은 젬마의 도덕성 기준을 따릅니다)
+
+[https://github.com/aigengen5-ship-it/llm_lightnovel_generator](https://unsafelink.com/https://github.com/aigengen5-ship-it/llm_lightnovel_generator "github.com/aigengen5-ship-it/llm_lightnovel_generator (외부 사이트)")
+
+예제 에피소드는 아래에 있으니 어느 정도로 출력되는지 참고하실 수 있습니다.
+
+[https://github.com/aigengen5-ship-it/llm_lightnovel_generator/blob/main/result/gemma4/episode_01_reviewed.md](https://unsafelink.com/https://github.com/aigengen5-ship-it/llm_lightnovel_generator/blob/main/result/gemma4/episode_01_reviewed.md "github.com/aigengen5-ship-it/llm_lightnovel_generator/blob/main/result/gemma4/episode_01_reviewed.md (외부 사이트)")
+
+자세한 설명은 아래에 있습니다...(github에도 있어요)
+
+[https://arca.live/b/alpaca/178295057](https://arca.live/b/alpaca/178295057)
+
+아래와 같은 사항이 업데이트 되었습니다.
+
+1) prompt를 수정해서 핍진성, 개연성 부분을 조금 더 잡도록 수정했습니다.
+
+2) textual 부분 버그를 좀 잡았습니다.
+
+3) 문체를 ㅁㄹㅋㅁ ㅎㄹㅋ 초기 작품을 따라하게 했습니다.
+
+써 보시고 피드백 부탁드립니다....:) 여러분들의 리퀘스트가 더 좋은(?) 소설 작성을 만들어줍니다.....TT
+
+ Like! 6
+
+(1) Dislike! 0
+
+(0)
+
+[Share](https://arca.live/b/alpaca/180308256# "Share")
+
+ Comment [7][Write Article](https://arca.live/b/alpaca/write "Write Article")
+
+[flankton](https://arca.live/u/@flankton)
+
+![Image 6: User gravatar image](https://secure.gravatar.com/avatar/030e89876c3688bd3d8151620d51f93d?d=retro&f=y)
+
+2026-08-18 23:35:54[Reply](https://arca.live/b/alpaca/180308256#)
+
+프로젝트 재미있어 보이네요 ㅎㅎ gemma 무슨 모델인가요? gemma4 인것 같아보이는데
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/180308256?#c_955850338)[Tttnew](https://arca.live/u/@Tttnew/74752429)
+
+![Image 7: User gravatar image](https://secure.gravatar.com/avatar/d9c33e94c40bf1c0cec7b064193e4a1f?d=retro&f=y)
+
+2026-08-18 23:37:12[Reply](https://arca.live/b/alpaca/180308256#)
+
+네. gemma4 31b 사용합니다. FP8 환경에서 테스트 했습니다.
+
+Unfold ▼
+
+[래틀](https://arca.live/u/@%EB%9E%98%ED%8B%80)
+
+![Image 8: User gravatar image](https://ac.arca.live/3e/3ec18a27c95486221960902aa6827eebc5423e89385c31db47c0f3767f11baee.png?expires=1787127193&key=W0-jL0_8mduOP-cmw4cPJQ)
+
+2026-08-19 01:21:55[Reply](https://arca.live/b/alpaca/180308256#)
+
+오오.. 가끔 소설 말아주는거 보고싶긴한데 그때 써먹겠습니다
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/180308256?#c_955884887)[래틀](https://arca.live/u/@%EB%9E%98%ED%8B%80)
+
+![Image 9: User gravatar image](https://ac.arca.live/3e/3ec18a27c95486221960902aa6827eebc5423e89385c31db47c0f3767f11baee.png?expires=1787127193&key=W0-jL0_8mduOP-cmw4cPJQ)
+
+2026-08-19 01:22:10[Reply](https://arca.live/b/alpaca/180308256#)
+
+![Image 10](https://ac.arca.live/20250604sac/5157cb4133b1bf79ff6d5d3aaffc52b693dd2704a8c184fe762ee277dc90afbb.png?expires=1788224400&key=LXtlDg-ImLGz9nIdvNW0NQ)
+
+[](https://arca.live/b/alpaca/180308256?#c_955884990)[Tttnew](https://arca.live/u/@Tttnew/74752429)
+
+![Image 11: User gravatar image](https://secure.gravatar.com/avatar/d9c33e94c40bf1c0cec7b064193e4a1f?d=retro&f=y)
+
+2026-08-19 01:22:43[Reply](https://arca.live/b/alpaca/180308256#)
+
+고맙습니다..!!
+
+Unfold ▼
+
+[니콜라](https://arca.live/u/@%EB%8B%88%EC%BD%9C%EB%9D%BC/41934611)
+
+![Image 12: User gravatar image](https://secure.gravatar.com/avatar/bf71635c622749259e077159ac7780b6?d=retro&f=y)
+
+2026-08-19 06:45:30[Reply](https://arca.live/b/alpaca/180308256#)
+
+감사합니다!!
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/180308256?#c_956041420)[Tttnew](https://arca.live/u/@Tttnew/74752429)
+
+![Image 13: User gravatar image](https://secure.gravatar.com/avatar/d9c33e94c40bf1c0cec7b064193e4a1f?d=retro&f=y)
+
+2026-08-19 06:49:42[Reply](https://arca.live/b/alpaca/180308256#)
+
+혹시 가능하시다면 써 보시고 가열찬 비난을…ㅠㅠ
+
+Unfold ▼
+
+[새로운 댓글이 달렸습니다!](https://arca.live/b/alpaca/180308256#comment)
+
+Write a Comment
+
+![Image 14: avatar](https://secure.gravatar.com/avatar/123cea059d63b41d8c2ffbd5c124c494?d=retro&f=y)
+
+Voice comment Arcacon
+
+Uploading
+
+0 Seconds 
+
+[Audio 2](https://arca.live/b/alpaca/180308256)
+
+[Record](https://arca.live/b/alpaca/180308256)[Stop](https://arca.live/b/alpaca/180308256)[Delete](https://arca.live/b/alpaca/180308256)업로드
+
+Write
+
+[Write Article](https://arca.live/b/alpaca/write "Write Article")
+
+[전체글](https://arca.live/b/alpaca)[개념글](https://arca.live/b/alpaca?mode=best)
+
+Recent Recently visited channel
+
+Recently visited channel
+
+ Clear All 
+
+[All](https://arca.live/b/alpaca)[일반](https://arca.live/b/alpaca?category=%EC%9D%BC%EB%B0%98)[질문](https://arca.live/b/alpaca?category=%EC%A7%88%EB%AC%B8)[정보](https://arca.live/b/alpaca?category=%EC%A0%95%EB%B3%B4)[학습](https://arca.live/b/alpaca?category=%ED%9B%88%EB%A0%A8)[자료](https://arca.live/b/alpaca?category=%EC%9E%90%EB%A3%8C)[자작모델](https://arca.live/b/alpaca?category=%EC%9E%90%EC%9E%91%EB%AA%A8%EB%8D%B8)[구동후기](https://arca.live/b/alpaca?category=%EA%B5%AC%EB%8F%99%ED%9B%84%EA%B8%B0)[스터디](https://arca.live/b/alpaca?category=%EC%8A%A4%ED%84%B0%EB%94%94)[공지](https://arca.live/b/alpaca?category=%EA%B3%B5%EC%A7%80)[운영](https://arca.live/b/alpaca?category=%EC%9A%B4%EC%98%81)[공모](https://arca.live/b/alpaca?category=%EA%B3%B5%EB%AA%A8)
+
+ Number  Title 
+
+Author Date created Views Like
+
+[**광고**광고**얘들아 우리 얘 재롱잔치 시키자**](https://arca.live/b/lobotomycoperation/180294714?p=1)[**Notice****아카라이브 모바일 앱 이용 안내(iOS/Android)** *ㅎㅎ 2020.08.18 53850429](https://arca.live/b/alpaca/6457546?p=1)[**Notice****![Image 15: ⭐](https://arca.live/node_modules/twemoji/assets/svg/2b50.svg)Ai 언어모델 로컬 채널 이용규정![Image 16: ⭐](https://arca.live/node_modules/twemoji/assets/svg/2b50.svg)** 바바리맨 2023.04.18 18336](https://arca.live/b/alpaca/74304620?p=1)[**Notice****신문고** 바바리맨 2023.04.18 9234](https://arca.live/b/alpaca/74304796?p=1)[**Notice****[월간 AI 리뷰] 26년도 8월 (상용 5, 오픈소스 12)** YeahEyahHaey 2026.08.14 1688](https://arca.live/b/alpaca/179869107?p=1)[**Notice****독파모 2차 모델 아키텍처/크기 비교** 가취 2026.08.11 3617](https://arca.live/b/alpaca/179636735?p=1)[**Notice****[월간 AI 리뷰] 26년도 7월 (상용 10, 오픈소스 10)** YeahEyahHaey 2026.07.18 4421](https://arca.live/b/alpaca/177276406?p=1)[**Notice****[월간 AI 리뷰] 26년도 6월 (상용 2, 오픈소스 5)** YeahEyahHaey 2026.06.22 3578](https://arca.live/b/alpaca/174545824?p=1)[**Notice****[중급자/상식]로컬 LLM환경 구축하신다는 분들이 꼭 선행했으면 하는점...** 민지쨔응6546 2026.06.12 13109](https://arca.live/b/alpaca/173524163?p=1)[**Notice****[초보자/상식]그놈의 Artificial Analysis 점수가 뭐길래 맨날 들고 오는거냐** YeahEyahHaey 2026.05.21 3700](https://arca.live/b/alpaca/171339880?p=1)[**Notice****[초보자/상식] 올바른 모델 선택에 관한 원론적인 글** 가취 2026.05.06 10477](https://arca.live/b/alpaca/169902336?p=1)[**Notice****[중급자/상식] MoE의 Activation이란 무엇인가? Qwen 3.5 35B-A3B를 예시로 들기** YeahEyahHaey 2026.03.24 4631](https://arca.live/b/alpaca/165694454?p=1)[**Notice****[트렌드, 26.8월] 념글 카테고리별 정리중** YeahEyahHaey 2026.04.17 6021](https://arca.live/b/alpaca/167944551?p=1)[**Notice****[초보자/상식] 초보자가 GPU 사기 전에 고민해야 할 것 들** John 2026.02.22 8258](https://arca.live/b/alpaca/163073828?p=1)[**Notice****[초보자/상식] 늒네를 위한 LLM 적용 가이드 (1)** 아주커마니커 2026.05.02 7547](https://arca.live/b/alpaca/169479173?p=1)[Unlock hidden notices(9 Amount)](https://arca.live/b/alpaca/180308256)[8341 질문 Qwen 3.8 이 gemma4 비해 어떤가요? [8] X 2026.08.19 304 0](https://arca.live/b/alpaca/180338049?p=1)[8340 일반 qwen 중간모델 출시?? [6] 코딩하는날다람쥐 2026.08.19 424 3](https://arca.live/b/alpaca/180335383?p=1)[8339 일반 R9700 윈도우에서 쓰는 사람들 속보 [3] ㅇㅇ 2026.08.19 299 2](https://arca.live/b/alpaca/180334830?p=1)[8338 일반 모티프 일반사용자 평가 안좋을만했다고 생각함 [7] ㅇㅇ 2026.08.19 411-3](https://arca.live/b/alpaca/180333094?p=1)[8337 질문 로컬 모델용 웹서치 mcp는 주로 뭘 쓰시나요? [4] ㅇㅇ 2026.08.19 344 1](https://arca.live/b/alpaca/180330504?p=1)[8336 일반 Qwen3.8 27b YaRN으로 1M 늘려서 쓰는데 쓸만하네요 ㅋㅋ [5] Wifnfiek 2026.08.19 648 3](https://arca.live/b/alpaca/180319731?p=1)[8335 질문 Qwen3.8 reasoning 문제 해결법 검증에 도움이 필요합니다 [1] 105년산오리 2026.08.19 425 1](https://arca.live/b/alpaca/180317484?p=1)[8334 정보 과연 자네야, GLM5.3 AA 60. [1] 래틀 2026.08.19 635 1](https://arca.live/b/alpaca/180316329?p=1)[8333 일반 b.ai 에서 DeepSeek-V4-Flash 무료쌀먹 gomtang77 2026.08.19 384 2](https://arca.live/b/alpaca/180316319?p=1)[8332 질문 스파크에서 qwen 3.8 fp8 vs nvfp4 [5] ㅇㅇ(221.145)2026.08.19 596 3](https://arca.live/b/alpaca/180312817?p=1)[8331 정보 Qwen3.8 27B이랑 Muse 머시기 DFlash2 웨이트 공개 [2] Virts 2026.08.19 672 3](https://arca.live/b/alpaca/180310521?p=1)[8330 일반 로컬 LLM(젬마....) 라이트노벨 자동 작성기 v2 업데이트입니다. [7] Tttnew 2026.08.18 614 6](https://arca.live/b/alpaca/180308256?p=1)[8329 질문 개인용 워크스테이션으로 4070ti super * 2 쓸만할까요? [7] 이안 2026.08.18 621 1](https://arca.live/b/alpaca/180301805?p=1)[8328 일반 스파크 한대만 있어도 행복할 거 같은데... [6] ㅎㄹㅋ 2026.08.18 948 1](https://arca.live/b/alpaca/180300630?p=1)[8327 질문 qwen3.8 preserve_thinking 잘 되시나요? [3] 나는항구를떠도는철새요 2026.08.18 676 1](https://arca.live/b/alpaca/180300027?p=1)[8326 일반 처음 가입했습니다 / 엑사원 혐오 / qwen 3.8 테스트 중 [2] ER당직 2026.08.18 942 7](https://arca.live/b/alpaca/180290595?p=1)[8325 일반 엑사원 떨어질거라고 생각했던 이유 [4] ㅇㅇ(218.52)2026.08.18 1650 13](https://arca.live/b/alpaca/180277250?p=1)[8324 일반 공개된 모티프 점수로 추론해보는 독파모 각 회사들 개별 점수 [13] 아카아카랍 2026.08.18 1789 11](https://arca.live/b/alpaca/180254331?p=1)[8323 일반 리벨 100이 2500만원으로 알려져있는데 [8] 미사카 2026.08.18 1001 0](https://arca.live/b/alpaca/180250488?p=1)[8322 일반 독파모 그냥 벤치맥싱, 치팅 안잡는거부터 답이 없다고 생각함 [9] 시비타이 2026.08.18 1732 26](https://arca.live/b/alpaca/180248904?p=1)
+
+[Write Article](https://arca.live/b/alpaca/write "Write Article")
+
+[전체글](https://arca.live/b/alpaca)[개념글](https://arca.live/b/alpaca?mode=best)
+
+Keyword search form input Search
+
+*   [1](https://arca.live/b/alpaca?p=1)
+*   [2](https://arca.live/b/alpaca?p=2)
+*   [3](https://arca.live/b/alpaca?p=3)
+*   [4](https://arca.live/b/alpaca?p=4)
+*   [5](https://arca.live/b/alpaca?p=5)
+*   [6](https://arca.live/b/alpaca?p=6)
+*   [7](https://arca.live/b/alpaca?p=7)
+*   [8](https://arca.live/b/alpaca?p=8)
+*   [9](https://arca.live/b/alpaca?p=9)
+*   [10](https://arca.live/b/alpaca?p=10)
+*   [](https://arca.live/b/alpaca?p=11)
+*   [](https://arca.live/b/alpaca?after=0 "See First Post")
+
+Go to Time
+
+GMT time zone is applied as your browser does not support time zone setting.
+
+[핫딜 채널](https://arca.live/b/hotdeal)
+
+[08-19 06:18 오프라이스 한촌설렁탕 정통설렁탕, 500g, 5개 (8,900원/무료)](https://arca.live/b/hotdeal/180338511)[08-19 02:12 SKT망 알뜰폰 6GB+200분 평생요금제 (550원/무료)](https://arca.live/b/hotdeal/180317844)[08-19 04:26 (메가MGC커피) (ICE)아메리카노 (1,600원/무료)](https://arca.live/b/hotdeal/180329074)[08-19 04:57 벤앤제리스 파인트 3종(8종 골라담기) + 파인트(pb스모어) 무료 증정 + 삽스푼 증정 (28,970원/무료)](https://arca.live/b/hotdeal/180331789)[08-19 04:07 종근당 락토핏골드 360포 세트 (52,500원/무료)](https://arca.live/b/hotdeal/180327393)
+
+[이 채널의 개념글](https://arca.live/b/alpaca?mode=best)
+
+[08-18 12:52 엑사원 떨어질거라고 생각했던 이유](https://arca.live/b/alpaca/180277250?mode=best)[08-18 09:36 공개된 모티프 점수로 추론해보는 독파모 각 회사들 개별 점수](https://arca.live/b/alpaca/180254331?mode=best)[08-18 04:53 170hx 메모리 오류 당첨! dogㅅㅂ -> 해결됨](https://arca.live/b/alpaca/180231273?mode=best)[08-18 08:36 독파모 그냥 벤치맥싱, 치팅 안잡는거부터 답이 없다고 생각함](https://arca.live/b/alpaca/180248904?mode=best)[08-18 08:24 로컬 ai 한달정도 연구해본 초보의 소감...](https://arca.live/b/alpaca/180247842?mode=best)
+
+arca.live 1
+*   Live v2(da76ee2d)
+*   Operado por umanle S.R.L.
+*   Hecho con <3 en Asunción, República del Paraguay
+
+HELP
+*   [Ads](mailto:arcalive@safefra.me)
+*   [Contáctenos](mailto:support@arca.live)
+*   [POLÍTICA DE PRIVACIDAD Y REGLAS DE USO](https://arca.live/policy)
+
+Application
+
+[](https://play.google.com/store/apps/details?id=live.arca.android.playstore)[](https://apps.apple.com/app/arcalive/id1632140546)
+
+ This site is protected by reCAPTCHA and the Google [Privacy Policy](https://policies.google.com/privacy) and [Terms of Service](https://policies.google.com/terms) apply. 
+
+*   [](https://arca.live/b/alpaca/180308256#comment)
+*   [](https://arca.live/b/alpaca/180308256#boardBtns)
+*   [](https://arca.live/b/alpaca/180308256#top "Go to top")
+*   [](https://arca.live/b/alpaca/180308256#bottom "Go to the bottom")
+
+##### Shortcut help
+
+##### On site
+
+1 ~ 0 Go to subscription channel R Refresh?Shortcut help T Back to top W Write article B Move channel
+##### In the post
+
+A Previous post S Next post C Comment

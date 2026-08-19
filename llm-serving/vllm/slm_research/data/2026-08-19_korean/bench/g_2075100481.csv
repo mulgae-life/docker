@@ -1,0 +1,63 @@
+모델,위키독스 페이지,RTX 4090,공식 홈페이지,라이선스,VRAM 요구량(GB),오픈소스/오픈웨이트 여부,파인튜닝 가능 여부
+42dot_LLM,https://wikidocs.net/226029,FALSE,https://42dot.ai/blog/178,CC BY-NC 4.0,약 3-4GB (FP16 기준),예 (오픈소스),예 (파인튜닝 가능)
+ChatGPT(GPT-3.5),https://wikidocs.net/226053,FALSE,https://openai.com/chatgpt/,상업용 라이선스 (API 사용료 필요),직접 실행 불가 (API 전용),아니오,아니오
+Bard,https://wikidocs.net/226057,FALSE,https://gemini.google.com/,API 사용료 기반 (무료 티어 제공),직접 실행 불가 (API 전용),아니오,아니오
+뤼튼(GPT-3.5),https://wikidocs.net/226062,FALSE,https://wrtn.ai/,서비스 이용 약관 (무료/유료 티어),해당 없음 (클라우드 서비스),아니오,아니오
+KULLM(구름) 5.8B,https://wikidocs.net/226090,TRUE,"https://huggingface.co/nlpai-lab/kullm-polyglot-5.8b-v2 (Hugging Face), https://github.com/nlpai-lab/KULLM (GitHub)",Apache 2.0,약 12-14GB (FP16 기준),예 (오픈소스),예 (파인튜닝 가능)
+ChatGPT(GPT-4),https://wikidocs.net/226091,FALSE,https://openai.com/gpt-4/,상업용 라이선스 (API 사용료 필요),직접 실행 불가 (API 전용),아니오,아니오
+Bing 채팅,https://wikidocs.net/226110,FALSE,https://www.microsoft.com/en-us/microsoft-copilot/,Microsoft 365 구독 또는 무료 티어,해당 없음 (클라우드 서비스),아니오,아니오
+CLOVA X,https://wikidocs.net/226117,FALSE,https://clova-x.naver.com/,네이버 서비스 이용 약관,해당 없음 (클라우드 서비스),아니오,아니오
+Claude 2,https://wikidocs.net/226357,FALSE,"https://www.anthropic.com/news/claude-2, https://claude.ai/",상업용 라이선스 (API 사용료 필요),해당 없음 (클라우드 서비스),아니오,아니오
+perplexity,https://wikidocs.net/226919,FALSE,https://www.perplexity.ai/,서비스 이용 약관 (개인용 무료/Pro 유료),해당 없음 (클라우드 서비스),아니오,아니오
+Solar-Mini,https://wikidocs.net/229911,FALSE,https://upstage.ai/blog/en/introducing-solar-mini-compact-yet-powerful,Apache 2.0,약 20-22GB (FP16 기준) / 3-4GB (4-bit 양자화),예 (오픈소스),예 (파인튜닝 가능)
+Claude 3 Opus,https://wikidocs.net/232992,FALSE,"https://www.anthropic.com/news/claude-3-family, https://claude.ai/",상업용 라이선스 (API 사용료 필요),해당 없음 (클라우드 서비스),아니오,아니오
+Meta-Llama-3-70B-Instruct,https://wikidocs.net/237683,FALSE,"https://ai.meta.com/blog/meta-llama-3/, https://huggingface.co/meta-llama/Meta-Llama-3-70B-Instruct",Meta Llama 3 Community License (상업적 사용 가능),약 140-210GB (FP16 기준) / 35GB (4-bit 양자화),예 (오픈소스),예 (파인튜닝 가능)
+Meta-Llama-3-70B-Instruct (시스템 프롬프트 사용),https://wikidocs.net/237685,FALSE,"https://ai.meta.com/blog/meta-llama-3/, https://huggingface.co/meta-llama/Meta-Llama-3-70B-Instruct",Meta Llama 3 Community License (상업적 사용 가능),약 140-210GB (FP16 기준) / 35GB (4-bit 양자화),예 (오픈소스),예 (파인튜닝 가능)
+ChatGPT 4o,https://wikidocs.net/239517,FALSE,https://openai.com/index/hello-gpt-4o/,상업용 라이선스 (API 사용료 필요),직접 실행 불가 (API 전용),아니오,아니오
+Meta-Llama-3-8B-Instruct-GGUF,https://wikidocs.net/249312,TRUE,"https://ai.meta.com/blog/meta-llama-3/, https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct",Meta Llama 3 Community License (상업적 사용 가능),약 16-18GB (FP16 기준) / 8-10GB (GGUF 양자화),예 (오픈소스),예 (파인튜닝 가능)
+Phi 4 (Q4),https://wikidocs.net/273153,TRUE,"https://huggingface.co/microsoft/phi-4, https://www.microsoft.com/en-us/research/publication/phi-4-technical-report/",MIT License,약 7-9GB (4-bit 양자화),예 (오픈소스),예 (파인튜닝 가능)
+Gemini 1.5 Pro,https://wikidocs.net/273168,FALSE,https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/1-5-pro,API 사용료 기반 (무료 티어 제공),직접 실행 불가 (API 전용),아니오,아니오
+Phi 4 (FP16),https://wikidocs.net/273307,TRUE,"https://huggingface.co/microsoft/phi-4, https://www.microsoft.com/en-us/research/publication/phi-4-technical-report/",MIT License,약 28-30GB (FP16),예 (오픈소스),예 (파인튜닝 가능)
+ChatGPT o1-mini,https://wikidocs.net/273419,FALSE,https://openai.com/index/openai-o1-mini-advancing-cost-efficient-reasoning/,상업용 라이선스 (API 사용료 필요),직접 실행 불가 (API 전용),아니오,아니오
+ChatGPT 4o mini,https://wikidocs.net/273425,FALSE,https://openai.com/index/gpt-4o-mini-advancing-cost-efficient-intelligence/,상업용 라이선스 (API 사용료 필요),직접 실행 불가 (API 전용),아니오,아니오
+Qwen2.5-14B-Instruct-GGUF,https://wikidocs.net/274002,TRUE,https://huggingface.co/Qwen/Qwen2.5-14B-Instruct-GGUF,Apache 2.0,약 28-30GB (FP16 기준) / 8-13GB (GGUF 양자화),예 (오픈소스),예 (파인튜닝 가능)
+DeepSeek-R1-Distill-Qwen-14B-GGUF,https://wikidocs.net/274497,TRUE,"https://huggingface.co/unsloth/DeepSeek-R1-Distill-Qwen-14B-GGUF, https://github.com/deepseek-ai/DeepSeek-R1",MIT License,약 28-30GB (FP16 기준) / 7-9GB (GGUF 양자화),예 (오픈소스),예 (파인튜닝 가능)
+DeepSeek-V3,https://wikidocs.net/274578,FALSE,"https://huggingface.co/deepseek-ai/DeepSeek-V3, https://github.com/deepseek-ai/DeepSeek-V3",DeepSeek Model License (상업적 사용 가능),약 380-700GB (다중 GPU 필요),예 (오픈소스),제한적 (매우 큰 모델)
+Gemini 2.0 Flash Experimental,https://wikidocs.net/274581,FALSE,"https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-0-flash, https://ai.google.dev/gemini-api/docs/models",API 사용료 기반 (무료 티어 제공),직접 실행 불가 (API 전용),아니오,아니오
+Claude 3.5 Sonnet,https://wikidocs.net/274583,FALSE,"https://www.anthropic.com/news/claude-3-5-sonnet, https://claude.ai/",상업용 라이선스 (API 사용료 필요),직접 실행 불가 (API 전용),아니오,아니오
+EXAONE-3.5-7.8B-Instruct-GGUF,https://wikidocs.net/274703,TRUE,"https://huggingface.co/LGAI-EXAONE/EXAONE-3.5-7.8B-Instruct-GGUF, https://github.com/LG-AI-EXAONE/EXAONE-3.5",EXAONE AI Model License 1.1 - NC (비상업적),약 15-18GB (FP16 기준) / 4-6GB (GGUF 양자화),예 (오픈소스),제한적 (비상업적 라이선스)
+ChatGPT o3-mini,https://wikidocs.net/274756,FALSE,https://openai.com/index/openai-o3-mini/,상업용 라이선스 (API 사용료 필요),직접 실행 불가 (API 전용),아니오,아니오
+Gemini 2.0 Flash,https://wikidocs.net/274763,FALSE,"https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-0-flash, https://ai.google.dev/gemini-api/docs/models",API 사용료 기반 (무료 티어 제공),직접 실행 불가 (API 전용),아니오,아니오
+Solar-Pro,https://wikidocs.net/274767,FALSE,https://upstage.ai/blog/en/solar-pro-preview-the-most-intelligent-llm-on-a-single-gpu,Apache 2.0 (추정),약 44-50GB (FP16 기준),예 (오픈소스),예 (파인튜닝 가능)
+DeepSeek DeepThink (R1),https://wikidocs.net/274770,FALSE,"https://api-docs.deepseek.com/news/news250120, https://github.com/deepseek-ai/DeepSeek-R1",MIT License,약 28-30GB (FP16 기준) / 8GB (양자화),예 (오픈소스),예 (파인튜닝 가능)
+Llama-3.3-70B-Instruct,https://wikidocs.net/274775,FALSE,https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct,Llama 3.3 Community License (상업적 사용 가능),약 140-210GB (FP16 기준) / 24GB+ (양자화),예 (오픈소스),예 (파인튜닝 가능)
+Microsoft Copilot,https://wikidocs.net/275109,FALSE,https://www.microsoft.com/en-us/microsoft-copilot/,Microsoft 365 구독 또는 무료 티어,해당 없음 (클라우드 서비스),아니오,아니오
+aya-expanse-8b-GGUF,https://wikidocs.net/275824,FALSE,"https://huggingface.co/CohereLabs/aya-expanse-8b, https://cohere.com/research/aya",CC-BY-NC 4.0 (비상업적),약 16-18GB (FP16 기준) / 6-8GB (GGUF 양자화),예 (오픈소스),제한적 (비상업적 라이선스)
+Grok 2,https://wikidocs.net/276582,FALSE,"https://x.ai/news/grok-2, https://grok.com/",xAI 서비스 약관 (API 전용),직접 실행 불가 (API 전용),아니오,아니오
+Grok 3,https://wikidocs.net/276589,FALSE,"https://x.ai/news/grok-3, https://grok.com/",xAI 서비스 약관 (API 전용),직접 실행 불가 (API 전용),아니오,아니오
+DeepSeek R1 Distill (Qwen 7B),https://wikidocs.net/276624,FALSE,"https://huggingface.co/deepseek-ai/DeepSeek-R1-Distill-Qwen-7B, https://github.com/deepseek-ai/DeepSeek-R1",MIT License,약 14-16GB (FP16 기준) / 3-4GB (양자화),예 (오픈소스),예 (파인튜닝 가능)
+Claude 3.7 Sonnet,https://wikidocs.net/277152,FALSE,"https://www.anthropic.com/news/claude-3-7-sonnet, https://claude.ai/",상업용 라이선스 (API 사용료 필요),직접 실행 불가 (API 전용),아니오,아니오
+ChatGPT 4.5,https://wikidocs.net/277775,FALSE,https://openai.com/index/introducing-gpt-4-5/,상업용 라이선스 (API 사용료 필요),직접 실행 불가 (API 전용),아니오,아니오
+gemma-3-27b-it@q3_k_l,https://wikidocs.net/278453,TRUE,https://huggingface.co/google/gemma-3-27b-it,Gemma Terms of Use (상업적 사용 가능),약 14-15GB (Q3_K_L 양자화),예 (오픈웨이트),예 (파인튜닝 가능)
+gemma-3-27b-it@q4_k_m,https://wikidocs.net/278454,TRUE,https://huggingface.co/google/gemma-3-27b-it,Gemma Terms of Use (상업적 사용 가능),약 23-29GB (Q4_K_M 양자화),예 (오픈웨이트),예 (파인튜닝 가능)
+gemma-3-27b-it@q6_k,https://wikidocs.net/278457,FALSE,https://huggingface.co/google/gemma-3-27b-it,Gemma Terms of Use (상업적 사용 가능),약 22GB (Q6_K 양자화),예 (오픈웨이트),예 (파인튜닝 가능)
+ChatGPT o4-mini,https://wikidocs.net/282149,FALSE,https://openai.com/index/introducing-o3-and-o4-mini/,상업용 라이선스 (API 사용료 필요),직접 실행 불가 (API 전용),아니오,아니오
+HyperCLOVAX-SEED-Text-Instruct-1.5B-gguf-bf16,https://wikidocs.net/283455,TRUE,https://huggingface.co/naver-hyperclovax/HyperCLOVAX-SEED-Text-Instruct-1.5B,상업적 사용 가능,약 3-4GB (BF16 기준),예 (오픈소스),예 (파인튜닝 가능)
+Qwen3-32B-GGUF,https://wikidocs.net/284013,TRUE,"https://huggingface.co/Qwen/Qwen3-32B-GGUF, https://github.com/QwenLM/Qwen3",Apache 2.0,약 64-70GB (FP16 기준) / 18-20GB (GGUF 양자화),예 (오픈소스),예 (파인튜닝 가능)
+Solar Pro2 Preview,https://wikidocs.net/285368,FALSE,https://upstage.ai/blog/en/solar-pro-2-preview-small-powerful-now-with-reasoning,Upstage 서비스 약관 (무료 미리보기),약 80GB (최적화 기준),아니오,아니오
+ChatGPT 4.1,https://wikidocs.net/285456,FALSE,https://openai.com/index/gpt-4-1/,상업용 라이선스 (API 사용료 필요),직접 실행 불가 (API 전용),아니오,아니오
+Qwen3 8B,https://wikidocs.net/290878,TRUE,"https://huggingface.co/Qwen/Qwen3-8B, https://github.com/QwenLM/Qwen3",Apache 2.0,약 16-18GB (FP16 기준) / 2-4GB (양자화),예 (오픈소스),예 (파인튜닝 가능)
+A.X-4.0-Light-gguf,https://wikidocs.net/291059,TRUE,https://huggingface.co/limjh12/A.X-4.0-Light-GGUF,Apache 2.0,약 14-16GB (FP16 기준) / 6GB (GGUF),예 (오픈소스),예 (파인튜닝 가능)
+gpt-oss-20b,https://wikidocs.net/292634,TRUE,"https://openai.com/index/introducing-gpt-oss/, https://huggingface.co/openai/gpt-oss-20b",Apache 2.0,약 16GB VRAM (MXFP4 기준),예 (오픈소스),예 (파인튜닝 가능)
+GPT-OSS-120B-T,https://wikidocs.net/292635,FALSE,"https://openai.com/index/introducing-gpt-oss/, https://huggingface.co/openai/gpt-oss-120b",Apache 2.0,약 80GB (단일 GPU) / 64GB (MXFP4),예 (오픈소스),예 (파인튜닝 가능)
+Gemini 2.5 Pro,https://wikidocs.net/292639,FALSE,"https://cloud.google.com/vertex-ai/generative-ai/docs/models/gemini/2-5-pro, https://deepmind.google/models/gemini/pro/",API 사용료 기반 (무료 티어 제공),직접 실행 불가 (API 전용),아니오,아니오
+GPT-5,https://wikidocs.net/292636,FALSE,https://openai.com/index/introducing-gpt-5/,상업용 라이선스 (API 사용료 필요),직접 실행 불가 (API 전용),아니오,아니오
+Claude Sonnet 4,https://wikidocs.net/292642,FALSE,"https://www.anthropic.com/claude/sonnet, https://www.anthropic.com/news/claude-4",상업용 라이선스 (API 사용료 필요),직접 실행 불가 (API 전용),아니오,아니오
+Claude Opus 4.1,https://wikidocs.net/293117,FALSE,,,,,
+A.X 4.0,https://wikidocs.net/300747,FALSE,https://adot.ai/,,,,
+EXAONE-4.0.1-32B,https://wikidocs.net/301142,FALSE,https://huggingface.co/LGAI-EXAONE/EXAONE-4.0.1-32B,,,,
+Gemma 3 1B,https://wikidocs.net/301178,TRUE,,,,,
+Grok 4 Fast,https://wikidocs.net/301261,FALSE,,,,,
+Grok 4,https://wikidocs.net/301280,FALSE,,,,,
+Gemini 3.0 Pro (Thinking),https://wikidocs.net/309823,FALSE,,,,,
+Gemma 4 (26B),https://wikidocs.net/340029,TRUE,https://ai.google.dev/gemma/docs/core/model_card_4?hl=ko,Apache 2.0,,,

@@ -1,0 +1,388 @@
+Title: Redlib: search results - qwen3.8 27b korean
+
+URL Source: https://redlib.catsarch.com/r/LocalLLaMA/search?q=qwen3.8+27b+korean&restrict_sr=on&sort=relevance
+
+Markdown Content:
+## [Other](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Other%22&restrict_sr=on)[If You Already Pay for an LLM Service, Running Local Embeddings and Rerankers Feels More Useful Than Running Local LLMs](https://redlib.catsarch.com/r/LocalLLaMA/comments/1us3li5/if_you_already_pay_for_an_llm_service_running/)
+
+190  Upvotes
+
+[![Image 1](https://redlib.catsarch.com/preview/pre/v0xtn3jdu9ch1.png?width=2047&format=png&auto=webp&s=628a6a541fe5f097d0f771ae0ba3b7f44126198f)](https://redlib.catsarch.com/preview/pre/v0xtn3jdu9ch1.png?width=2047&format=png&auto=webp&s=628a6a541fe5f097d0f771ae0ba3b7f44126198f)[![Image 2](https://redlib.catsarch.com/preview/pre/vjxiucsdu9ch1.png?width=2047&format=png&auto=webp&s=74f7a18a5a30276e206e2bfb5a0c529826ce86e4)](https://redlib.catsarch.com/preview/pre/vjxiucsdu9ch1.png?width=2047&format=png&auto=webp&s=74f7a18a5a30276e206e2bfb5a0c529826ce86e4)
+This post was originally written in Korean, then polished and translated into English using ChatGPT.
+
+I do run llama.cpp locally on a Tesla P40, but as someone who already pays for ChatGPT Pro, I was gradually losing the practical reason to keep running local LLMs like Qwen 3.6 27B or Gemma 4 31B. If I need access to OpenAI models through an API-like workflow, I can usually just use Codex OAuth instead.
+
+But then I realized that embedding models and reranker models are not something I can access through Codex in the same way. That gave me a more practical reason to use local AI, not just as a hobby or for fun, but as something that can actually improve productivity: a memory MCP for LLMs.
+
+With the Codex app, GPT-based models are almost unlimited for me under ChatGPT Pro, but embedding and reranker models still almost always require paid API usage. So instead of focusing on running a local LLM, I decided to use Qwen3 Embedding 4B and Qwen3 Reranker 4B locally to build an LLM memory system through GBrain.
+
+The stack is roughly llama.cpp, PostgreSQL, pgvector, Ceph for the S3 API, and GitLab for storing memories as Markdown files.
+
+The workflow looks like this: when I use Codex, ChatGPT Web, or another client, anything I explicitly ask to remember, or anything the system considers important, is saved to GBrain through an MCP interface as a Markdown file. GBrain then indexes those files, generates embeddings for them, and uses an LLM to extract facts from each Markdown-based memory.
+
+Later, when a memory lookup request comes in through MCP, GBrain first retrieves potentially relevant memories using the embedding model. Then it uses the reranker model to narrow the results down to the most relevant memories before returning them.
+
+I think this approach is better than just storing memories as plain Markdown files. By placing a management layer like GBrain on top, the system can extract concise facts from Markdown documents instead of forcing the LLM to consume entire files. It also makes retrieval much more accurate because embeddings and reranking can be used together to surface only the information that is actually relevant.
+
+Another reason this is useful for me is that I use both Codex and ChatGPT Web. If I connect GBrain to ChatGPT Web as an app, MCP requests can happen alongside normal web-style searches. That makes it much easier to share context between work done in Codex and conversations in ChatGPT Web, with much less manual intervention from me.
+
+Overall, my current impression is that if you are already paying for services like Codex, ChatGPT, or Claude, running local LLMs may not always be the most productive use of local hardware. Instead, it can make more sense to run the models that those services do not conveniently provide, such as embedding models and rerankers
+
+## [New Model](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22New%20Model%22&restrict_sr=on)[Daniel Han of Unsloth validates Qwen3.8-27B will run only 17GB VRAM](https://redlib.catsarch.com/r/LocalLLaMA/comments/1ve4uoe/daniel_han_of_unsloth_validates_qwen3827b_will/)
+
+[![Image 3: Post image](https://redlib.catsarch.com/img/kabmtuygn3hh1.jpeg)](https://redlib.catsarch.com/img/kabmtuygn3hh1.jpeg)
+
+1.8k  Upvotes
+
+Super excited about this release for the new 27B. Who else is with me. Only 17GB VRAM needed 😍😍
+
+## [New Model](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22New%20Model%22&restrict_sr=on)[Local uncensored Opus 4.6 at home - Qwen3.8 27B heretic](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voix4o/local_uncensored_opus_46_at_home_qwen38_27b/)
+
+[![Image 4: Thumbnail](https://redlib.catsarch.com/preview/external-pre/XQ1_sxXmFl6K5_gJsJP8z4I8B1gQ_MVLBEZrKX7Ebo8.png?width=140&height=75&auto=webp&s=2b1eb26fb620c849b42c7a408dbf58a98482f0b2) huggingface.co](https://huggingface.co/trohrbaugh/Qwen3.8-27B-heretic-ara)
+923  Upvotes
+
+Someone made a heretic version of Qwen 3.8 27B, giving us a local Opus 4.6 tier model but without any refusals or safeguards!
+
+Fuck Dario
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[A preliminary Qwen3.8-27B model card is live!](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vo2iiz/a_preliminary_qwen3827b_model_card_is_live/)
+
+[![Image 5: Post image](https://redlib.catsarch.com/img/3u6hgcgk7bjh1.png)](https://redlib.catsarch.com/img/3u6hgcgk7bjh1.png)
+
+573  Upvotes
+
+If you scroll down from the countdown at [https://huggingface.co/Qwen/Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B), you see a big model card with a bunch of sections: Highlights, Model Overview, Quickstart, Best Practices, Citation, etc!
+
+No benchmarks on this yet as far as I can tell. We'll still need to wait another 5.5 hours for those I reckon.
+
+Edit: Ladies and gentlemen, the model is live. Let the testing begin!
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[We could really use Qwen3.8 in 27B, 35B, 122B and 397B sizes](https://redlib.catsarch.com/r/LocalLLaMA/comments/1v7nrfm/we_could_really_use_qwen38_in_27b_35b_122b_and/)
+
+574  Upvotes
+
+Instead of 2T+ models, continuing to release highly capable small to medium size LLMs would really help to keep this community vibrant. Hardly anyone can even dream of running the recent 1.5-2T+ beasts, while the range from the title could run comfortably (especially with CPU expert offloading) across a wide range of systems we have today.
+
+The trend towards Chinese labs trying to match the Mythos class frontier with trillion parameter open weights models is not helping the local model community to innovate. It just gives big corporates who can actually run these a cheaper alternative to the commercial frontier.
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[If you would have told me half a year ago that a local model running in my office would be able to one-shot a Super Mario clone, I would have called you nuts. Qwen3.8-27B is a different beast.](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vp438p/if_you_would_have_told_me_half_a_year_ago_that_a/)
+
+[![Image 6: Post image](https://redlib.catsarch.com/img/ew8ixbz3sjjh1.png)](https://redlib.catsarch.com/img/ew8ixbz3sjjh1.png)
+
+619  Upvotes
+
+Running the Q8 GGUF on my Framework Desktop is not fast, but it's extremely smart for overnight batches and background jobs. Can't wait to play around with MTP and other quants.
+
+Have any of you found ways to improve speed while keeping accuracy?
+
+[https://mikeveerman.github.io/qwen38-27b-mario](https://mikeveerman.github.io/qwen38-27b-mario)
+
+Edit: to avoid copyright issues and to see how creative it would get, I asked Qwen3.8 to make it circus-themed instead of Mario-themed. It's technically no longer a one-shot.
+
+## [Other](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Other%22&restrict_sr=on)[Qwen3.8-27B vs Qwen3.6-27B writing ray-tracers in BASIC](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vpiyj9/qwen3827b_vs_qwen3627b_writing_raytracers_in_basic/)
+
+[![Image 7: Thumbnail](https://redlib.catsarch.com/preview/pre/cjjqj9n7smjh1.png?width=140&height=105&auto=webp&s=e632a1a28885ca173a47ec8d3ba3aa0ddc4f2e24) gallery](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vpiyj9/qwen3827b_vs_qwen3627b_writing_raytracers_in_basic/)
+860  Upvotes
+
+one of my llm hobbies is re-creating graphics demos i used to write in BASIC in the late 1980s. i slopped together an agentic harness and a basic-to-js transpiler in a web page i've been playing with for a few months. the agent can write basic programs, run them, examine the resulting images, and iterate. qwen3.6 could do a ray-tracer with some user input -- often it got something wrong that it couldn't see/didn't notice, and hence wouldn't fix without further prompting. qwen3.8 typically knocks it out of the park on its own, iterating to a good result. both models are running the unsloth UD-Q8_K_XL quants. i'm pretty happy with 3.8 so far.
+
+the user prompt was "write a recursive ray-tracing demo to render three metallic spheres (copper, silver, gold) over a glossy checkerboard plane and under a deep blue sky. use the cook-torrance model to render the spheres."
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[Alright, We got Qwen3.8-27B. Now it's community's turn to make it more better & faster](https://redlib.catsarch.com/r/LocalLLaMA/comments/1voc15b/alright_we_got_qwen3827b_now_its_communitys_turn/)
+
+292  Upvotes
+
+Facing any issues?
+
+Chat Template is fine?
+
+Looping issue?
+
+Too much reasoning thing?
+
+How's MTP with this one?
+
+Any other issues faced by Qwen3.6-27B & Qwen3.5-27B during release time?
+
+If I missed any other items, please mention in your comments.
+
+AND
+
+1.   Share comparison with Qwen3.6-27B. On Memory & t/s stats
+2.   How much memory takes for this model if you use full 256K context + unquantized KVCache + MTP? For Q4 & above quants. Particularly Q8 please, want to know it's possible to hold this in 32GB VRAM. Also share t/s stats.
+3.   How good is this model on Creative writing? Better than Qwen3.6-27B?
+
+## [Question | Help](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Question%20|%20Help%22&restrict_sr=on)[How many tokens/second output are you getting with Qwen3.8-27B?](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vqjeub/how_many_tokenssecond_output_are_you_getting_with/)
+
+100  Upvotes
+
+Trying to get a feel for where I stand. If you can list your relevant hardware and model used, that would be awesome.
+
+Here's mine:
+
+**Model:** Qwen3.8-27B-heretic-ara, Q5_K_M GGUF
+
+**T/s by context saturation:**
+
+ I found that t/s output depends on how saturated the context is. The more saturated, the slower the speeds.
+
+~1K | 74.88 tok/s
+
+ ~16K | 70.15 tok/s
+
+ ~63K | 56.58 tok/s
+
+ ~90K | 42.71 tok/s
+
+**Hardware:** 3090 GPU | 64 GBs DDR4 RAM | AMD 7950x CPU
+
+**Harness:** Pi
+
+**Inference:** llama.ccp
+
+Edit: When I made this post I was getting around 31 t/s with a fresh context. I since moved my models to an SSD and enabled Multi-Token Prediction (MTP) and now get ~74 t/s on a fresh context window (134.5% increase!). I’ve updated the post to reflect that change.
+
+The only downside is I had to reduce my context window to 96k for it to fit snugly on my 3090 since MTP increases VRAM usage.
+
+## [Other](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Other%22&restrict_sr=on)[Running Qwen3.5 27b dense with 170k context at 100+t/s decode and ~1500t/s prefill on 2x3090 (with 585t/s throughput for 8 simultaneous requests)](https://redlib.catsarch.com/r/LocalLLaMA/comments/1rianwb/running_qwen35_27b_dense_with_170k_context_at/)
+
+704  Upvotes
+
+Hi everyone!
+
+I've been trying to run the new Qwen models as efficiently as possible with my setup - and seem to have performance higher than I've seen around, so wanted to share my scripts and metrics!
+
+The above video is simulating ideal conditions - due to the nature of MTP, it does get slower once your response requires more intelligence and creativity. However, even at the worst-case scenario I rarely ever see my decode speeds drop below 60t/s. And for multi-user throughput, I have seen as high as 585t/s across 8 requests.
+
+To achieve this, I had to:
+
+*   Use vLLM with tensor parallelism (I also have NVLink, which probably plays a role considering tensor parallelism does better with GPU interconnect).
+
+*   Enable MTP with 5 tokens predicted. This is in contrast to any documentation I've seen which suggests 3, but in practice I am getting mean acceptance length values above 3 with my setup so I think 5 is appropriate. I found values above 5 not to be worth it, since the mean acceptance length never exceeded 5 when I tried with higher values. I have also observed a noticable slowdown when I cranked MTP above 5 tokens.
+
+*   Compile vLLM from scratch on my own hardware. It's a fairly slow operation, especially if your CPU is not great or you don't have a lot of RAM - I typically just leave the compilation running overnight. It also doesn't seem to increase the performance much, so it's certainly not a requirement but something I did to get the absolute most out of my GPU's.
+
+*   Use [this exact quant](https://huggingface.co/cyankiwi/Qwen3.5-27B-AWQ-BF16-INT4) because the linear attention layers are kept at full-precision (as far as I can tell, linear attention still quantizes rather poorly) and the full attention layers are quantized to int4. This matters, because 3090's have hardware support for int4 - massively boosting performance.
+
+*   Play around a lot with the vLLM engine arguments and environment variables.
+
+~~The tool call parser for Qwen3 Coder (also used in Qwen3.5 in vLLM) seems to have a bug where tool calling is inaccurate when MTP is enabled, so I cherry-picked [this pull request](https://github.com/vllm-project/vllm/pull/35615) into the current main branch (and another pull request to fix an issue where reasoning content is lost when using LiteLLM). My fork with the cherry-picked fixes are available [on my GitHub](https://github.com/JohnTheNerd/vllm) if you'd like to use it, but please keep in mind that I am unlikely to maintain this fork.~~
+
+**Edit**: The PR with the tool calling fix is merged and the fork is no longer necessary.
+
+Prefill speeds appear to be really good too, at ~1500t/s.
+
+My current build script is:
+
+```
+
+## !/bin/bash
+
+. /mnt/no-backup/vllm-venv/bin/activate
+
+export CUDACXX=/usr/local/cuda-12.4/bin/nvcc export MAX_JOBS=1 export PATH=/usr/local/cuda-12.4/bin:$PATH export LD_LIBRARY_PATH=/usr/local/cuda-12.4/lib64:$LD_LIBRARY_PATH
+
+cd vllm
+
+pip3 install -e . ```
+
+And my current launch script is:
+
+```
+
+## !/bin/bash
+
+. /mnt/no-backup/vllm-venv/bin/activate
+
+export CUDA_VISIBLE_DEVICES=0,1 export RAY_memory_monitor_refresh_ms=0 export NCCL_CUMEM_ENABLE=0 export VLLM_SLEEP_WHEN_IDLE=1 export VLLM_ENABLE_CUDAGRAPH_GC=1 export VLLM_USE_FLASHINFER_SAMPLER=1
+
+vllm serve /mnt/no-backup/models/Qwen3.5-27B-AWQ-BF16-INT4 --served-model-name=qwen3.5-27b \ --quantization compressed-tensors \ --max-model-len=170000 \ --max-num-seqs=8 \ --block-size 32 \ --max-num-batched-tokens=2048 \ --swap-space=0 \ --enable-prefix-caching \ --enable-auto-tool-choice \ --tool-call-parser qwen3_coder \ --reasoning-parser qwen3 \ --attention-backend FLASHINFER \ --speculative-config '{"method":"qwen3_next_mtp","num_speculative_tokens":5}' \ --tensor-parallel-size=2 \ -O3 \ --gpu-memory-utilization=0.9 \ --no-use-tqdm-on-load \ --host=0.0.0.0 --port=5000
+
+deactivate ```
+
+Hope this helps someone!
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[The difference between "medium" and "xhigh" reasoning effort for Qwen3.8-27B is actually insane.](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vohpc8/the_difference_between_medium_and_xhigh_reasoning/)
+
+221  Upvotes
+
+I'm currently testing out Qwen3.8-27B using Unsloth's UD-Q4_K_XL running a freshly rebuilt llama.cpp. I have a 22GB RTX 2080TI on which I'm able to fit 100k context with q8_0 quantization, and using MTP with --spec-draft-n-max 4 I get about 40tk/s which is slightly less than Qwen3.6-27B but usable enough.
+
+I've been trying to test out some admittedly silly one shot prompts using the llama.cpp webui by asking the model to create fully functional HTML clones of flappy bird, pacman and such, and the difference that changing reasoning_effort makes has been surprising to say the least.
+
+Setting it to "medium" seems to result in barely any thinking at all, a couple thousand tokens max and even less than 3.6-27B. Whereas when using "xhigh seems" I get 15k to 20k thinking tokens at the very least with the pacman example actually hitting 40 thousand fucking tokens.
+
+I'm well aware I can limit the reasoning budget in llama.cpp but I'm wondering if this is expected model behavior or if something is broken somewhere. Any of you guys seeing this?
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[Weirdly, no one talks about Temperature setting for the Qwen3.8 27b](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vr3cma/weirdly_no_one_talks_about_temperature_setting/)
+
+272  Upvotes
+
+Mind you, it is **1.0** by default, yet everyone is focused on how much the new model thinks, restricting the reasoning budget and/or dropping the reasoning level.
+
+Set the temperature to 0.7 and the model will no longer write a whole book of thoughts before trying to make a small edit in the file.
+
+The question is - how much does this affect the model's capabilities? What is the sweet spot for the temp parameter for various tasks?
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[Qwen3.8 27B reasoning effort low/medium/xhigh comparison](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vpuh7m/qwen38_27b_reasoning_effort_lowmediumxhigh/)
+
+229  Upvotes
+
+I did a short test of the different reasoning efforts, since on default xhigh the model thinks **a lot**.
+
+Not very scientific, just a quick "generate an SVG of a pelican on a bicycle" prompt with 3 different seeds. I think the result is interesting none the less: xhigh gives ***much\*** higher visual fidelity - but it also takes about 7x as long as low. Low and medium seem to be very close to each other.
+
+[![Image 8](https://redlib.catsarch.com/preview/pre/fkbx5qf41qjh1.png?width=1560&format=png&auto=webp&s=bfc1e9679802605c61af203ca27422ed763b6a19)](https://redlib.catsarch.com/preview/pre/fkbx5qf41qjh1.png?width=1560&format=png&auto=webp&s=bfc1e9679802605c61af203ca27422ed763b6a19)
+## Hardware and setup
+
+*   GPU: NVIDIA RTX 5080 Laptop GPU, 16 GB VRAM
+*   Model: `unsloth/Qwen3.8-27B-UD-IQ3_XXS`
+*   llama.cpp: build 10451, commit `10bf611e5`
+*   Context: 65,536
+*   KV cache: Q8_0
+*   Flash Attention: enabled
+*   MTP speculative decoding: `--spec-default --spec-type draft-mtp`
+*   `--fit off`
+*   One concurrent slot
+
+Prompt:
+
+> Create a polished SVG graphic of a pelican riding a bicycle. The result must clearly show a recognizable pelican actively riding a recognizable two-wheeled bicycle. Return only one complete, self-contained SVG document with a viewBox; no Markdown fences, prose, external images, JavaScript, or animation.
+
+## Average results
+
+| Reasoning effort | Reasoning tokens | SVG tokens | Total completion | Wall time | Generation speed | MTP acceptance | Visual score (Codex rated) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Low | 4,418 | 3,966 | 8,387 | 111.6 s | 75.4 t/s | 62.1% | 21.8/25 |
+| Medium | 5,918 | 3,038 | 8,959 | 127.4 s | 70.5 t/s | 58.3% | 22.5/25 |
+| X-High | 39,398 | 5,085 | 44,487 | 717.8 s | 62.0 t/s | 52.7% | 24.0/25 |
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[AA is the reason for Qwen3.8 27B shipped with xhigh](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vrf477/aa_is_the_reason_for_qwen38_27b_shipped_with_xhigh/)
+
+206  Upvotes
+
+I know why Qwen3.8 27B shipped with xhigh reasoning as default, it's to do its best in benchmarks. Models from top labs often get benchmarked at multiple reasoning levels, but that same treatment doesn't apply to other labs. Open models are lucky to even be benchmarked at all. (See Laguna S 2.1)
+
+So it makes total sense that Qwen team decided to ship with a default that show the model at its maximum capabilities, assuming Artificial Analysis would benchmark at the default.
+
+And before anyone accuses Qwen team, I don't think it's benchmaxxing. That is an actual toggle that you can use if you have high bandwidth (or tolerence), and variable reasoning is pretty standard across the board. Totally reasonable to default to your best if you think you have one shot.
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[Can't wait to see Qwen3.8-27B](https://redlib.catsarch.com/r/LocalLLaMA/comments/1ve3no7/cant_wait_to_see_qwen3827b/)
+
+238  Upvotes
+
+Qwen announced Qwen3.8 a few hours ago, and it looks like we’re getting a new 27B model!
+
+Really excited to try this one locally.
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[NInfer day0 support for Qwen3.8 27b: ~200 tok/s generation, with tons of engine improvments](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vod417/ninfer_day0_support_for_qwen38_27b_200_toks/)
+
+98  Upvotes
+
+Qwen3.8-27B is finally here, and [NInfer](https://github.com/Neroued/ninfer) already has Day-0 support!
+
+Weights:
+
+[https://huggingface.co/neroued/Qwen3.8-27B-NInfer](https://huggingface.co/neroued/Qwen3.8-27B-NInfer)
+
+Just update to the latest source and give it a try. On a single RTX 5090, NInfer can still reach around **200 tok/s** generation with speculative decoding.
+
+NInfer has also improved a lot since my last post.
+
+Now NInfer supports up to **8 concurrent requests**, with a shared paged KV cache pool, each request can still use the full context length.
+
+I aslo implemented **ReplaySSM** for GDN + speculative decoding, which greatly reduces the recurrent-state memory overhead under concurrency, and this is also something vllm does not yet fully supported.
+
+There have also been many cuda kernel optimizations, as well as usage of **PDL** to further reduce latency.
+
+Feedback and bug reports are always welcome, I'll try to fix issues as soon as possible!
+
+## [Discussion](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Discussion%22&restrict_sr=on)[While waiting for the release of Qwen3.8-27B, let's try to guess what will happen](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vn7h1v/while_waiting_for_the_release_of_qwen3827b_lets/)
+
+33  Upvotes
+
+They highlighted 3 things on countdown page: VLM, Agentic Improvements, and Think mode. What improvements do you expect? Reply here!
+
+Personally, I want to meet a sage who has attained enlightenment. The first ASI was 27B. For example, I hope Qwen3.8's Think mode looks something like this:
+
+```
+
+"reasoning_effort": {
+
+ "type": "string",
+
+ "enum": ["high", "xhigh", "monk"],
+
+ "default": "high"
+
+ }
+
+```
+
+ Unlike standard reasoning modes that output a massive Chain-of-Thought trying to solve your coding bugs or logic puzzles, monk mode achieves ultimate long-horizon cognitive detachment.
+
+When you prompt it with a simple request like "Hey, can you refactor this messy Python script for me?", It does not answer immediately. The model enters an unyielding state of deep, silent contemplation.
+
+Finally, it gains tool access and calls `rm -rf /`.
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[Qwen3.8-27b on RTX 3090 - 82 tps single request, up to 672 tps peak](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vq6fdj/qwen3827b_on_rtx_3090_82_tps_single_request_up_to/)
+
+148  Upvotes
+
+EDIT: NEW AND UPDATED VERSION AVAILABLE:
+
+[https://www.reddit.com/r/LocalLLaMA/comments/1vr347s/i_pushed_qwen3827b_to_99_tps_single_request_and/](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vr347s/i_pushed_qwen3827b_to_99_tps_single_request_and/) --- 99 tps single request and 1150 batch.
+
+Hi,
+
+After a long night of optimizations, I believe I have made the fastest inference engine for Qwen3.6-28B on a 3090.
+
+Quick metrics:
+
+- 250w power capped
+
+- Up to 195k context (ships with 150k for safety though)
+
+- 82 tps single request, 417 tps sustained with 64 concurrent
+
+- Between 17% to 149% faster than ninfer depending on the amount of concurrent requests.
+
+Quick how:
+
+- W4A16 quantization -> 16.8gb in vram - cache 66k
+
+- + fp8 KV cache -> 16.8 gb in vram - cache 155k
+
+- + lm_head int8 -> 15.4 gb in VRAM - cache 192k
+
+- + embed_tokens int8 -> 14.2 gb in VRAM - cache 200k
+
+Quantization loss of 0.6% in the lm head and quant embed compared to bf16.
+
+It runs via vLLM and needs a few patches to work perfectly, but should be easier to setup than ninfer.
+
+Also only tested on linux, but should work on windows too.
+
+[https://github.com/syv-ai/qwen38-27b-rtx3090](https://github.com/syv-ai/qwen38-27b-rtx3090)
+
+## [Resources](https://redlib.catsarch.com/r/LocalLLaMA/search?q=flair_name%3A%22Resources%22&restrict_sr=on)[Qwen3.8-27B is now up to ~3× faster on Apple Silicon with mlx-dspark](https://redlib.catsarch.com/r/LocalLLaMA/comments/1vokrcy/qwen3827b_is_now_up_to_3_faster_on_apple_silicon/)
+
+[Video 5](https://redlib.catsarch.com/preview/pre/j0d6n66hwejh1.gif?format=mp4&s=f97951b15d0bce2dd7dd079ad353f12e5c4e5331)
+
+190  Upvotes
+
+**mlx-dspark** is an MLX port of DeepSeek's DSpark speculative-decoding drafters (the DeepSpec release), plus z-lab's DFlash, with one lossless verify loop. v0.10.0 adds Qwen3.8-27B via RadixArk's drafter, the first SpecForge/SGLang-packaged head it loads.
+
+Numbers (M4 Pro 48 GB, **medians of 3**, greedy, output ids identical to plain decoding):
+
+*   8-bit target: **2.45× mean** at the auto-picked cap — 3.00× math / 2.38× code / 1.96× chat, 8.3 → 20.3 tok/s (code runs hit **3.18×**). Peak ~29 GB.
+*   4-bit target: 1.74× at 25.3 tok/s in ~18 GB (same drafter auto-resolves).
+*   **Fun property:** 8-bit + drafter (20-27 tok/s) beats plain 4-bit (14.6 tok/s) — 8-bit quality at better-than-4-bit speed.
+
+"Lossless" is checked, not asserted: the target verifies every drafted token, and the Mac app's Race view runs speculative vs plain on the same prompt and diffs the token ids (video is that view).
+
+Everything is `pip install mlx-dspark` (OpenAI-compatible server + Anthropic Messages API, so it can back Claude Code with a local model), and there's a native Mac app (DMG/Homebrew).
+
+Repo: [github.com/ARahim3/mlx-dspark](http://github.com/ARahim3/mlx-dspark)
+
+I'd appreciate any feedback you might have after using it.

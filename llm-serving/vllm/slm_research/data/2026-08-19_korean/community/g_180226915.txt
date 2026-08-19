@@ -1,0 +1,37 @@
+Title: 영어로 질문했을때와 한국어로 질문했을 때 차이가 컸던걸까요 - Ai 언어모델 로컬 채널
+
+URL Source: https://arca.live/b/alpaca/180226915
+
+Markdown Content:
+Recent Recently visited channel
+
+Recently visited channel
+
+[All](https://arca.live/b/alpaca)[일반](https://arca.live/b/alpaca?category=%EC%9D%BC%EB%B0%98)[질문](https://arca.live/b/alpaca?category=%EC%A7%88%EB%AC%B8)[정보](https://arca.live/b/alpaca?category=%EC%A0%95%EB%B3%B4)[학습](https://arca.live/b/alpaca?category=%ED%9B%88%EB%A0%A8)[자료](https://arca.live/b/alpaca?category=%EC%9E%90%EB%A3%8C)[자작모델](https://arca.live/b/alpaca?category=%EC%9E%90%EC%9E%91%EB%AA%A8%EB%8D%B8)[구동후기](https://arca.live/b/alpaca?category=%EA%B5%AC%EB%8F%99%ED%9B%84%EA%B8%B0)[스터디](https://arca.live/b/alpaca?category=%EC%8A%A4%ED%84%B0%EB%94%94)[공지](https://arca.live/b/alpaca?category=%EA%B3%B5%EC%A7%80)[운영](https://arca.live/b/alpaca?category=%EC%9A%B4%EC%98%81)[공모](https://arca.live/b/alpaca?category=%EA%B3%B5%EB%AA%A8)
+
+Number  Title
+
+Author Date created Views Like
+
+[8321 일반 로컬 ai 한달정도 연구해본 초보의 소감... [13] ㅇㅇ(221.158)2026.08.18 2033 18](https://arca.live/b/alpaca/180247842?p=2)[8320 질문 24/7 로컬 LLM머신, M5 Ultra를 기다리고 있습니다. 제가 놓치고 있는 부분이 있을까요? [31] 눈팅요정 2026.08.18 1311 4](https://arca.live/b/alpaca/180247601?p=2)[8319 일반 그냥 관에서 하는 일답게 뭔가 모를 기준이 있었나보다싶은데 [10] ㅇㅇ 2026.08.18 1035 7](https://arca.live/b/alpaca/180246425?p=2)[8318 일반 나 LG CNS 앞인데 [3] ㅇㅇ(211.202)2026.08.18 1645-5](https://arca.live/b/alpaca/180245487?p=2)[8317 질문 곧 졸업 앞둔 컴공 학부 학생인데 흥미가 있어서 5070ti로 돌리는 중인데 질문이 있습니다. [27] 바우개 2026.08.18 1027 1](https://arca.live/b/alpaca/180244357?p=2)[8316 일반 5070ti에 qwen 3.8 태우고 서브모델로 쓸만한가요 [3] ㅇㅇ 2026.08.18 864 2](https://arca.live/b/alpaca/180243381?p=2)[8315 질문 cmp 170hx 두개 구매를 하려는데 kc 플레이트가 없다고 합니다. 따로따로 구매를 하면 되나요? [10] Zee구 2026.08.18 588 1](https://arca.live/b/alpaca/180243016?p=2)[8314 일반 독파모에 대한 개인적인 생각.. [24] ㅇㅇ(183.98)2026.08.18 1562 6](https://arca.live/b/alpaca/180238887?p=2)[8313 일반 2080ti 10-20기가 이런거 메모리 개조도 못하겠네요 이젠 [4] ㅇㅇ(221.158)2026.08.18 669 2](https://arca.live/b/alpaca/180235477?p=2)[8312 일반 어제 spark에 qwen38로 multi agent, aggregate 시도했다고 글쓴사람입니다 [4] ㅇㅇ(211.203)2026.08.18 830 4](https://arca.live/b/alpaca/180233714?p=2)[8311 일반 (전)Qwen 기술책임자 린쥔양 창업했다고 하내요 [6] flankton 2026.08.18 1569 4](https://arca.live/b/alpaca/180233319?p=2)[8310 정보 170hx 메모리 오류 당첨! dogㅅㅂ -> 해결됨 [14] 래틀 2026.08.18 1038 11](https://arca.live/b/alpaca/180231273?p=2)[8309 질문 PC에 3080 10G메모리가 너무 작아서, 디스플레이 전용 그래픽 추가장착 효과? [4] ㅇㅇ(221.158)2026.08.18 620 1](https://arca.live/b/alpaca/180231047?p=2)[8308 일반 QWEN 3.8-27B 지식밀도는 세계제일!! [3] 이웃의AI 2026.08.18 2724 4](https://arca.live/b/alpaca/180229207?p=2)[8307 일반 평소에 과학 기사 쓰지도 않던 온갖 언론사가 붙을때부터 알아봤어야 했나 [2] 응애에요 2026.08.18 924 7](https://arca.live/b/alpaca/180227231?p=2)[8306 질문 영어로 질문했을때와 한국어로 질문했을 때 차이가 컸던걸까요 심플1234 2026.08.18 479 1](https://arca.live/b/alpaca/180226915?p=2)[8305 일반 모티프가 떨어지니 모두가 의아해 [4] 참을수없는존재의가벼움 2026.08.18 1361 2](https://arca.live/b/alpaca/180226078?p=2)[8304 일반 독파모 그냥 심심이 뽑기 프로젝트인가보네 [1] 모보조 2026.08.18 781 2](https://arca.live/b/alpaca/180225692?p=2)[8303 일반 3차 평가에 일반인 평가 있으면 꼭 참여해야겠네요 5ee5 2026.08.18 526 1](https://arca.live/b/alpaca/180224597?p=2)[8302 일반 아니 엑사원 기사 ㅋㅋㅋㅋㅋ [2] 5ee5 2026.08.18 1486 14](https://arca.live/b/alpaca/180224118?p=2)
+
+[Write Article](https://arca.live/b/alpaca/write "Write Article")
+
+[전체글](https://arca.live/b/alpaca)[개념글](https://arca.live/b/alpaca?mode=best)
+
+Keyword search form input
+
+*   [1](https://arca.live/b/alpaca?p=1)
+*   [2](https://arca.live/b/alpaca?p=2)
+*   [3](https://arca.live/b/alpaca?p=3)
+*   [4](https://arca.live/b/alpaca?p=4)
+*   [5](https://arca.live/b/alpaca?p=5)
+*   [6](https://arca.live/b/alpaca?p=6)
+*   [7](https://arca.live/b/alpaca?p=7)
+*   [8](https://arca.live/b/alpaca?p=8)
+*   [9](https://arca.live/b/alpaca?p=9)
+*   [10](https://arca.live/b/alpaca?p=10)
+*   [](https://arca.live/b/alpaca?p=11)
+*   [](https://arca.live/b/alpaca?after=0 "See First Post")
+
+GMT time zone is applied as your browser does not support time zone setting.

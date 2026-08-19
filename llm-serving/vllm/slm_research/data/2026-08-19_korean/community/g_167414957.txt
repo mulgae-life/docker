@@ -1,0 +1,262 @@
+Title: gemma-4 31b로 어떻게 로컬에서 '한글' 소설을 쓸 수 있을지에 대한 꼼수들. - Ai 언어모델 로컬 채널
+
+URL Source: https://arca.live/b/alpaca/167414957
+
+Markdown Content:
+[](https://arca.live/ "Arcalive")
+*   [Subscribe Channel](https://arca.live/b/alpaca/167414957# "Subscription Channel")[There are no channels you are subscribed to.](https://arca.live/b/alpaca/167414957#) 
+*   [Main Channel](https://arca.live/b/alpaca/167414957# "Channel")[Best live](https://arca.live/b/live)[Hot Deals](https://arca.live/b/hotdeal)[ideal article collection](https://arca.live/b/headline)[Comprehensive deliberation target](https://arca.live/b/replay)[Comprehensive breaking news](https://arca.live/b/breaking) [Notices](https://arca.live/b/notice)[Channel inquiry board](https://arca.live/b/whyiblocked) [Help](https://support.arca.live/)[Customer Service](https://arca.live/b/request) [주식 채널](https://arca.live/b/stock)[승리의 여신 니케 채널](https://arca.live/b/nikketgv)[KBO 채널](https://arca.live/b/baseball)[명조 채널](https://arca.live/b/wutheringwaves)[리그 오브 레전드 채널](https://arca.live/b/leagueoflegends)[붕괴 스타레일 채널](https://arca.live/b/hkstarrail)[블루 아카이브 채널](https://arca.live/b/bluearchive)[던전앤파이터 채널](https://arca.live/b/dunfa)[홀로라이브 채널](https://arca.live/b/holopro)[이환 채널](https://arca.live/b/nevernesstoeverness)[메이플스토리 채널](https://arca.live/b/maplestory)[로보토미 코퍼레이션 채널](https://arca.live/b/lobotomycoperation)[명일방주 엔드필드 채널](https://arca.live/b/akendfield)[원신 채널](https://arca.live/b/genshin)[소녀전선2: 망명 채널](https://arca.live/b/gilrsfrontline2exili)[트릭컬 RE:VIVE 채널](https://arca.live/b/trickcal)[이터널 리턴 채널](https://arca.live/b/bser)[로스트아크 채널](https://arca.live/b/lostark)[젠레스 존 제로 채널](https://arca.live/b/zenlesszonezero)[명일방주 채널](https://arca.live/b/arknights)[에픽세븐 채널](https://arca.live/b/epic7)[유희왕 채널](https://arca.live/b/yugioh)[에어소프트 채널](https://arca.live/b/airsoft2077)[장르소설 채널](https://arca.live/b/novelchannel)[브라운더스트2 채널](https://arca.live/b/browndust2)[마비노기 모바일 채널](https://arca.live/b/mabimobile)[AI 채팅 채널](https://arca.live/b/characterai)[메이플랜드 채널](https://arca.live/b/mapleland)[가이진 채널](https://arca.live/b/gaijin)[리버스 1999 채널](https://arca.live/b/arcalivebreverse)[포켓몬스터 채널](https://arca.live/b/pokemon)[컴퓨터 본체/견적 채널](https://arca.live/b/082tlqkfnomdeul)[헤드폰 채널](https://arca.live/b/headphones)[마비노기 블로니 채널](https://arca.live/b/mabi)[사이퍼즈 채널](https://arca.live/b/actioncyphers) [View More](https://arca.live/channels) 
+*    Loading...   Close  
+*   [Search](https://arca.live/b/alpaca/167414957)Loading...  Close  
+
+*   [](https://arca.live/u/login?goto=%2Fb%2Falpaca%2F167414957 "Login")
+
+[![Image 1: Channel icon](https://ac.arca.live/20230705sac/c94aac291344d182294637be53fa53aea42811326f4e139e8eb8906e0c852c23.png?expires=1787127055&key=TkDCd9DbDnFZrccnQq9zzw)](https://arca.live/b/alpaca)
+
+[Ai 언어모델 로컬 채널[](https://arca.live/b/alpaca/167414957#)](https://arca.live/b/alpaca)
+
+[알림 알림 중 알림 취소](https://arca.live/b/alpaca/notificate?value=1&_csrf=dUCANerg-k4U4RDJm_2n3TFe5l0XvjrrutaM)[Subscribe Subscribed Unsubscribe](https://arca.live/b/alpaca/subscribe?value=1&_csrf=dUCANerg-k4U4RDJm_2n3TFe5l0XvjrrutaM)
+
+7152 subscribers 알림수신 346명[@바바리맨](https://arca.live/u/@%EB%B0%94%EB%B0%94%EB%A6%AC%EB%A7%A8)
+
+ 제한없는 언어모델을 위한 채널 
+
+일반 gemma-4 31b로 어떻게 로컬에서 '한글' 소설을 쓸 수 있을지에 대한 꼼수들. 
+
+[Tttnew](https://arca.live/u/@Tttnew/74752429)
+
+![Image 2: User gravatar image](https://secure.gravatar.com/avatar/d9c33e94c40bf1c0cec7b064193e4a1f?d=retro&f=y)
+
+Like 23 Dislike 0 Comment 6 Views 4064 Uploaded date 2026-04-11 14:20:18 Updated date 2026-04-11 14:29:16
+
+[https://arca.live/b/alpaca/167414957](https://arca.live/b/alpaca/167414957 "게시물 주소")
+
+![Image 3](https://ac.arca.live/20230322sac/9429c77a19766a570dc7ab23560fde627a7b1d4462aac758212dfedd1e19638e.jpg?expires=1788224400&key=EPkRFI3OQIw17lyIW0KM8Q)
+
+일단 여기 작성한 꼼수들을 모아 간단한 파이썬 코드를 작성하였으니, 필요하신 분들은 쓰셔도 됩니다(퀄리티는 보장 못함)
+
+[https://github.com/aigengen5-ship-it/llm_novel_picture_writer](https://unsafelink.com/https://github.com/aigengen5-ship-it/llm_novel_picture_writer "github.com/aigengen5-ship-it/llm_novel_picture_writer (외부 사이트)")
+
+글 잘 쓰시는 분들과 아이디어 많으신 분들의 많은 지도 편달 부탁드립니다.....저는 글빨 없는 욕심만 많은 공돌이라 지식의 한계를 느낍니다.
+
+note) 아 깜빡했는데, 기본 설정에 'anima' prompt 생성 옵션 자체가 들어있습니다. 필요없는 분들은 수정해서 빼 주세요...:)
+
+그러나 anima는 신입니다.
+
+-------------------
+
+여기서부터는 제가 작성한 과정과 꼼수입니다. 피드백 엄청 환영합니다.
+
+A) 과거(QWEN3.5 전)까지 로컬로 '한글' 소설을 쓸 때 가장 큰 문제는 2가지였습니다.
+
+1) 로컬 모델의 한국어 구사 능력은 gemma-3 제외 특정 용도(일하는데)에 집중되어 있음. 즉 소설로서의 문장 구조가 잘 안 나옴..
+
+2) gemma-3의 지능 자체가 미묘하게 떨어지면서, 소설 작업 자체가 노가다에 가까워짐.
+
+B) 저도 이 프로젝트(?)를 하면서 gemma-3의 한글 능력은 좋지만, 여러 처리 능력의 부재로 하다가 많이 힘들었는데...
+
+QWEN3.5를 쓰면서 소설 작업 자체의 노가다를 '자동화'할 수 있게 되었고, GEMMA-4를 쓰면서 한국어 구사를 제미나이 2.5 정도로
+
+쓸 수 있게 되어서 이제 좀 '가지고 놀만한' 정도까지는 온 것 같습니다.
+
+B.5) 원래는 QWEN3.5와 gemma-3의 혼용으로 갔다가, gemma-4 정도의 지능이라면 단일 LLM으로도 작업이 가능하다는 것을
+
+확인하고 기존 프로젝트를 엄청 간소화 시킬 수 있었습니다.
+
+C) 어짜피 로컬에서 쓸 소설은 알다시피 노벨상을 노릴 작품도 아니고, 순수 개인적 용도, 또는 습작 정도에 가까울 수 있습니다.
+
+그렇다면 현재 가장 클리쉐가 잘 정착되어 있고, 많은 소재들이 널려있는 이 라노벨 스타일로 짤막하게 6개~14개 정도의 에피소드를
+
+기승전결 구조로 쓸 수 있는 방법을 찾아보았습니다.
+
+1) 먼저 context의 제한을 생각합시다. 운이 좋은 경우가 아니라면 대충 16~32k 정도 context가 나올텐데 이 정도라면 하나의 에피소드를
+
+기-승-전-결 전체 4000~5000자 정도까지는 써 줄 수 있다는 것을 테스트를 통해 확인했습니다.
+
+2) 이 경험적 수치를 이용하여 얻은 결론은:
+
+가능한 많은 '전처리'를 통해 소설의 뼈대를 먼저 만들고(요약), 캐릭터 시트를 작성한 후, 정보를 로컬에 저장한 후 에피소드 쓸 때마다 새로 시작하자입니다.
+
+D) 가능한 좋은 퀄리티를 얻기 위해서, 에피소드 작성 전 초기화 상태에서 입력되어야 하는 정보(꼼수)는 아래와 같습니다.
+
+1) 소설의 배경 설정 및 현재 에피소드 '**요약**'
+
+2) 현재까지의 캐릭터 시트(과거 히스토리를 계속 쌓아나감)
+
+3) 어떤 문체/시점으로 에피소드를 작성할지.
+
+D.5) 이 과정은 고달프고 귀찮으므로 이 부분을 자동화한 게 제가 올린 github 코드입니다...:) 파이썬 전문가가 아니라 참 어렵더군요.
+
+E) 이 정도의 입력이 들어갈 경우 GEMMA-4는 나름대로는(?) 일관성 있는 에피소드를 계속 뽑아줄 수 있었습니다. 물론 상업적 용도, 또는
+
+일반적 라노벨 작가의 퀄에는 미치지 못하며, 중간중간 이상한 부분들이 약간은 있지만. 이제는 '읽어줄'만한 소설을 뽑아주는 데는 문제가 없었습니다.
+
+ Like! 23
+
+(0) Dislike! 0
+
+(0)
+
+[Share](https://arca.live/b/alpaca/167414957# "Share")
+
+ Comment [6][Write Article](https://arca.live/b/alpaca/write "Write Article")
+
+[tail](https://arca.live/u/@tail/40654722)
+
+![Image 4: User gravatar image](https://secure.gravatar.com/avatar/7bf3d04375dfc80f34e7fea19d1324e2?d=retro&f=y)
+
+2026-04-11 14:44:05[Reply](https://arca.live/b/alpaca/167414957#)
+
+소설을 작성해주는 agnt
+
+[https://discuss.pytorch.kr/t/inkos-10-ai-cli/9450](https://discuss.pytorch.kr/t/inkos-10-ai-cli/9450)
+
+이런건 어떨까요?
+
+[![Image 5](https://ac.arca.live/20260411sac/e5c14b1753d017682bec96257e8e1718db9ae16a93a213fa9e5dc40f2f16df1a.jpg?expires=1787127055&key=nTPKG9LyQX4bVpLuHkZ6ug) PyTorchKR **InkOS: 10개의 전문 AI 에이전트가 협력해 소설을 자율적으로 집필, 감사, 수정하는 멀티에이전트 소설 창작 CLI 도구** InkOS 소개 AI로 소설을 자동 생성하는 시도는 여러 차례 있었지만, 대부분 단일 모델에 긴 맥락을 주입하는 방식에 의존했습니다. 이 접근법은 챕터 수가 늘어날수록 컨텍스트 과부하(Context Bloat)로 인해 품질이 급격히 저하되고, 캐릭터 일관성이나 복선(Foreshadowing) 처리가 어려워지는 한계가 있었습니다. InkOS는 이 문제를 해결하기 위해 소설 창작 파이프라인을 10개의 전문 AI 에이전트(Specialized Agent)로 분해하고, 각 에이전트가 명확한 역할을 담당하는 멀티에이전트(Multi-Agent) 아키텍처를 채택했습니다. 개발자인 Narcooo의 실제 검증 결과, 《吞天魔帝》라는 소설 31챕터를 자율 집필하여 총 452,191 단어를 생성했으며, 33개 차원의 연속성 감사(Continuity Audit) 통과율 100%를 달성했습니다. InkOS는 TypeScript로 작성된 CLI 도구로 npm 패키지(@actalk/inkos)로 배포됩…](https://unsafelink.com/https://discuss.pytorch.kr/t/inkos-10-ai-cli/9450 "discuss.pytorch.kr/t/inkos-10-ai-cli/9450 (외부 사이트)")
+
+소설을 작성해주는 agnt
+
+[https://discuss.pytorch.kr/t/inkos-10-ai-cli/9450](https://unsafelink.com/https://discuss.pytorch.kr/t/inkos-10-ai-cli/9450 "discuss.pytorch.kr/t/inkos-10-ai-cli/9450 (외부 사이트)")
+
+이런건 어떨까요?
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/167414957?#c_880793114)[Tttnew](https://arca.live/u/@Tttnew/74752429)
+
+![Image 6: User gravatar image](https://secure.gravatar.com/avatar/d9c33e94c40bf1c0cec7b064193e4a1f?d=retro&f=y)
+
+2026-04-11 14:47:38[Reply](https://arca.live/b/alpaca/167414957#)
+
+***Modified**
+
+네. 더 전문적이고 좋은 툴이 있네요. 저의 목표는 좀 더 개인적인 소설을 로컬에서 돌려놓고 나가면 한 편 받아보기... 정도입니다.
+
+Unfold ▼
+
+[bedovyy](https://arca.live/u/@bedovyy)
+
+![Image 7: User gravatar image](https://secure.gravatar.com/avatar/cbeb40c7e158f69f8cb0ae39a1ffef80?d=retro&f=y)
+
+2026-04-12 07:43:04[Reply](https://arca.live/b/alpaca/167414957#)
+
+레딧에서는 gemma4 평가가 박하지만, 저는 매우 만족합니다.
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/167414957?#c_881112152)[Tttnew](https://arca.live/u/@Tttnew/74752429)
+
+![Image 8: User gravatar image](https://secure.gravatar.com/avatar/d9c33e94c40bf1c0cec7b064193e4a1f?d=retro&f=y)
+
+2026-04-12 09:28:38[Reply](https://arca.live/b/alpaca/167414957#)
+
+저도 대만족입니다. 결과물 자체가 좋더군요…
+
+Unfold ▼
+
+[ㅇㅇ](https://arca.live/u/@%E3%85%87%E3%85%87/52982420)
+
+![Image 9: User gravatar image](https://secure.gravatar.com/avatar/c2ebbd45e324d1573c7af9d1a0701147?d=retro&f=y)
+
+2026-04-12 16:03:09[Reply](https://arca.live/b/alpaca/167414957#)
+
+instruct 모델이 아니라 completion이 되는 base 모델도 그러던가요.
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/167414957?#c_881381691)[Tttnew](https://arca.live/u/@Tttnew/74752429)
+
+![Image 10: User gravatar image](https://secure.gravatar.com/avatar/d9c33e94c40bf1c0cec7b064193e4a1f?d=retro&f=y)
+
+2026-04-12 16:21:02[Reply](https://arca.live/b/alpaca/167414957#)
+
+It 모델 사용중입니다…
+
+Unfold ▼
+
+[새로운 댓글이 달렸습니다!](https://arca.live/b/alpaca/167414957#comment)
+
+Write a Comment
+
+![Image 11](https://secure.gravatar.com/avatar/f24701f06f07b2a5be2ed80360d717df?d=retro&f=y)
+
+Voice comment Arcacon
+
+Uploading
+
+0 Seconds 
+
+[Audio 2](https://arca.live/b/alpaca/167414957)
+
+[Record](https://arca.live/b/alpaca/167414957)[Stop](https://arca.live/b/alpaca/167414957)[Delete](https://arca.live/b/alpaca/167414957)업로드
+
+Write
+
+[Write Article](https://arca.live/b/alpaca/write "Write Article")
+
+[전체글](https://arca.live/b/alpaca)[개념글](https://arca.live/b/alpaca?mode=best)
+
+Recent Recently visited channel
+
+Recently visited channel
+
+ Clear All 
+
+[All](https://arca.live/b/alpaca)[일반](https://arca.live/b/alpaca?category=%EC%9D%BC%EB%B0%98)[질문](https://arca.live/b/alpaca?category=%EC%A7%88%EB%AC%B8)[정보](https://arca.live/b/alpaca?category=%EC%A0%95%EB%B3%B4)[학습](https://arca.live/b/alpaca?category=%ED%9B%88%EB%A0%A8)[자료](https://arca.live/b/alpaca?category=%EC%9E%90%EB%A3%8C)[자작모델](https://arca.live/b/alpaca?category=%EC%9E%90%EC%9E%91%EB%AA%A8%EB%8D%B8)[구동후기](https://arca.live/b/alpaca?category=%EA%B5%AC%EB%8F%99%ED%9B%84%EA%B8%B0)[스터디](https://arca.live/b/alpaca?category=%EC%8A%A4%ED%84%B0%EB%94%94)[공지](https://arca.live/b/alpaca?category=%EA%B3%B5%EC%A7%80)[운영](https://arca.live/b/alpaca?category=%EC%9A%B4%EC%98%81)[공모](https://arca.live/b/alpaca?category=%EA%B3%B5%EB%AA%A8)
+
+ Number  Title 
+
+Author Date created Views Like
+
+[일반 맥북프로에서 QWEN 3.5 9B 전성비가 좋은 거 같아요. [4] 연구는즐거워 2026.04.14 2013 2](https://arca.live/b/alpaca/167622842)[정보 Gemma 4 "짭 추론" [18] FOMO 2026.04.13 8668 38](https://arca.live/b/alpaca/167597965)[질문 듀얼 그래픽카드(4070ti 12gb + 3080ti 12gb) 테스트 해보려하는데 어떨까요? [6] awevnip 2026.04.13 1099 1](https://arca.live/b/alpaca/167596352)[일반 모델의 외국어 섞임에 대해서 [4] ㅇㅇ 2026.04.13 1017 2](https://arca.live/b/alpaca/167583818)[구동후기 Minimax m2.7 229b [19] 뉴비 2026.04.13 2040 6](https://arca.live/b/alpaca/167575482)[정보 Google DeepMind배 천하제일 Gemma4 파인튜닝 대회 [3] YeahEyahHaey 2026.04.12 3261 18](https://arca.live/b/alpaca/167466173)[질문 제미나이 api 일일 할당량 제한 넘겨도 괜찮은거임? [2] 청이 2026.04.12 1267 1](https://arca.live/b/alpaca/167456417)[일반 dgx spark로 qwen3.5 122b a10b moe모델이 tg가 50t/s가 나오네요. [2] 우샷미 2026.04.12 1337 6](https://arca.live/b/alpaca/167444838)[질문 로컬 번역 llm은 뭐가 좋나요? [24] kwnxlws 2026.04.12 3098 0](https://arca.live/b/alpaca/167440419)[일반 뭔가 로컬 AI 욕심 버리니까 마음이 편해졌습니다 [7] ㅇㅇ 2026.04.11 2495 9](https://arca.live/b/alpaca/167419025)[일반 gemma-4 31b로 어떻게 로컬에서 '한글' 소설을 쓸 수 있을지에 대한 꼼수들. [6] Tttnew 2026.04.11 4064 23](https://arca.live/b/alpaca/167414957)[일반 openclaw 로 gemma 4 돌릴때 [1] 카페알바 2026.04.11 1522 2](https://arca.live/b/alpaca/167406758)[정보 turboquant 보다 빠르다고 주장하는 rotorquant 등장 [3] 흔적 2026.04.10 1662 4](https://arca.live/b/alpaca/167289146)[일반 저는 gemma4보다 qwopus가 더 나은것 같아요. [1] 우샷미 2026.04.10 2131 6](https://arca.live/b/alpaca/167285786)[질문 H200 2장으로! [13] 메시지왔다 2026.04.10 1652 4](https://arca.live/b/alpaca/167271399)[질문 미니PC 고민중인데 조언좀 부탁함 [20] ㅇㅇ 2026.04.10 1710 1](https://arca.live/b/alpaca/167260966)[질문 젬마4-31b 다운받았는데요 진짜 궁금한거 있습니다! [11] hoduhodu 2026.04.09 2308 2](https://arca.live/b/alpaca/167243197)[일반 llama.cpp에서 백엔드 상관없는 텐서병렬 지원 [6] rlaflszld 2026.04.09 1092 5](https://arca.live/b/alpaca/167237228)[일반 RTX PRO 6000으로는 DPO도 쉽지 않군요. [6] 파블로프의자명종 2026.04.09 1256 0](https://arca.live/b/alpaca/167223996)[일반 Gemma 4 뜯어볼 수록 스트레스 받네 [4] LineAnniac 2026.04.09 5062 16](https://arca.live/b/alpaca/167186955)
+
+[Write Article](https://arca.live/b/alpaca/write "Write Article")
+
+[전체글](https://arca.live/b/alpaca)[개념글](https://arca.live/b/alpaca?mode=best)
+
+Keyword search form input Search
+
+*   [](https://arca.live/b/alpaca?p=1 "See Latest Post")
+*   [](https://arca.live/b/alpaca?after=2026-04-14T02%3A45%3A58.000Z)
+*   [26-04-14 02:45](https://arca.live/b/alpaca?before=2026-04-14T02%3A45%3A58.000Z)
+*   [](https://arca.live/b/alpaca?before=2026-04-09T07%3A01%3A42.000Z)
+*   [](https://arca.live/b/alpaca?after=0 "See First Post")
+
+[핫딜 채널](https://arca.live/b/hotdeal)
+
+[08-19 06:18 오프라이스 한촌설렁탕 정통설렁탕, 500g, 5개 (8,900원/무료)](https://arca.live/b/hotdeal/180338511)[08-19 04:57 벤앤제리스 파인트 3종(8종 골라담기) + 파인트(pb스모어) 무료 증정 + 삽스푼 증정 (28,970원/무료)](https://arca.live/b/hotdeal/180331789)[08-19 05:19 GS25 8월 이달의도시락 혜자편 사전예약 현대카드가 (4,920원/무료)](https://arca.live/b/hotdeal/180333588)[08-19 05:41 크라운 콘초 초코가나슈, 66g, 10개 (9,360원/무료)](https://arca.live/b/hotdeal/180335381)[08-19 03:29 바세린 더마 바디로션 400ml 2개 (드라이스킨/센시티브) (8,900원/무료)](https://arca.live/b/hotdeal/180324188)
+
+[이 채널의 개념글](https://arca.live/b/alpaca?mode=best)
+
+[08-18 12:52 엑사원 떨어질거라고 생각했던 이유](https://arca.live/b/alpaca/180277250?mode=best)[08-18 09:36 공개된 모티프 점수로 추론해보는 독파모 각 회사들 개별 점수](https://arca.live/b/alpaca/180254331?mode=best)[08-18 04:53 170hx 메모리 오류 당첨! dogㅅㅂ -> 해결됨](https://arca.live/b/alpaca/180231273?mode=best)[08-18 08:36 독파모 그냥 벤치맥싱, 치팅 안잡는거부터 답이 없다고 생각함](https://arca.live/b/alpaca/180248904?mode=best)[08-18 08:24 로컬 ai 한달정도 연구해본 초보의 소감...](https://arca.live/b/alpaca/180247842?mode=best)
+
+arca.live 1
+*   Live v2(da76ee2d)
+*   Operado por umanle S.R.L.
+*   Hecho con <3 en Asunción, República del Paraguay
+
+HELP
+*   [Ads](mailto:arcalive@safefra.me)
+*   [Contáctenos](mailto:support@arca.live)
+*   [POLÍTICA DE PRIVACIDAD Y REGLAS DE USO](https://arca.live/policy)
+
+Application
+
+[](https://play.google.com/store/apps/details?id=live.arca.android.playstore)[](https://apps.apple.com/app/arcalive/id1632140546)
+
+ This site is protected by reCAPTCHA and the Google [Privacy Policy](https://policies.google.com/privacy) and [Terms of Service](https://policies.google.com/terms) apply. 
+
+*   [](https://arca.live/b/alpaca/167414957#comment)
+*   [](https://arca.live/b/alpaca/167414957#boardBtns)
+*   [](https://arca.live/b/alpaca/167414957#top "Go to top")
+*   [](https://arca.live/b/alpaca/167414957#bottom "Go to the bottom")
+
+##### Shortcut help
+
+##### On site
+
+1 ~ 0 Go to subscription channel R Refresh?Shortcut help T Back to top W Write article B Move channel
+##### In the post
+
+A Previous post S Next post C Comment

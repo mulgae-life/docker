@@ -1,0 +1,274 @@
+Title: 젬마 26B 후기 - Ai 언어모델 로컬 채널
+
+URL Source: https://arca.live/b/alpaca/166654763
+
+Markdown Content:
+[](https://arca.live/ "Arcalive")
+*   [Subscribe Channel](https://arca.live/b/alpaca/166654763# "Subscription Channel")[There are no channels you are subscribed to.](https://arca.live/b/alpaca/166654763#) 
+*   [Main Channel](https://arca.live/b/alpaca/166654763# "Channel")[Best live](https://arca.live/b/live)[Hot Deals](https://arca.live/b/hotdeal)[ideal article collection](https://arca.live/b/headline)[Comprehensive deliberation target](https://arca.live/b/replay)[Comprehensive breaking news](https://arca.live/b/breaking) [Notices](https://arca.live/b/notice)[Channel inquiry board](https://arca.live/b/whyiblocked) [Help](https://support.arca.live/)[Customer Service](https://arca.live/b/request) [주식 채널](https://arca.live/b/stock)[승리의 여신 니케 채널](https://arca.live/b/nikketgv)[KBO 채널](https://arca.live/b/baseball)[명조 채널](https://arca.live/b/wutheringwaves)[리그 오브 레전드 채널](https://arca.live/b/leagueoflegends)[붕괴 스타레일 채널](https://arca.live/b/hkstarrail)[블루 아카이브 채널](https://arca.live/b/bluearchive)[던전앤파이터 채널](https://arca.live/b/dunfa)[홀로라이브 채널](https://arca.live/b/holopro)[이환 채널](https://arca.live/b/nevernesstoeverness)[메이플스토리 채널](https://arca.live/b/maplestory)[로보토미 코퍼레이션 채널](https://arca.live/b/lobotomycoperation)[명일방주 엔드필드 채널](https://arca.live/b/akendfield)[원신 채널](https://arca.live/b/genshin)[소녀전선2: 망명 채널](https://arca.live/b/gilrsfrontline2exili)[트릭컬 RE:VIVE 채널](https://arca.live/b/trickcal)[이터널 리턴 채널](https://arca.live/b/bser)[로스트아크 채널](https://arca.live/b/lostark)[젠레스 존 제로 채널](https://arca.live/b/zenlesszonezero)[명일방주 채널](https://arca.live/b/arknights)[에픽세븐 채널](https://arca.live/b/epic7)[유희왕 채널](https://arca.live/b/yugioh)[에어소프트 채널](https://arca.live/b/airsoft2077)[장르소설 채널](https://arca.live/b/novelchannel)[브라운더스트2 채널](https://arca.live/b/browndust2)[마비노기 모바일 채널](https://arca.live/b/mabimobile)[AI 채팅 채널](https://arca.live/b/characterai)[메이플랜드 채널](https://arca.live/b/mapleland)[가이진 채널](https://arca.live/b/gaijin)[리버스 1999 채널](https://arca.live/b/arcalivebreverse)[포켓몬스터 채널](https://arca.live/b/pokemon)[컴퓨터 본체/견적 채널](https://arca.live/b/082tlqkfnomdeul)[헤드폰 채널](https://arca.live/b/headphones)[마비노기 블로니 채널](https://arca.live/b/mabi)[사이퍼즈 채널](https://arca.live/b/actioncyphers) [View More](https://arca.live/channels) 
+*    Loading...   Close  
+*   [Search](https://arca.live/b/alpaca/166654763)Loading...  Close  
+
+*   [](https://arca.live/u/login?goto=%2Fb%2Falpaca%2F166654763 "Login")
+
+[![Image 3: Channel icon](https://ac.arca.live/20230705sac/c94aac291344d182294637be53fa53aea42811326f4e139e8eb8906e0c852c23.png?expires=1787128573&key=VF88KkjSKxZ3UAmrQ5YP_Q)](https://arca.live/b/alpaca)
+
+[Ai 언어모델 로컬 채널[](https://arca.live/b/alpaca/166654763#)](https://arca.live/b/alpaca)
+
+[알림 알림 중 알림 취소](https://arca.live/b/alpaca/notificate?value=1&_csrf=JXO2FBKv-rAyrp9XImzt22fgHcXTBllEW5sQ)[Subscribe Subscribed Unsubscribe](https://arca.live/b/alpaca/subscribe?value=1&_csrf=JXO2FBKv-rAyrp9XImzt22fgHcXTBllEW5sQ)
+
+7152 subscribers 알림수신 346명[@바바리맨](https://arca.live/u/@%EB%B0%94%EB%B0%94%EB%A6%AC%EB%A7%A8)
+
+ 제한없는 언어모델을 위한 채널 
+
+정보 젬마 26B 후기 
+
+[끼랑까랑](https://arca.live/u/@%EB%81%BC%EB%9E%91%EA%B9%8C%EB%9E%91)
+
+![Image 4: User gravatar image](https://secure.gravatar.com/avatar/23828fb6647fd5262e0ac1a7779491c7?d=retro&f=y)
+
+Like 6 Dislike 0 Comment 12 Views 2698 Uploaded date 2026-04-03 08:19:47
+
+[https://arca.live/b/alpaca/166654763](https://arca.live/b/alpaca/166654763 "게시물 주소")
+
+![Image 5](https://ac.arca.live/20230322sac/9429c77a19766a570dc7ab23560fde627a7b1d4462aac758212dfedd1e19638e.jpg?expires=1788224400&key=EPkRFI3OQIw17lyIW0KM8Q)
+
+기존 젬마3 27B 보다 유의미하게 똑똑한거 같고 한글도 잘하는데
+
+활성 파라미터는 4B라서 개 빠릅니다.
+
+뭐 물론 크기 자체가 작아서 상업 API나 몇백B짜리들한테는 밀릴수 있겠지만
+
+가성비는 최고 인거 같습니다. 번역으로만 써도 괜찮으거같습니다. 속도가 개사기입니다.
+
+ Like! 6
+
+(1) Dislike! 0
+
+(0)
+
+[Share](https://arca.live/b/alpaca/166654763# "Share")
+
+ Comment [12][Write Article](https://arca.live/b/alpaca/write "Write Article")
+
+[끼랑까랑](https://arca.live/u/@%EB%81%BC%EB%9E%91%EA%B9%8C%EB%9E%91)
+
+![Image 6: User gravatar image](https://secure.gravatar.com/avatar/23828fb6647fd5262e0ac1a7779491c7?d=retro&f=y)
+
+2026-04-03 08:21:08[Reply](https://arca.live/b/alpaca/166654763#)
+
+참고로 vllm 공식페이지 가보면 도커로 서빙하는 방법 있는데 그렇게 하는게 가장 쉽고 깔끔한거 같습니다. 
+
+한국어 기준으로 소형모델에서는 당분간 계속 1황일듯 합니다. 
+
+아. 그리고 호출할때 thinking enable 을 true로 하면 추론도 곧잘합니다. 성능이 얼마나 향상되는지는 몰겠는데 진짜 토큰생성 속도가 개발라서 띵낑 켜고 써도 괜찮을거 같긴 합니다.
+
+Unfold ▼
+
+[ㅇㅇ](https://arca.live/u/@%E3%85%87%E3%85%87/33740111)
+
+![Image 7: User gravatar image](https://secure.gravatar.com/avatar/51f51a0e98195847d0c6d12c0c700f2c?d=retro&f=y)
+
+2026-04-03 08:33:07[Reply](https://arca.live/b/alpaca/166654763#)
+
+몇달을 기다린만큼 기대치 너무 높아졌는데
+그 기대를 충족시키고도 남을만큼 빠르고 똘똘함
+
+Unfold ▼
+
+[고정깡계](https://arca.live/u/@%EA%B3%A0%EC%A0%95%EA%B9%A1%EA%B3%84)
+
+![Image 8: User gravatar image](https://secure.gravatar.com/avatar/f0e6ee6c187a21019728d60b716c667e?d=retro&f=y)
+
+2026-04-03 08:39:45[Reply](https://arca.live/b/alpaca/166654763#)
+
+llama.cpp에선 뭔가 잘 안 되는 거 같던데 그쪽은 잘 되나보네
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/166654763?#c_876237325)[bedovyy](https://arca.live/u/@bedovyy)
+
+![Image 9: User gravatar image](https://secure.gravatar.com/avatar/cbeb40c7e158f69f8cb0ae39a1ffef80?d=retro&f=y)
+
+2026-04-03 09:54:25[Reply](https://arca.live/b/alpaca/166654763#)
+
+llama.cpp 토크나이저 문제 있어서 고쳤다고 하더라구요.
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/166654763?#c_876280729)[고정깡계](https://arca.live/u/@%EA%B3%A0%EC%A0%95%EA%B9%A1%EA%B3%84)
+
+![Image 10: User gravatar image](https://secure.gravatar.com/avatar/f0e6ee6c187a21019728d60b716c667e?d=retro&f=y)
+
+2026-04-03 10:14:37[Reply](https://arca.live/b/alpaca/166654763#)
+
+[Video 2](https://ac.arca.live/82/8200ccb93a2983ce1e9e3e1aedde1202f241bb3724d8d13e036bf5446cedb6ea.mp4?expires=1788224400&key=V233jagQF_IIey33FG7r5g)
+
+[끼랑까랑](https://arca.live/u/@%EB%81%BC%EB%9E%91%EA%B9%8C%EB%9E%91)
+
+![Image 11: User gravatar image](https://secure.gravatar.com/avatar/23828fb6647fd5262e0ac1a7779491c7?d=retro&f=y)
+
+2026-04-03 08:40:49[Reply](https://arca.live/b/alpaca/166654763#)
+
+rtx pro 6000으로 한거긴 한데 속도가 진짜 말도 안됩니다.(5090보다 10프로 정도 빠른듯) 한글이 정말 빨리 출력 됩니다. 체감상 젬플라이트보다 더 빠른거 같습니다. 품질도 비슷한거같고요.
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/166654763?#c_876237965)[팬더고라니](https://arca.live/u/@%ED%8C%AC%EB%8D%94%EA%B3%A0%EB%9D%BC%EB%8B%88)
+
+![Image 12: User gravatar image](https://secure.gravatar.com/avatar/34b1507a2aa45d16a6c0707302ca482f?d=retro&f=y)
+
+2026-04-03 09:18:42[Reply](https://arca.live/b/alpaca/166654763#)
+
+오우 이거 올리는데 vram 얼마 들어가나요?
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/166654763?#c_876260436)[끼랑까랑](https://arca.live/u/@%EB%81%BC%EB%9E%91%EA%B9%8C%EB%9E%91)
+
+![Image 13: User gravatar image](https://secure.gravatar.com/avatar/23828fb6647fd5262e0ac1a7779491c7?d=retro&f=y)
+
+2026-04-03 09:35:37[Reply](https://arca.live/b/alpaca/166654763#)
+
+***Modified**
+
+글쎄요. 그냥 남은거 다 캐시로 넣어서 몰겠습니다. 근데 아마 27b랑 비슷하거나 조금 덜 먹을거 같습니다. 아마 5090 한장에서 넉넉히 돌리고. 4090에서는 못돌릴꺼에요. awq 버전은 4090에서 돌리려면 2장 묶어야 할겁니다. (gemma 27b는 그랬거든요)
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/166654763?#c_876269950)[팬더고라니](https://arca.live/u/@%ED%8C%AC%EB%8D%94%EA%B3%A0%EB%9D%BC%EB%8B%88)
+
+![Image 14: User gravatar image](https://secure.gravatar.com/avatar/34b1507a2aa45d16a6c0707302ca482f?d=retro&f=y)
+
+2026-04-03 09:56:21[Reply](https://arca.live/b/alpaca/166654763#)
+
+그렇군요 기본 모델 올리는게 70정도만 되도 나머지 kv캐시쓰면 딱 좋은데
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/166654763?#c_876260436)[bedovyy](https://arca.live/u/@bedovyy)
+
+![Image 15: User gravatar image](https://secure.gravatar.com/avatar/cbeb40c7e158f69f8cb0ae39a1ffef80?d=retro&f=y)
+
+2026-04-03 09:55:16[Reply](https://arca.live/b/alpaca/166654763#)
+
+***Modified**
+
+1x3090 에서 AWQ 버전 잘 돌아가요. 모델이 17GB 정도 먹으니 나머지에서 캐시 잡아줘야 합니다.
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/166654763?#c_876281168)[끼랑까랑](https://arca.live/u/@%EB%81%BC%EB%9E%91%EA%B9%8C%EB%9E%91)
+
+![Image 16: User gravatar image](https://secure.gravatar.com/avatar/23828fb6647fd5262e0ac1a7779491c7?d=retro&f=y)
+
+2026-04-03 10:46:01[Reply](https://arca.live/b/alpaca/166654763#)
+
+예전에 27b gptq가 4090에서 안돌아가서 안되는줄 알았는데 awq는 돌아가나 보네요
+
+Unfold ▼
+
+[](https://arca.live/b/alpaca/166654763?#c_876310327)[bedovyy](https://arca.live/u/@bedovyy)
+
+![Image 17: User gravatar image](https://secure.gravatar.com/avatar/cbeb40c7e158f69f8cb0ae39a1ffef80?d=retro&f=y)
+
+2026-04-03 11:08:17[Reply](https://arca.live/b/alpaca/166654763#)
+
+컨텍스트 길이를 줄이면 gemma3 27B도 4bit(AWQ, GPTQ)는 24GB 1대에서 돌아가요.
+rosetta로 번역 돌리고 있습니다.
+
+Unfold ▼
+
+[새로운 댓글이 달렸습니다!](https://arca.live/b/alpaca/166654763#comment)
+
+Write a Comment
+
+![Image 18](https://secure.gravatar.com/avatar/8643c5372fd7ec7b93b3f07e2bf78e67?d=retro&f=y)
+
+Voice comment Arcacon
+
+Uploading
+
+0 Seconds 
+
+[Audio 2](https://arca.live/b/alpaca/166654763)
+
+[Record](https://arca.live/b/alpaca/166654763)[Stop](https://arca.live/b/alpaca/166654763)[Delete](https://arca.live/b/alpaca/166654763)업로드
+
+Write
+
+[Write Article](https://arca.live/b/alpaca/write "Write Article")
+
+[전체글](https://arca.live/b/alpaca)[개념글](https://arca.live/b/alpaca?mode=best)
+
+Recent Recently visited channel
+
+Recently visited channel
+
+ Clear All 
+
+[All](https://arca.live/b/alpaca)[일반](https://arca.live/b/alpaca?category=%EC%9D%BC%EB%B0%98)[질문](https://arca.live/b/alpaca?category=%EC%A7%88%EB%AC%B8)[정보](https://arca.live/b/alpaca?category=%EC%A0%95%EB%B3%B4)[학습](https://arca.live/b/alpaca?category=%ED%9B%88%EB%A0%A8)[자료](https://arca.live/b/alpaca?category=%EC%9E%90%EB%A3%8C)[자작모델](https://arca.live/b/alpaca?category=%EC%9E%90%EC%9E%91%EB%AA%A8%EB%8D%B8)[구동후기](https://arca.live/b/alpaca?category=%EA%B5%AC%EB%8F%99%ED%9B%84%EA%B8%B0)[스터디](https://arca.live/b/alpaca?category=%EC%8A%A4%ED%84%B0%EB%94%94)[공지](https://arca.live/b/alpaca?category=%EA%B3%B5%EC%A7%80)[운영](https://arca.live/b/alpaca?category=%EC%9A%B4%EC%98%81)[공모](https://arca.live/b/alpaca?category=%EA%B3%B5%EB%AA%A8)
+
+ Number  Title 
+
+Author Date created Views Like
+
+[일반 젬마4 124B... 나오겠죠? [6] 오마츠리맘보 2026.04.03 1572 2](https://arca.live/b/alpaca/166697650)[일반 Spark 용 Qwen3.5/Gemma4 계열 서빙용 이미지 공유함 [5] 다스놀이 2026.04.03 997 8](https://arca.live/b/alpaca/166684610)[일반 gemma4 지원을 위해 vllm 0.19 올리면서 부수적인 성능 향상 효과도 얻었네. 다스놀이 2026.04.03 1064 4](https://arca.live/b/alpaca/166684188)[일반 gemma4-26B-A4B-it 한국어 테스트 결과 다스놀이 2026.04.03 1650 7](https://arca.live/b/alpaca/166683750)[일반 gemma4-31B-it 한국어 테스트 결과 [4] 다스놀이 2026.04.03 2704 12](https://arca.live/b/alpaca/166682934)[일반 Gemma 4 31B UD-Q4_K_XL — RTX 5090 한 장으로 256K 풀 컨텍스트 벤치마크 [8] FOMO 2026.04.03 5109 15](https://arca.live/b/alpaca/166682716)[일반 짜장벤치 가수 맞춘 거 처음 본 듯 (gemma-4-31b) [1] bedovyy 2026.04.03 1032 4](https://arca.live/b/alpaca/166678604)[일반 벤치마크 돌리는 중입니다 FOMO 2026.04.03 351 2](https://arca.live/b/alpaca/166678366)[일반 역시 gemma4 31B 는 많이 느려... 다스놀이 2026.04.03 1142 3](https://arca.live/b/alpaca/166675767)[구동후기 캬 잼마 야점 야점이요! [10] 흔적 2026.04.03 2714 16](https://arca.live/b/alpaca/166668223)[정보 젬마 26B 후기 [12] 끼랑까랑 2026.04.03 2698 6](https://arca.live/b/alpaca/166654763)[일반 Gemma4 vllm으로 아직 안되는가? [5] 팬더고라니 2026.04.03 1303 1](https://arca.live/b/alpaca/166654194)[질문 mi50 질문좀 드릴게요 [3] 마라 2026.04.03 741 1](https://arca.live/b/alpaca/166643582)[일반 gemma4 검열이 좀 많이 유해진듯 [8] ㅇㅇ 2026.04.03 2888 2](https://arca.live/b/alpaca/166643373)[일반 Gemma 4의 아키텍처적 혁신은 없음 (feat. 구글은 똑똑하다) [10] YeahEyahHaey 2026.04.03 2880 16](https://arca.live/b/alpaca/166638852)[일반 Gemma-4 31B 하루 사용 후기(수정) [25] Tttnew 2026.04.03 12344 21](https://arca.live/b/alpaca/166622732)[질문 vllm 0.18.1로 Qwen3.5 서빙 시 발생한 문제점 [3] 민지쨔응6546 2026.04.03 1052 1](https://arca.live/b/alpaca/166621827)[일반 생각해보니 학습용으로 하나 사야하는데... [2] 모맵 2026.04.02 750 1](https://arca.live/b/alpaca/166620264)[정보 Qwen 3.6 오픈소스로 풀 예정 [4] YeahEyahHaey 2026.04.02 1857 5](https://arca.live/b/alpaca/166620108)[일반 안녕하세요. 로컬 AI하려고 눈팅중인 신입입니다. [13] ㅇㅇ 2026.04.02 1411 2](https://arca.live/b/alpaca/166619545)
+
+[Write Article](https://arca.live/b/alpaca/write "Write Article")
+
+[전체글](https://arca.live/b/alpaca)[개념글](https://arca.live/b/alpaca?mode=best)
+
+Keyword search form input Search
+
+*   [](https://arca.live/b/alpaca?p=1 "See Latest Post")
+*   [](https://arca.live/b/alpaca?before=2026-04-17T01%3A27%3A46Z)
+*   [-4](https://arca.live/b/alpaca?before=2026-04-14T07%3A32%3A28Z)
+*   [-3](https://arca.live/b/alpaca?before=2026-04-09T15%3A51%3A20Z)
+*   [-2](https://arca.live/b/alpaca?before=2026-04-07T15%3A30%3A02Z)
+*   [-1](https://arca.live/b/alpaca?before=2026-04-05T23%3A20%3A50Z)
+*   [26-04-03 15:59](https://arca.live/b/alpaca?before=2026-04-03T15%3A59%3A16Z)
+*   [+1](https://arca.live/b/alpaca?before=2026-04-02T20%3A10%3A18Z)
+*   [+2](https://arca.live/b/alpaca?before=2026-03-31T15%3A11%3A47Z)
+*   [+3](https://arca.live/b/alpaca?before=2026-03-26T17%3A29%3A49Z)
+*   [+4](https://arca.live/b/alpaca?before=2026-03-23T12%3A58%3A46Z)
+*   [](https://arca.live/b/alpaca?before=2026-03-19T06%3A43%3A44Z)
+*   [](https://arca.live/b/alpaca?after=0 "See First Post")
+
+[핫딜 채널](https://arca.live/b/hotdeal)
+
+[08-19 07:26 [CJ프레시웨이공식] 냉동블루베리 1kg 특가 3개입 (21,850원/무료)](https://arca.live/b/hotdeal/180344911)[08-19 07:14 조립PC 2종 ( 5600 + RX9060 / 7500F + RTX5060 ) (947,570원 / 1,249,200원) (0원/무료)](https://arca.live/b/hotdeal/180343816)[08-19 04:40 Z폴드 8 울트라 256GB (2,422,660원/무료)](https://arca.live/b/hotdeal/180330312)[08-19 04:19 로지텍 G PRO X2 SUPERSTRIKE (지슈스) 무선 게이밍 마우스 실버블랙 (235,000원/5,000원)](https://arca.live/b/hotdeal/180328471)[08-19 06:18 오프라이스 한촌설렁탕 정통설렁탕, 500g, 5개 (8,900원/무료)](https://arca.live/b/hotdeal/180338511)
+
+[이 채널의 개념글](https://arca.live/b/alpaca?mode=best)
+
+[08-18 12:52 엑사원 떨어질거라고 생각했던 이유](https://arca.live/b/alpaca/180277250?mode=best)[08-18 09:36 공개된 모티프 점수로 추론해보는 독파모 각 회사들 개별 점수](https://arca.live/b/alpaca/180254331?mode=best)[08-18 04:53 170hx 메모리 오류 당첨! dogㅅㅂ -> 해결됨](https://arca.live/b/alpaca/180231273?mode=best)[08-18 08:36 독파모 그냥 벤치맥싱, 치팅 안잡는거부터 답이 없다고 생각함](https://arca.live/b/alpaca/180248904?mode=best)[08-18 08:24 로컬 ai 한달정도 연구해본 초보의 소감...](https://arca.live/b/alpaca/180247842?mode=best)
+
+arca.live 1
+*   Live v2(da76ee2d)
+*   Operado por umanle S.R.L.
+*   Hecho con <3 en Asunción, República del Paraguay
+
+HELP
+*   [Ads](mailto:arcalive@safefra.me)
+*   [Contáctenos](mailto:support@arca.live)
+*   [POLÍTICA DE PRIVACIDAD Y REGLAS DE USO](https://arca.live/policy)
+
+Application
+
+[](https://play.google.com/store/apps/details?id=live.arca.android.playstore)[](https://apps.apple.com/app/arcalive/id1632140546)
+
+ This site is protected by reCAPTCHA and the Google [Privacy Policy](https://policies.google.com/privacy) and [Terms of Service](https://policies.google.com/terms) apply. 
+
+*   [](https://arca.live/b/alpaca/166654763#comment)
+*   [](https://arca.live/b/alpaca/166654763#boardBtns)
+*   [](https://arca.live/b/alpaca/166654763#top "Go to top")
+*   [](https://arca.live/b/alpaca/166654763#bottom "Go to the bottom")
+
+##### Shortcut help
+
+##### On site
+
+1 ~ 0 Go to subscription channel R Refresh?Shortcut help T Back to top W Write article B Move channel
+##### In the post
+
+A Previous post S Next post C Comment
