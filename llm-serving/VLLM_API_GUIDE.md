@@ -23,7 +23,6 @@
    - 3.4 Tool Calling (함수 호출)
    - 3.5 멀티턴 대화
 4. [파라미터·응답·에러 레퍼런스](#4-파라미터응답에러-레퍼런스)
-5. [chatbot-poc 통합 (.env)](#5-chatbot-poc-통합-env)
 
 ---
 
@@ -763,24 +762,6 @@ curl http://43.203.142.247:5015/v1/chat/completions \
 
 - **결정적 출력**: `temperature: 0` + `seed` 고정
 - **같은 표현 반복**: `presence_penalty` 1.0~1.5. 한국어 응답에 다른 언어가 섞일 때도 효과가 있습니다
-
----
-
-## 5. chatbot-poc 통합 (.env)
-
-LangChain `ChatOpenAI` 기반 chatbot-poc는 `.env`만 바꾸면 즉시 vLLM SLM으로 전환됩니다.
-
-```env
-PROVIDER=huggingface
-HF_BASE_URL=http://43.203.142.247:5015/v1   # 연구계 (운영계는 :5501)
-CHAT_MODEL=gemma-4
-RERANKER_MODEL=gemma-4
-```
-
-> 서버 모델이 교체돼도 이 값들은 그대로 둡니다. `CHAT_MODEL`을 실제 모델명으로 바꾸면 404가 납니다.
-
-> ⚠️ **`PROVIDER`는 단일 스택** — Chat과 Embedding이 함께 전환됩니다. 임베딩은 OpenAI 유지하면서 Chat만 vLLM으로 쓰려면 provider 분리가 필요합니다.
-
 
 ---
 

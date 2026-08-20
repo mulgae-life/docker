@@ -154,7 +154,7 @@ docker/
 | `llm-serving/pii/start.sh` | NER+프록시 기동, 다중 포트 (`up/down/status [5015\|5501\|all]`), salt 자동주입. NER 풀 정의는 `configs/ner.yaml`(gpu/max_concurrency/backends, env `PII_GPU` 우선) |
 | `llm-serving/pii/tests/eval_pii.py` | PII 정확성 평가 (한국어 합성 케이스셋, 타입별 precision/recall + 과탐) |
 | `llm-serving/pii/tests/recall_gate.py` | 실데이터 recall 게이트 하버스 (라벨 JSONL span-겹침 매칭, person/address/org ≥0.95 미달 시 exit 1, 데이터 없으면 스킵) |
-| `llm-serving/VLLM_API_GUIDE.md` | vLLM 사용자용 API 가이드 (§1~§5: 호출·파라미터·`.env`) |
+| `llm-serving/VLLM_API_GUIDE.md` | vLLM 사용자용 API 가이드 (§1~§4: 호출·기능·파라미터·에러) |
 | `llm-serving/VLLM_OPS_GUIDE.md` | vLLM 운영자용 가이드 (§6~§15: 기동·튜닝·트러블슈팅·QA) |
 | `llm-serving/STT_API_GUIDE.md` | STT 사용자용 API 가이드 (§1~§5: transcription·realtime·통합) |
 | `llm-serving/STT_OPS_GUIDE.md` | STT 운영자용 가이드 (§6~§12: 시스템 구조·메모리 핏·의존성·트러블슈팅·QA) |

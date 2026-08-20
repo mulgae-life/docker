@@ -35,7 +35,7 @@
 14. [QA 테스트](#14-qa-테스트)
 15. [참고 자료](#15-참고-자료)
 
-> 📝 § 번호는 사용자 가이드(`VLLM_API_GUIDE.md` §1~§5)와의 cross-reference 안정성을 위해 6부터 시작합니다.
+> 📝 § 번호는 사용자 가이드(`VLLM_API_GUIDE.md` §1~§4)와 겹치지 않도록 6부터 시작합니다.
 
 ---
 
@@ -1506,7 +1506,7 @@ python tests/speed_test.py --base-url http://localhost:5015 --results-path tests
 
 ```
 llm-serving/
-├── VLLM_API_GUIDE.md            ← 사용자용 API 가이드 (§1~§5)
+├── VLLM_API_GUIDE.md            ← 사용자용 API 가이드 (§1~§4)
 ├── VLLM_OPS_GUIDE.md            ← 이 문서 (운영자용, §6~§15)
 ├── DEPLOY_GUIDE.md              ← 배포 절차 (로컬 → S3 → EC2)
 ├── README.md                    ← llm-serving 인덱스 (vllm/sglang/stt)
