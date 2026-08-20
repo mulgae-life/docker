@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-08-20 (모델명 gemma-4 고정 + 호환 계층 + traffic --label·문서 정합성)
+last-updated: 2026-08-20 (모델명 gemma-4 고정 + 호환 계층 + traffic --label·문서 정합성 + 정체성 프롬프트 주입 + fingerprint 고정)
 ---
 
 # 세션 상태
@@ -24,7 +24,7 @@ last-updated: 2026-08-20 (모델명 gemma-4 고정 + 호환 계층 + traffic --l
 
 | 우선순위 | 작업 | 상태 |
 |---------|------|------|
-| P1 | **`gemma-4` 별칭 운영계 반영**: 8/20 연구계 적용·검증 완료. 잔존 — `./start.sh push` 후 운영계에서 인스턴스·게이트웨이 **둘 다** 재기동(게이트웨이만 하면 호환 계층은 붙고 별칭은 옛 이름). 클라이언트 `.env`(`CHAT_MODEL` 등)는 `VLLM_OPS_GUIDE.md` §9.4 참고. | 연구계 ✅, 운영계 대기 |
+| P1 | **`gemma-4` 별칭 + 정체성 프롬프트 운영계 반영**: 8/20 연구계 적용·검증 완료. 잔존 — `./start.sh push` 후 운영계에서 인스턴스·게이트웨이 **둘 다** 재기동. 게이트웨이 재기동만으로 걸리는 것은 호환 계층과 정체성 주입(코드 기본값 on)이고, 별칭과 `fingerprint_mode: custom`은 **인스턴스 재기동이 있어야** 반영된다. 클라이언트 `.env`(`CHAT_MODEL` 등)는 `VLLM_OPS_GUIDE.md` §9.4 참고. | 연구계 ✅, 운영계 대기 |
 | P1 | **:5015 운영 프로파일 (26B 기준)**: 2026-07-21부터 :5015 = 비PII 직접 게이트웨이 + gemma-26b(fp8·TP2·gmu 0.9·max_len 32768, overload 20/40). 잔존: 장문 트래픽 기준 latency·429 비율 측정. | 갱신(모델 교체), 장문 검증 잔존 |
 | P1 | **MTP 실기동 검증 (31B/26B/Qwen)**: 31B·Qwen 27B(5/13) + 26B-A4B(7/21, QA 통과) 실기동 확인. 잔존: ① Qwen 5016 재기동·가용성 ② acceptance/TPOT 사내 벤치(`slm_research/mtp.md` §5 참고). | 부분 완료, 벤치 잔존 |
 | P1 | **모델 간 속도 매트릭스**: `./start.sh speed [name\|all]` (8/10 진입점 신설 — 무인자면 기동된 게이트웨이를 순회하며 같은 파일에 누적). 26B-A4B 6행 확보(c=1 TPS 168.5 / c=10 TPS 81 — 31B quick 64.8 대비 단발 약 2.6배). 잔존: 31B·Qwen 풀 매트릭스로 3모델 비교 완성. | 부분 완료(26B 측정) |
@@ -62,7 +62,10 @@ last-updated: 2026-08-20 (모델명 gemma-4 고정 + 호환 계층 + traffic --l
 - **발견**: Gemma Thinking의 `skip_special_tokens: false`는 vLLM 0.20.2가 서버에서 자동 처리(`gemma4_reasoning_parser.py:60-65`) — 문서에서 삭제. 모델 무관 Thinking 규약을 막던 유일한 항목
 - **후속(같은 날)**: `traffic_test_vllm.py`에 `--label` 추가(`speed_test.py`와 같은 의미 — 요청엔 안 실리고 리포트 `config.label`·진행 화면에만 남는다. 미지정 시 경고 1줄). 이어 문서 정합성 점검에서 낡은 사실 5건을 잡음 — API 가이드가 §3.3에서 백엔드를 "Gemma 4"로 단정(모델명 고정 전제와 충돌), `reasoning_content`를 OpenAI 스펙으로 잘못 표기(실제로는 vLLM 폐기 예정 구필드), OPS 헤더의 `qwen.yaml`·`prd-gemma.yaml` 모델명·게이트웨이 포트가 `5a8fd1b` 이후 미갱신(`:6016`은 매칭 인스턴스 없음), §11.1 "(현재)" 마커가 두 세대 전
 - **후속2**: `speed_test.py`에도 라벨 미지정 경고를 넣어 traffic과 대칭. OPS §11.1 비교표에 Qwen3.8-27B-FP8 열과 권장 샘플링 2행 추가 — 로컬 체크포인트의 `config.json`(linear 48/full 16, 262K, FP8 e4m3)·`chat_template.jinja`(Thinking 기본 ON, `<think>`)·모델 카드(Thinking presence_penalty 0, Instruct 1.5)에서 직접 확인
-- **상태**: 완료. 연구계 재기동 후 실환경 14항목 + 단위 33건 통과(effort 8값 전부 200, 백엔드 직결은 여전히 400). 문서 수정 후 QA 스위트 31/31 재통과. 잔존은 "다음 작업" P1 참조
+- **후속3**: 모델명을 다 가려도 **"너는 어떤 모델이야"에는 백엔드 실모델을 그대로 답한다**는 것을 실측(Qwen이 통이 연구소 소속임을 스스로 밝힘). 정체성은 사후 학습으로 가중치에 박혀 서빙 설정으로 못 바꾸므로, 게이트웨이가 `/v1/chat/completions`마다 정체성 시스템 프롬프트를 주입하도록 `compat.inject_identity_prompt`(기본 on) 신설. **새 system 메시지를 index 0에 끼우는 방식은 불가** — Qwen3.8 템플릿이 선두 아닌 system에 `raise_exception`으로 400을 낸다. 클라이언트 system 메시지가 있으면 그 안으로 병합하고, 정체성 문구가 앞·클라이언트 지시가 뒤라 클라이언트 페르소나는 살아남는다
+- **상태**: 완료. 연구계 재기동 후 실환경 14항목 + 단위 33건 통과(effort 8값 전부 200, 백엔드 직결은 여전히 400). 문서 수정 후 QA 스위트 31/31 재통과. 정체성 주입도 실기동 6케이스(한/영 정체성·우회 시도·클라 system 유지·일반 품질·effort 합성) + 단위 7케이스 통과 후 QA 31/31 재확인. 잔존은 "다음 작업" P1 참조
+- **후속4**: `system_fingerprint`도 닫음. 전 인스턴스 yaml에 `fingerprint_mode: custom` + `fingerprint_value: gemma-4`. 원래 용도는 `seed`와 짝지어 "결정성이 깨졌을 때 서버 탓인지 판별"인데, **연속 배칭에서는 그 계약이 성립하지 않음을 실측** — 같은 `seed=777`이 한산할 땐 3회 동일, 동시 요청 9건과 섞으면 매번 다름. 지킬 계약이 없는 반면 해시에 모델 정체성이 들어가 교체 시점은 드러나므로 고정값이 이득. `none`이 아니라 `custom`인 이유는 클라이언트가 이 값을 로그·캐시 키로 쓸 때 `null`로 깨질 수 있어서. 근거는 `VLLM_OPS_GUIDE.md` §10.5
+- **미결(설계 판단)**: `X-Effort-Applied`(계열별 값이라 Qwen/그 외가 갈림)·`logprobs`(토크나이저 지문)는 계열 추정 단서로 남겨둠. 끄면 각각 사고 길이 추적과 정상 용도를 함께 죽이는 맞교환이라 디버깅 쪽을 택함
 
 ### 2026-08-19~20 (한국어 능력 비교 + Qwen3.8 조사)
 

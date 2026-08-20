@@ -116,7 +116,7 @@ chat/completions 요청에 동시 처리량과 대기열 제한을 적용한다.
 사용자에게 노출되는 모델명을 하나로 고정한 채(인스턴스 yaml의
 served_model_name) 뒤에서 Gemma/Qwen/GLM을 갈아끼우기 위한 계층이다.
 모델마다 다른 요청 파라미터를 게이트웨이가 흡수해 클라이언트가 400/422를
-보지 않게 한다. 두 항목 모두 기본 활성이라 yaml에 없어도 동작한다.
+보지 않게 한다. 세 스위치 모두 기본 활성이라 yaml에 없어도 동작한다.
 
   translate_reasoning_effort
       reasoning_effort를 백엔드가 아는 값으로 번역한다. 클라이언트는 OpenAI
@@ -136,3 +136,14 @@ served_model_name) 뒤에서 Gemma/Qwen/GLM을 갈아끼우기 위한 계층이�
       (_DEFAULT_EFFORT_PROFILES — 현재 qwen3.8만 등록)을 쓴다.
       새 모델이 effort를 지원하면 여기에 항목을 추가한다. 등록되지 않은 계열은
       effort 미지원으로 보고 필드를 제거한다.
+  inject_identity_prompt
+      /v1/chat/completions의 messages 맨 앞에 정체성 시스템 프롬프트를 얹는다.
+      모델명을 다 가려도 "너는 어떤 모델이야"에는 백엔드 실모델을 그대로 답하기
+      때문이다 — 정체성은 사후 학습으로 가중치에 박혀 서빙 설정으로 못 바꾼다.
+      클라이언트 system 메시지가 있으면 그 안으로 병합한다(정체성 문구가 앞).
+      새 system 메시지를 index 0에 끼우면 Qwen3.8 템플릿이 400을 내기 때문이다.
+      끄면 백엔드 실모델이 그대로 드러난다.
+  identity_prompt
+      주입할 문구. 비우면 코드 기본값(_DEFAULT_IDENTITY_PROMPT — Gemma 4로
+      답하게 하는 영어 문구)을 쓴다. 백엔드를 무엇으로 바꾸든 이 문구는
+      그대로 간다(계열별 분기 없음).

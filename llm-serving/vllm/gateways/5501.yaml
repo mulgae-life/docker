@@ -58,5 +58,7 @@ overload:
 compat:
   translate_reasoning_effort: true  # effort를 백엔드가 아는 값으로 번역 (미지원이면 제거 → 400 방지)
   mask_model_path: true             # /v1/models의 root(실제 체크포인트 경로)를 별칭으로 가림
+  inject_identity_prompt: true      # "너는 어떤 모델이야"에 백엔드 실모델을 답하는 것을 막는 시스템 프롬프트 주입
   # effort_profiles:                # 계열별 번역표 재정의 (비우면 코드 기본값 = qwen3.8만 등록)
   #   qwen3.8: {minimal: low, low: low, medium: medium, high: xhigh, xhigh: xhigh, max: xhigh}
+  # identity_prompt: ""             # 주입 문구 재정의 (비우면 코드 기본값 = Gemma 4로 답하게 하는 문구)

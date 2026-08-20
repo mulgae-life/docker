@@ -710,7 +710,7 @@ curl http://127.0.0.1:7080/v1/chat/completions \
 
 사용자에게 노출되는 모델명을 `gemma-4` 하나로 고정한 채 뒤에서 모델을 갈아끼우기 위한 계층입니다. 모델을 바꿔도 챗봇·RAG 클라이언트가 코드를 고치지 않게 하는 것이 목적입니다.
 
-두 부분으로 되어 있습니다.
+세 부분으로 되어 있습니다.
 
 **① 모델명 고정** — 인스턴스 yaml의 `served_model_name: [gemma-4]`가 담당합니다. 전 인스턴스가 이 값으로 통일돼 있습니다. 다만 이것만으로는 `/v1/models` 응답의 `root`에 실제 체크포인트 경로가 그대로 남으므로, 게이트웨이의 `compat.mask_model_path`가 `root`를 `id`와 같은 값으로 덮습니다.
 
@@ -765,7 +765,87 @@ compat:
 >
 > 백엔드 계열 판정은 웜업 때 받아둔 `root`로 합니다. 그 조회가 실패해 `model_root`가 비면 안전을 택해 effort를 항상 제거합니다 — effort가 무시되는 증상이 계속되면 게이트웨이 기동 로그의 `모델 경로:` 줄이 찍혔는지 보세요.
 
-**끄는 법** — 게이트웨이 yaml에서 `compat.translate_reasoning_effort: false` 또는 `compat.mask_model_path: false`. 번역을 끄면 클라이언트 값이 백엔드로 그대로 가서 Qwen3.8에 `high`를 보내면 400이 납니다.
+**③ 정체성 프롬프트 주입** — ①이 응답의 메타데이터를 다 가려도, **모델에게 직접 물어보면 자기 정체를 그대로 말합니다.** 정체성은 사후 학습(post-training) 단계에서 가중치에 박히는 것이라 서빙 설정으로는 바꿀 수 없습니다.
+
+```bash
+# compat.inject_identity_prompt: false 였을 때 (2026-08-20 실측)
+curl -s http://127.0.0.1:5015/v1/chat/completions -H "Content-Type: application/json" \
+  -d '{"model":"gemma-4","messages":[{"role":"user","content":"너는 어떤 모델이야?"}],"max_tokens":200}' \
+  | jq -r '.choices[0].message.content'
+# 저는 알리바바 그룹의 통이 연구소(Tongyi Lab)에서 독자적으로 개발한 ... 큐웬(Qwen)입니다.
+```
+
+그래서 게이트웨이가 `/v1/chat/completions` 요청마다 정체성 문구를 `messages` 맨 앞에 얹습니다. 문구는 `vllm_gateway.py`의 `_DEFAULT_IDENTITY_PROMPT`에 있고, 게이트웨이 yaml의 `compat.identity_prompt`로 덮어쓸 수 있습니다.
+
+병합 규칙은 이렇습니다.
+
+| 클라이언트 요청 | 게이트웨이가 보내는 것 |
+|---|---|
+| system 메시지 없음 | 정체성 문구를 `system` 메시지로 맨 앞에 삽입 |
+| `messages[0]`이 system | **그 메시지 안으로 병합** — 정체성 문구가 앞, 클라이언트 지시가 뒤 |
+| `messages[0]`이 developer | 위와 같이 병합하되 **role을 `system`으로 눕힘** — Qwen3.8 템플릿은 `developer`를 몰라 `raise_exception('Unexpected message role.')`으로 400을 낸다(실측). 눕히면 Gemma·Qwen 양쪽에서 통한다 |
+| system 내용이 멀티모달 배열 | 텍스트 파트 하나를 배열 맨 앞에 삽입 |
+| `messages`가 없거나 빈 배열 | 손대지 않음 (백엔드가 낼 400을 그대로 보여주려고) |
+
+> ⚠️ **새 system 메시지를 끼워 넣는 방식은 못 씁니다.** Qwen3.8 챗 템플릿은 선두가 아닌 system 메시지를 만나면 `raise_exception('System message must be at the beginning.')`으로 **400**을 냅니다. Gemma 템플릿은 예외는 안 던지지만 `messages[0]`만 시스템 턴으로 취급하고 나머지는 일반 턴으로 흘립니다. 병합이 유일하게 두 계열 모두에서 동작하는 방식입니다.
+
+정체성 문구가 앞, 클라이언트 지시가 뒤인 순서에는 이유가 있습니다. 뒤에 오는 지시가 우선하므로 클라이언트가 자기 봇 이름을 붙이는 설정은 그대로 살아납니다. 막으려는 것은 백엔드 실모델 노출이지 클라이언트의 페르소나 설정이 아닙니다. 실제로 `"너는 '하나봇'이다"`를 보낸 클라이언트는 `"저는 '하나봇'입니다. ... Google에서 개발한 Gemma 4 기반으로 동작합니다"`를 받습니다.
+
+> 📌 **주입만으로 끝나지 않습니다.** 응답 자체에도 식별 단서가 남습니다. 하나는 닫았고 둘은 남겨뒀습니다.
+>
+> - **`system_fingerprint` — 닫음.** 기본값(`full`)이면 `vllm-<버전>-tp2-<해시8>`이 실립니다. 모델명은 없지만 GPU 병렬도가 드러나고, 이 해시에 모델 정체성·양자화·어텐션 백엔드가 들어가므로 **백엔드를 교체하면 값이 바뀌어 교체 시점이 외부에서 감지**됩니다. 전 인스턴스 yaml에 `fingerprint_mode: custom` + `fingerprint_value: gemma-4`를 넣어 고정값으로 바꿨습니다. 자세한 배경은 아래 [§10.5](#105-system_fingerprint를-고정값으로-두는-이유).
+> - **`X-Effort-Applied` — 남김.** ②의 번역표가 계열별이라 `high`를 보내면 Qwen은 `xhigh`, 그 외는 `dropped`가 돌아옵니다. 헤더값 하나로 계열이 갈립니다. 끄면 사고 길이 문의를 추적할 수단을 잃어 맞교환이라, 디버깅 쪽을 택했습니다.
+> - **`logprobs` — 남김.** 토큰 분절이 그대로 보여 토크나이저 어휘를 식별할 수 있습니다. 막으려면 `logprobs` 자체를 차단해야 하는데 정상 용도를 함께 죽입니다.
+>
+> 남긴 둘은 "모델명을 말해준다"가 아니라 "계열을 추정할 단서를 준다" 수준입니다.
+>
+> 주입 대상은 `/v1/chat/completions` 뿐입니다. `/v1/audio/*`와 `/v1/realtime`은 본문을 그대로 흘려보냅니다 — 지금 뜬 인스턴스는 전부 텍스트·비전 LLM이라 이 경로로 대화가 오가지 않지만, 음성 모델을 올리면 그때 주입 범위를 다시 봐야 합니다.
+
+**끄는 법** — 게이트웨이 yaml에서 `compat.translate_reasoning_effort: false`, `compat.mask_model_path: false`, `compat.inject_identity_prompt: false`. 번역을 끄면 클라이언트 값이 백엔드로 그대로 가서 Qwen3.8에 `high`를 보내면 400이 납니다. 주입을 끄면 위 실측처럼 백엔드 실모델이 그대로 드러납니다.
+
+### 10.5 `system_fingerprint`를 고정값으로 두는 이유
+
+`system_fingerprint`는 vLLM이 만든 필드가 아니라 **OpenAI API 표준**입니다. `seed`와 한 쌍으로 쓰라고 만든 것입니다.
+
+```
+seed:
+  "...repeated requests with the same seed and parameters should return the same
+   result. Determinism is not guaranteed, and you should refer to the
+   system_fingerprint response parameter to monitor changes in the backend."
+
+system_fingerprint:
+  "This fingerprint represents the backend configuration that the model runs with.
+   Can be used in conjunction with the seed request parameter to understand when
+   backend changes have been made that might impact determinism."
+```
+
+의도는 이런 상황입니다. 어제까지 `seed=42`로 재현되던 결과가 오늘 달라졌을 때, 지문 값이 같으면 클라이언트 탓이고 다르면 서버 탓입니다. **결정성이 깨졌을 때 책임 소재를 가르는 표식**입니다.
+
+**우리 환경에서는 이 계약이 성립하지 않습니다.** 직접 재봤습니다(2026-08-20, `:5015` / Qwen3.8-27B-FP8 / `temperature=1.0`).
+
+| 조건 | `seed=777` 반복 결과 |
+|---|---|
+| 서버가 한산할 때 3회 | 세 번 모두 동일 |
+| 동시 요청 9건과 섞어서 3회 | 매번 다름. 한산할 때 값과도 다름 |
+
+연속 배칭에서는 **어떤 요청들과 같은 배치에 묶이느냐**에 따라 부동소수점 누적 순서가 달라집니다. 트래픽이 있는 순간 `seed`는 이미 못 믿으므로, 지문이 지켜줄 계약 자체가 없습니다.
+
+반면 잃는 것은 분명합니다. 해시에 모델 정체성이 들어가므로 **백엔드를 교체하면 값이 바뀌어, 외부에서 응답만 모아 봐도 교체 시점이 드러납니다.** 모델명을 `gemma-4`로 고정한 목적과 정면으로 충돌합니다.
+
+그래서 전 인스턴스 yaml에 이렇게 넣었습니다.
+
+```yaml
+fingerprint_mode: custom
+fingerprint_value: gemma-4
+```
+
+**`none`이 아니라 `custom`을 쓰는 이유** — `none`은 필드를 `null`로 만듭니다. 클라이언트가 이 값을 로그 키나 캐시 키로 쓰고 있으면 `null` 처리를 안 해뒀을 수 있습니다. 고정 문자열이면 필드는 그대로 살아 있고 값만 안 변하므로, 호환은 유지한 채 교체 감지만 막습니다. 값을 노출 모델명과 같은 `gemma-4`로 둬서 표기도 일관됩니다.
+
+> 📌 **모드는 넷입니다** (`entrypoints/openai/fingerprint.py`). `full`(기본, 버전+병렬도+해시8) / `hash`(병렬도만 제거 — 해시는 그대로라 교체는 여전히 감지됨) / `custom`(고정 문자열) / `none`(필드 생략). **`hash`는 우리 목적에 안 맞습니다.**
+>
+> 운영자가 실제 백엔드를 확인하는 경로는 그대로입니다. `./start.sh status`, 백엔드 직결 `/v1/models`, `instances/.runtime/<name>.json`, 게이트웨이 기동 로그의 `모델 경로:` 줄 — 넷 다 지문보다 정확합니다.
+>
+> 이 설정은 **인스턴스 재기동이 필요합니다**(게이트웨이가 아니라 `vllm serve` 인자). 런처는 `_LAUNCHER_KEYS` 밖의 yaml 키를 그대로 넘기므로 별도 배선은 없습니다. 반영되면 기동 로그 `non-default args:` 줄에 `'fingerprint_mode': 'custom'`이 찍힙니다.
 
 ---
 

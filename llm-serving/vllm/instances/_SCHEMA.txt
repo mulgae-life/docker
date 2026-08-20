@@ -42,6 +42,16 @@ backends로 등록한다(vllm_server_launcher.py:_LAUNCHER_KEYS가 vllm serve
       전부 받아들여진다. 응답 body의 model 필드와 메트릭 라벨은 첫 번째 값이다.
       실제 체크포인트 경로는 /v1/models의 root에 남으므로, 그것까지 가리는 일은
       게이트웨이 compat.mask_model_path가 맡는다.
+  fingerprint_mode / fingerprint_value
+      응답의 system_fingerprint를 무엇으로 채울지. 전 인스턴스가
+      custom + gemma-4로 고정돼 있다.
+      기본값 full이면 vllm-<버전>-tp<N>-<설정해시8>이 실리는데, 이 해시에
+      모델 정체성이 들어가서 백엔드를 교체하면 값이 바뀐다 — 응답만 모아 봐도
+      교체 시점이 외부에 드러나므로 served_model_name 고정과 충돌한다.
+      none(필드 생략)이 아니라 custom을 쓰는 이유는, 클라이언트가 이 값을 로그·
+      캐시 키로 쓰고 있을 때 null이 들어가면 깨질 수 있기 때문이다.
+      원래 용도(seed와 짝지어 결정성 변화 추적)는 연속 배칭에서 성립하지 않는다.
+      배경과 실측은 VLLM_OPS_GUIDE.md §10.5 참고.
   trust_remote_code
       모델 코드에 custom Python 포함 시. Gemma 4/Qwen3.5/3.6은 네이티브
       지원이라 불필요.

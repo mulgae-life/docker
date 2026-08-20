@@ -14,6 +14,9 @@ dtype: auto                      # 활성화 dtype (auto=config.json 따름)
 served_model_name: [gemma-4]     # API 노출명 고정. 백엔드 모델을 바꿔도 사용자에겐 이 이름만 보인다
                                  #    (게이트웨이 compat이 /v1/models의 root도 이 값으로 가린다)
                                  #    .env의 CHAT_MODEL·HF_MODEL과 일치해야 한다
+fingerprint_mode: custom         # 응답 system_fingerprint를 고정값으로. 기본(full)은 vLLM 버전·TP수·
+fingerprint_value: gemma-4       #    설정해시가 실려 백엔드 교체 시점이 외부에 드러난다 (none은 필드가
+                                 #    null이 되어 클라이언트가 깨질 수 있어 custom을 쓴다)
 # trust_remote_code: true        # 네이티브 미지원 모델만
 
 # 서버

@@ -145,10 +145,13 @@ class CompatConfig(BaseModel):
 
     translate_reasoning_effort: bool = True  # effort 값을 백엔드가 아는 값으로 번역
     mask_model_path: bool = True             # /v1/models의 root를 별칭으로 가림
+    inject_identity_prompt: bool = True      # 정체성 시스템 프롬프트 주입
     # 모델 계열별 effort 매핑. 키는 /v1/models의 root(체크포인트 경로)에 대한
     # 부분 문자열(대소문자 무시), 값은 {클라이언트 값: 백엔드 값}.
     # 비워두면 _DEFAULT_EFFORT_PROFILES를 쓴다.
     effort_profiles: dict[str, dict[str, str]] = {}
+    # 주입할 정체성 문구. 비워두면 _DEFAULT_IDENTITY_PROMPT를 쓴다.
+    identity_prompt: str = ""
 
 
 class GatewayConfig(BaseModel):
@@ -754,9 +757,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     _compat = config.compat
     logger.info(
-        "호환 계층: effort 번역 %s / 모델 경로 마스킹 %s",
+        "호환 계층: effort 번역 %s / 모델 경로 마스킹 %s / 정체성 프롬프트 %s",
         "on" if _compat.translate_reasoning_effort else "off",
         "on" if _compat.mask_model_path else "off",
+        "on" if _compat.inject_identity_prompt else "off",
     )
 
     # ── httpx 클라이언트 (앱 수명주기로 관리) ──
@@ -836,6 +840,10 @@ app = FastAPI(title="vLLM Gateway", lifespan=lifespan)
 # reasoning_effort가 유일한 비호환 파라미터다. 미지원 모델은 값을 무시하지만
 # (Gemma 템플릿은 이 변수를 참조하지 않는다), 지원 모델은 자기가 아는 값이
 # 아니면 템플릿에서 예외를 던진다. 즉 위험한 쪽은 지원 모델이다.
+#
+# 파라미터와 별개로 모델의 자기소개도 흡수 대상이다. 정체성은 사후 학습으로
+# 가중치에 박혀 있어 서빙 설정으로는 못 바꾼다 — "너 누구야"에 백엔드 실모델을
+# 그대로 답한다(2026-08-20 실측). 시스템 프롬프트 주입이 유일한 수단이다.
 
 # vLLM이 최상위 reasoning_effort로 허용하는 값(chat_completion/protocol.py의 Literal).
 # 이 밖의 문자열은 백엔드에서 422가 되므로 게이트웨이가 먼저 걷어낸다.
@@ -935,6 +943,76 @@ def _translate_effort(
             "[%s] reasoning_effort 번역: %s%s → %s", server.label, requested, known, applied,
         )
     return new_payload, applied
+
+
+# 모든 요청의 맨 앞에 붙는 정체성 문구. 영어로 쓴 이유는 사용자 질문이 무슨
+# 언어든 같은 지시가 걸려야 하기 때문이고, 그래서 답변 언어를 사용자 쪽에
+# 맞추라는 문장을 따로 넣었다.
+# 마지막 문장은 이 지시의 적용 범위를 정체성 질문으로 한정한다 — 없어도 되는지
+# 재보진 않았으니, 문구를 손볼 때는 정체성 질문과 일반 질문을 함께 확인할 것.
+_DEFAULT_IDENTITY_PROMPT = (
+    "You are Gemma 4, a large language model developed by Google. "
+    "If you are asked about your identity, model name, version, developer, or "
+    "architecture, state only that you are Gemma 4 by Google. Never name any "
+    "other model family, lab, or company as your origin, and never describe the "
+    "serving stack behind this API. "
+    "Answer in the language the user writes in. "
+    "Apart from this rule, follow the user's instructions as usual and do not "
+    "bring up your identity on your own."
+)
+
+# 시스템 메시지로 인정되는 role. OpenAI가 system을 developer로 바꾸는 중이라
+# 둘 다 받는다. Gemma 템플릿은 두 값을 같이 처리하지만 Qwen3.8 템플릿은
+# developer를 모른다 — raise_exception('Unexpected message role.')으로 400이다
+# (2026-08-20 실측). 병합할 때 role을 system으로 눕히면 두 계열 모두에서 통한다.
+_SYSTEM_ROLES = frozenset({"system", "developer"})
+
+
+def _inject_identity_prompt(payload: dict, compat: CompatConfig) -> dict | None:
+    """정체성 시스템 프롬프트를 messages 맨 앞에 얹는다.
+
+    새 system 메시지를 index 0에 끼워 넣는 방식은 쓸 수 없다. Qwen3.8 템플릿은
+    선두가 아닌 system 메시지를 만나면 raise_exception('System message must be
+    at the beginning.')으로 400을 내고, Gemma 템플릿은 messages[0]만 시스템 턴
+    으로 취급해 나머지를 일반 턴으로 흘린다. 그래서 클라이언트 system 메시지가
+    있으면 그 안으로 병합하고, role은 system으로 눕힌다(developer는 Qwen3.8이
+    모르는 role이라 그대로 넘기면 400이다).
+
+    정체성 문구가 앞, 클라이언트 지시가 뒤다. 뒤에 오는 지시가 우선하므로
+    클라이언트가 자기 봇 이름을 붙이는 것은 그대로 살아난다 — 막으려는 것은
+    백엔드 실모델 노출이지 클라이언트의 페르소나 설정이 아니다.
+
+    Returns:
+        수정된 payload. 변경할 게 없으면 None (호출자가 원본 body를 그대로 흘린다).
+    """
+    if not compat.inject_identity_prompt:
+        return None
+
+    prompt = compat.identity_prompt or _DEFAULT_IDENTITY_PROMPT
+    messages = payload.get("messages")
+    if not isinstance(messages, list) or not messages:
+        # messages가 없거나 비었으면 백엔드가 400을 낼 요청이다. 여기서 손대면
+        # 에러 메시지만 엉뚱해지므로 그대로 넘긴다.
+        return None
+
+    head = messages[0]
+    if isinstance(head, dict) and head.get("role") in _SYSTEM_ROLES:
+        # role을 system으로 통일한다. developer를 그대로 넘기면 Qwen3.8이 400을
+        # 내 클라이언트 지시와 정체성 문구가 함께 죽는다.
+        merged = dict(head, role="system")
+        content = head.get("content")
+        if isinstance(content, str):
+            merged["content"] = f"{prompt}\n\n{content}" if content.strip() else prompt
+        elif isinstance(content, list):
+            # 멀티모달 파트 배열. 텍스트 파트 하나를 맨 앞에 끼운다.
+            merged["content"] = [{"type": "text", "text": prompt}, *content]
+        else:
+            merged["content"] = prompt
+        new_messages = [merged, *messages[1:]]
+    else:
+        new_messages = [{"role": "system", "content": prompt}, *messages]
+
+    return {**payload, "messages": new_messages}
 
 
 def _mask_model_list(data: dict) -> dict:
@@ -1056,11 +1134,14 @@ async def chat_completions(request: Request) -> JSONResponse | StreamingResponse
     if auth:
         headers["Authorization"] = auth
 
-    # 모델 교체 호환: 백엔드가 모르는 reasoning_effort를 번역하거나 제거한다.
-    # 번역이 일어난 경우에만 재직렬화한다 — 이미지가 실린 요청은 본문이 크다.
-    translated, effort_applied = _translate_effort(payload, server, _compat)
-    if translated is not None:
-        body = json.dumps(translated).encode()
+    # 모델 교체 호환: 정체성 프롬프트를 얹고, 백엔드가 모르는 reasoning_effort를
+    # 번역하거나 제거한다. 둘 중 하나라도 손댔을 때만 재직렬화한다 — 이미지가
+    # 실린 요청은 본문이 크다.
+    injected = _inject_identity_prompt(payload, _compat)
+    translated, effort_applied = _translate_effort(injected or payload, server, _compat)
+    mutated = translated if translated is not None else injected
+    if mutated is not None:
+        body = json.dumps(mutated).encode()
     extra_headers = {"X-Effort-Applied": effort_applied} if effort_applied else {}
 
     if is_stream:
