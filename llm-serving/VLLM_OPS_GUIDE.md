@@ -60,7 +60,7 @@ chatbot-poc (.env)
 ┌──────────────────────────────┐
 │ vLLM :7071 (GPU 0·1, TP2)    │  instances/gemma-26b.yaml
 │   gateway_port: 5015 ────────┘  ※ 운영계 prd-gemma.yaml (:7070, GPU 0)
-│   model: gemma-4-26B-A4B-it  │
+│   model: google/gemma-4-26B… │
 └──────────────────────────────┘
 ```
 
@@ -525,11 +525,11 @@ PROVIDER=huggingface
 # 페어 게이트웨이 중 선택:
 HF_BASE_URL=http://43.203.142.247:5015/v1     # Gemma 페어
 # HF_BASE_URL=http://43.203.142.247:5016/v1   # Qwen 페어
-CHAT_MODEL=gemma-4-26B-A4B-it               # 프로파일 따라 gemma-4-31B-it 또는 Qwen3.6-27B-FP8
-RERANKER_MODEL=gemma-4-26B-A4B-it
+CHAT_MODEL=gemma-4                          # 모델을 교체해도 이 값은 그대로
+RERANKER_MODEL=gemma-4
 ```
 
-> **`CHAT_MODEL`은 반드시 `served_model_name`(미설정 시 `model`에서 자동 추출)과 일치**해야 vLLM이 요청을 받습니다.
+> **`CHAT_MODEL`은 반드시 `served_model_name`과 일치**해야 vLLM이 요청을 받습니다. 전 인스턴스가 `gemma-4`로 고정돼 있으므로 어느 백엔드로 붙든 이 값이면 됩니다 ([§10.4](#104-모델-교체-호환-계층-compat)).
 
 ### 9.5 📝 참고: YAML `bool false` 전달 제약 (런처 내부)
 
@@ -543,7 +543,7 @@ vLLM의 YAML 파서(`vllm/utils/argparse_utils.py:501-504`)는 `key: true`만 `-
 
 ## 10. API 운영 레퍼런스
 
-> 사용자(클라이언트) 호출 가이드는 [Part 1 — API 빠른 시작](#-part-1--api-빠른-시작-사용자용)을 참고하세요. 본 섹션은 운영자에게만 의미 있는 **게이트웨이 디버그 엔드포인트**와 **Qwen3.6 모델 검증용 복붙 예시**만 다룹니다.
+> 사용자(클라이언트) 호출 가이드는 [`VLLM_API_GUIDE.md`](VLLM_API_GUIDE.md)를 참고하세요. 본 섹션은 운영자에게만 의미 있는 **게이트웨이 디버그 엔드포인트**, **모델 검증용 복붙 예시**, **모델 교체 호환 계층**을 다룹니다.
 
 ### 10.1 게이트웨이 전용 엔드포인트
 
@@ -596,7 +596,7 @@ curl http://127.0.0.1:6016/server-status
 
 ### 10.2 Qwen3.6 Thinking 모델 검증용 복붙 예시
 
-> Qwen3.6 인스턴스(`:5016`) 단독 검증/디버그 시 사용. 사용자 일반 호출 가이드는 [`VLLM_API_GUIDE.md` §3.2](VLLM_API_GUIDE.md#32-thinking-모드-사고-과정-분리), [§4.4](VLLM_API_GUIDE.md#44-모델별-권장-샘플링) 참고.
+> Qwen 인스턴스(`:5016`) 단독 검증/디버그 시 사용. 사용자 일반 호출 가이드는 [`VLLM_API_GUIDE.md` §3.2](VLLM_API_GUIDE.md#32-thinking-모드-사고-과정-분리) 참고.
 
 **Qwen3.6 공식 권장 샘플링 파라미터** (모델 카드 기준):
 
@@ -614,7 +614,7 @@ curl http://127.0.0.1:6016/server-status
 ```bash
 cat > /tmp/qwen_req.json <<'EOF'
 {
-  "model": "Qwen3.6-27B-FP8",
+  "model": "gemma-4",
   "messages": [
     {"role": "system", "content": "자세하게 답변해줘."},
     {"role": "user", "content": "미국인과 한국인의 차이점 비교 설명해줘"}
@@ -634,7 +634,7 @@ curl http://43.203.142.247:5016/v1/chat/completions \
 **한 줄 명령**:
 
 ```bash
-curl -sS http://43.203.142.247:5016/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"Qwen3.6-27B-FP8","messages":[{"role":"system","content":"자세하게 답변해줘."},{"role":"user","content":"미국인과 한국인의 차이점 비교 설명해줘"}],"max_tokens":10000,"temperature":1.0,"presence_penalty":1.0,"chat_template_kwargs":{"enable_thinking":true}}'
+curl -sS http://43.203.142.247:5016/v1/chat/completions -H "Content-Type: application/json" -d '{"model":"gemma-4","messages":[{"role":"system","content":"자세하게 답변해줘."},{"role":"user","content":"미국인과 한국인의 차이점 비교 설명해줘"}],"max_tokens":10000,"temperature":1.0,"presence_penalty":1.0,"chat_template_kwargs":{"enable_thinking":true}}'
 ```
 
 **Thinking OFF — 빠른 응답**:
@@ -642,7 +642,7 @@ curl -sS http://43.203.142.247:5016/v1/chat/completions -H "Content-Type: applic
 ```bash
 cat > /tmp/qwen_req_nothink.json <<'EOF'
 {
-  "model": "Qwen3.6-27B-FP8",
+  "model": "gemma-4",
   "messages": [
     {"role": "user", "content": "미국인과 한국인의 차이점 간단히 설명"}
   ],
@@ -687,17 +687,83 @@ curl -sS http://43.203.142.247:5016/v1/chat/completions \
 # Gemma 인스턴스 직접 (내부 포트 :7070)
 curl http://127.0.0.1:7070/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"model":"gemma-4-31B-it","messages":[{"role":"user","content":"ping"}],"max_tokens":20}'
+  -d '{"model":"gemma-4","messages":[{"role":"user","content":"ping"}],"max_tokens":20}'
 
 # Qwen 인스턴스 직접 (내부 포트 :7080)
 curl http://127.0.0.1:7080/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"model":"Qwen3.6-27B-FP8","messages":[{"role":"user","content":"ping"}],"max_tokens":20}'
+  -d '{"model":"gemma-4","messages":[{"role":"user","content":"ping"}],"max_tokens":20}'
 ```
+
+> 백엔드도 `served_model_name`이 `gemma-4`라 `model` 필드는 어느 인스턴스든 같습니다. 실제로 어떤 모델인지는 `/v1/models`의 `root`로 확인합니다([§10.4](#104-모델-교체-호환-계층-compat)).
+> 게이트웨이를 우회하므로 effort 번역이 적용되지 않습니다 — Qwen3.8 백엔드에 `reasoning_effort: high`를 보내면 400입니다.
 
 > ⚠️ vLLM 포트는 **외부 비개방**이라 운영계 호스트 안에서만 접근됩니다. 외부에서 접근하려면 게이트웨이를 거쳐야 합니다.
 >
 > 🆕 launcher 자동 포트 회피로 실제 포트가 hint와 다를 수 있습니다. 정확한 포트는 `instances/.runtime/<name>.json` 또는 `./start.sh status`로 확인.
+
+---
+
+### 10.4 모델 교체 호환 계층 (compat)
+
+사용자에게 노출되는 모델명을 `gemma-4` 하나로 고정한 채 뒤에서 모델을 갈아끼우기 위한 계층입니다. 모델을 바꿔도 챗봇·RAG 클라이언트가 코드를 고치지 않게 하는 것이 목적입니다.
+
+두 부분으로 되어 있습니다.
+
+**① 모델명 고정** — 인스턴스 yaml의 `served_model_name: [gemma-4]`가 담당합니다. 전 인스턴스가 이 값으로 통일돼 있습니다. 다만 이것만으로는 `/v1/models` 응답의 `root`에 실제 체크포인트 경로가 그대로 남으므로, 게이트웨이의 `compat.mask_model_path`가 `root`를 `id`와 같은 값으로 덮습니다.
+
+```bash
+# 게이트웨이 경유 — 사용자가 보는 것
+curl -s http://127.0.0.1:5015/v1/models | jq '.data[0] | {id, root, max_model_len}'
+# { "id": "gemma-4", "root": "gemma-4", "max_model_len": 65536 }
+
+# 백엔드 직결 — 운영자가 실제 모델을 확인하는 경로
+curl -s http://127.0.0.1:7080/v1/models | jq '.data[0].root'
+# "/models/LLM/Qwen/Qwen3.8-27B-FP8"
+```
+
+실제로 어떤 모델이 떠 있는지는 백엔드 직결 조회, `./start.sh status`, `instances/.runtime/<name>.json` 셋 중 아무거나로 확인합니다. 게이트웨이 로그에도 기동 시 `[127.0.0.1:7080] 모델 경로: ...`로 남습니다.
+
+**② `reasoning_effort` 번역** — 모델마다 받아들이는 값이 다른 유일한 파라미터입니다. 게이트웨이가 백엔드 계열에 맞춰 값을 바꾸거나 제거해서, 클라이언트가 무엇을 보내든 400·422가 나지 않게 합니다.
+
+| 클라이언트가 보낸 값 | Qwen3.8 백엔드 | 그 외 백엔드 |
+|---|---|---|
+| `minimal`, `low` | `low` | 제거 |
+| `medium` | `medium` | 제거 |
+| `high`, `xhigh`, `max` | `xhigh` | 제거 |
+| `none` | 제거 + `enable_thinking: false` | 제거 |
+| 스펙 밖 문자열 | 제거 | 제거 |
+
+적용 결과는 응답 헤더 `X-Effort-Applied`와 게이트웨이 로그에 남습니다. 값이 `dropped`면 현재 백엔드가 이 옵션을 지원하지 않아 무시된 것입니다.
+
+```bash
+# 번역 동작 확인 — 백엔드 직결은 400, 게이트웨이 경유는 200
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:7080/v1/chat/completions \
+  -H "Content-Type: application/json" -d '{"model":"gemma-4","messages":[{"role":"user","content":"1+1?"}],
+  "max_tokens":20,"reasoning_effort":"high","chat_template_kwargs":{"enable_thinking":true}}'   # 400
+
+curl -s -D - -o /dev/null http://127.0.0.1:5015/v1/chat/completions \
+  -H "Content-Type: application/json" -d '{"model":"gemma-4","messages":[{"role":"user","content":"1+1?"}],
+  "max_tokens":20,"reasoning_effort":"high","chat_template_kwargs":{"enable_thinking":true}} ' \
+  | grep -i 'x-effort-applied'   # x-effort-applied: xhigh
+```
+
+**새 모델이 effort를 지원할 때** — 게이트웨이 yaml의 `compat.effort_profiles`에 항목을 추가합니다. 키는 `/v1/models`의 `root` 경로에 대한 부분 문자열(대소문자 무시)입니다.
+
+```yaml
+compat:
+  effort_profiles:
+    qwen3.8: {minimal: low, low: low, medium: medium, high: xhigh, xhigh: xhigh, max: xhigh}
+    glm-5:   {minimal: low, low: low, medium: medium, high: high,  xhigh: high,  max: high}
+```
+
+비워두면 코드 기본값(`vllm_gateway.py`의 `_DEFAULT_EFFORT_PROFILES` — 현재 `qwen3.8`만 등록)을 씁니다. 등록되지 않은 계열은 effort 미지원으로 보고 필드를 제거합니다.
+
+> ⚠️ **번역은 요청을 조용히 바꿉니다.** `high`를 보낸 클라이언트는 실제로 `xhigh`로 돌았다는 걸 모릅니다. 사고 길이가 기대와 다르다는 문의가 오면 `X-Effort-Applied` 헤더와 게이트웨이 로그의 `reasoning_effort 번역:` 줄을 먼저 확인하세요.
+>
+> 백엔드 계열 판정은 웜업 때 받아둔 `root`로 합니다. 그 조회가 실패해 `model_root`가 비면 안전을 택해 effort를 항상 제거합니다 — effort가 무시되는 증상이 계속되면 게이트웨이 기동 로그의 `모델 경로:` 줄이 찍혔는지 보세요.
+
+**끄는 법** — 게이트웨이 yaml에서 `compat.translate_reasoning_effort: false` 또는 `compat.mask_model_path: false`. 번역을 끄면 클라이언트 값이 백엔드로 그대로 가서 Qwen3.8에 `high`를 보내면 400이 납니다.
 
 ---
 
@@ -728,15 +794,27 @@ curl http://127.0.0.1:7080/v1/chat/completions \
 
 > 두 Qwen3.5 vs 3.6, Gemma 4 vs Qwen 3.6 상세 비교는 [`vllm/slm_research/comparison.md`](vllm/slm_research/comparison.md) 참고.
 
+**모델별 권장 샘플링** (모델 카드·`generation_config.json` 기준):
+
+| 모델 | 모드 | temperature | top_p | top_k | presence_penalty |
+|------|------|:-----------:|:-----:|:-----:|:----------------:|
+| Gemma 4 (26B-A4B·31B) | 일반 | 1.0 | 0.95 | 64 | 0 |
+| Qwen3.6-27B | Thinking·일반 | 1.0 | 0.95 | 20 | **1.5** |
+| Qwen3.6-27B | Thinking·코딩 | 0.6 | 0.95 | 20 | 0 |
+| Qwen3.6-27B | Instruct·일반 | 0.7 | 0.8 | 20 | **1.5** |
+
+> 모델의 `generation_config.json`이 자동 적용되므로 클라이언트가 명시하지 않는 것이 기본입니다. 사용자 가이드에서 샘플링 권장값을 뺀 이유도 같습니다 — 모델을 교체하면 권장값이 달라지는데 클라이언트가 옛 값을 박아두면 품질이 떨어집니다. 값 조정이 필요하면 인스턴스 yaml에서 서버 기본값으로 넣으세요.
+
 ### 11.2 모델 교체 퀵 가이드
 
 기존 인스턴스를 다른 모델로 교체하려면 해당 `instances/<name>.yaml`의 모델 관련 키만 바꾸면 됩니다(포트·GPU는 모델 무관). **새 모델을 추가**하는 경우엔 `instances/<new>.yaml`을 복사하여 만들고 게이트웨이를 재기동하면 자동 디스커버리됩니다.
+
+> 🔒 **`served_model_name: [gemma-4]`은 건드리지 않습니다.** 사용자에게 노출되는 이름을 고정해 두고 뒤에서만 모델을 바꾸는 것이 현재 정책입니다. 이 값을 바꾸면 챗봇·RAG 클라이언트가 전부 404를 받습니다. 배경과 동작은 [§10.4](#104-모델-교체-호환-계층-compat) 참고.
 
 ```yaml
 # ── Qwen3.6-27B-FP8 (현재, Mamba-hybrid Dense) ──
 model: Qwen/Qwen3.6-27B-FP8
 # quantization 생략 (사전 양자화 체크포인트, 자동 감지)
-served_model_name: [Qwen3.6-27B-FP8]
 tool_call_parser: qwen3_xml              # 모델 카드 권장은 qwen3_coder
 reasoning_parser: qwen3
 # Mamba-hybrid 운영 필수
@@ -746,14 +824,12 @@ mm_processor_cache_type: shm
 
 # ── Qwen3.5 27B FP8로 교체 시 ──
 # model: Qwen/Qwen3.5-27B-FP8
-# served_model_name: [Qwen3.5-27B-FP8]
 # tool_call_parser: qwen3_xml
 # reasoning_parser: qwen3
 
 # ── Gemma 4 26B-A4B (MoE, BF16→FP8 온라인 양자화) ──
 # model: google/gemma-4-26B-A4B-it
 # quantization: fp8
-# served_model_name: [gemma-4-26B-A4B-it]
 # tool_call_parser: gemma4
 # reasoning_parser: gemma4
 # # 비전 토큰 예산(기본 280 → 560 권장, 문서/차트 QA 최소선). 상세는 §11.4 참고.
@@ -767,7 +843,6 @@ mm_processor_cache_type: shm
 # ── Gemma 4 31B (Dense) ──
 # model: google/gemma-4-31B-it
 # quantization: fp8
-# served_model_name: [gemma-4-31B-it]
 # tool_call_parser: gemma4
 # reasoning_parser: gemma4
 # # 비전 토큰 예산(기본 280 → 560 권장, 문서/차트 QA 최소선). 상세는 §11.4 참고.
@@ -779,7 +854,7 @@ mm_processor_cache_type: shm
 #   video: 0
 ```
 
-> 교체 후 `.env`의 `CHAT_MODEL`도 `served_model_name`과 일치시키세요.
+> 교체 후 `.env`는 손댈 필요가 없습니다. `CHAT_MODEL`은 `served_model_name`(=`gemma-4`)과 짝이고, 그 값은 모델을 바꿔도 그대로이기 때문입니다.
 >
 > **Qwen3.6 → Gemma 4 교체 시 멀티모달 플래그 정정** (vLLM 0.19.0 소스 검증):
 > - `mm_encoder_tp_mode: data` — Gemma 4는 `supports_encoder_tp_data=False`(`gemma4_mm.py`에 플래그 없음)라 `vllm/config/model.py:617-625`에서 **"weights"로 자동 폴백 + 경고**. 설정 자체는 무해하나 효과 없음 → Gemma 4에서는 제거 권장.
@@ -846,7 +921,7 @@ vllm serve google/gemma-4-31B-it \
 **(c) 요청 단위 override — 특정 요청만 예산 변경**
 ```json
 {
-  "model": "gemma-4-31B-it",
+  "model": "gemma-4",
   "messages": [
     {"role": "user", "content": [
       {"type": "image_url", "image_url": {"url": "data:image/png;base64,..."}},
@@ -909,7 +984,7 @@ Qwen3.6 고유 신규 옵션. 멀티턴 대화에서 **이전 턴 reasoning**을
 
 ```json
 {
-  "model": "Qwen3.6-27B-FP8",
+  "model": "gemma-4",
   "messages": [ ... ],
   "chat_template_kwargs": {
     "enable_thinking": true,
@@ -973,6 +1048,8 @@ Qwen3.8에서 새로 생긴 채팅 템플릿 변수입니다. thinking을 켠 �
 > {"error":{"message":"Unexpected reasoning effort high. Supported types are
 >  xhigh (default), medium, and low.","type":"BadRequestError","code":400}}
 > ```
+>
+> 📌 **이 400은 백엔드 직결에서만 봅니다.** 게이트웨이를 거치면 호환 계층이 `high`를 `xhigh`로 번역하므로 사용자에게는 노출되지 않습니다([§10.4](#104-모델-교체-호환-계층-compat)). 이 절은 번역이 무엇을 막아주고 있는지, 그리고 번역을 껐을 때 무슨 일이 생기는지를 기록해 둔 것입니다.
 
 **왜 서버 기본값을 medium으로 고정했나**: 템플릿 기본값이 `xhigh`라 아무것도 지정하지 않으면 사고 지시문이 항상 최대로 붙습니다. 같은 질문(알고리즘 설계)을 thinking ON으로 던져보니 총 생성 토큰이 `medium` 1,673 → `xhigh` 4,092로 2.4배였습니다. 챗봇 트래픽 대부분은 그만큼 사고할 필요가 없으므로 `instances/qwen.yaml`에서 `medium`으로 눌러두고, 필요한 호출만 `xhigh`로 올립니다.
 
@@ -991,12 +1068,12 @@ Qwen3.8에서 새로 생긴 채팅 템플릿 변수입니다. thinking을 켠 �
 vLLM은 `merge_kwargs(서버 기본값, merge_kwargs(요청 kwargs, 최상위 필드))` 순으로 병합합니다(`renderers/params.py:28`, `entrypoints/openai/chat_completion/serving.py:194`). 최상위 필드를 주지 않으면 `None`이라 병합에서 제외되고 하위 값이 그대로 살아납니다.
 
 ```bash
-# 이 요청만 깊게 생각시키기
+# 이 요청만 깊게 생각시키기 (게이트웨이 경유 — high가 xhigh로 번역된다)
 curl -sS http://127.0.0.1:5015/v1/chat/completions -H "Content-Type: application/json" -d '{
-  "model": "Qwen3.8-27B-FP8",
+  "model": "gemma-4",
   "messages": [{"role":"user","content":"이 설계의 병목을 찾아줘"}],
   "max_tokens": 8000,
-  "reasoning_effort": "xhigh",
+  "reasoning_effort": "high",
   "chat_template_kwargs": {"enable_thinking": true}
 }'
 ```
@@ -1004,7 +1081,7 @@ curl -sS http://127.0.0.1:5015/v1/chat/completions -H "Content-Type: application
 **모델별 지원**:
 
 - **Qwen3.8** — 지원. 위 3값만.
-- **Qwen3.5 / 3.6, Gemma 4** — 템플릿에 이 변수가 없어 값을 줘도 **무시**됩니다(에러는 아님). 모델 교체 시 필드를 지울 필요는 없습니다.
+- **Qwen3.5 / 3.6, Gemma 4** — 템플릿에 이 변수가 없어 값을 줘도 **무시**됩니다(에러는 아님). 게이트웨이는 이 계열에서 필드를 아예 제거하므로 결과는 같습니다.
 - **thinking OFF일 때** — 템플릿이 effort 분기 자체를 타지 않아, 잘못된 값을 줘도 400 없이 통과합니다(실측). 즉 400은 thinking을 켠 요청에서만 납니다.
 
 ---
@@ -1284,6 +1361,12 @@ python tests/traffic_test_vllm.py --base-url http://43.203.142.247:5015 --mode s
 
 `tests/speed_test.py`는 게이트웨이 단위 속도 측정 도구입니다. 모델명은 `{base_url}/v1/models`에서 자동 추출하며, 결과는 `tests/results/speed_results.md`에 Markdown 테이블 행으로 누적 append 됩니다. 여러 모델 비교는 게이트웨이별로 두 번 호출하면 같은 파일에 이어 쌓입니다.
 
+> ⚠️ **모델 비교 측정에는 `--label`이 필수입니다.** 자동 추출되는 이름은 이제 어느 백엔드든 `gemma-4`라서([§10.4](#104-모델-교체-호환-계층-compat)), 라벨 없이 재면 결과 표의 `model` 열이 전부 `gemma-4`가 되어 무엇을 잰 기록인지 구분할 수 없습니다. 실제 모델을 라벨로 남기세요.
+>
+> ```bash
+> ./start.sh speed 5015 --label "Qwen3.8-27B-FP8"
+> ```
+
 진입점은 `./start.sh speed`입니다. 합격·불합격 판정이 없는 측정 도구라, 실패로 잡히는 것은 연결 자체가 안 될 때뿐입니다. 인스턴스 직접 지정도 됩니다.
 
 ```bash
@@ -1306,7 +1389,7 @@ python tests/speed_test.py --base-url http://localhost:5015     # Gemma 게이�
 python tests/speed_test.py --base-url http://localhost:5016     # Qwen 진입점(PII 프록시) (같은 파일에 누적)
 
 # 모델명 직접 지정 (자동 추출 건너뜀)
-python tests/speed_test.py --base-url http://localhost:5015 --model gemma-4-26B-A4B-it --label "Gemma-32k"
+python tests/speed_test.py --base-url http://localhost:5015 --model gemma-4 --label "Gemma-32k"
 
 # 빠른 구문/연결 확인 (동시성 1, max_tokens 512만)
 python tests/speed_test.py --base-url http://localhost:5015 --quick
@@ -1365,8 +1448,8 @@ python tests/speed_test.py --base-url http://localhost:5015 --results-path tests
 | 5.2 | 요청 단위 ON | `reasoning` (또는 `reasoning_content`) 필드 존재 |
 | 5.3 | 요청 단위 OFF 명시적 전달 | content에 `<think>` 미포함 |
 
-> Qwen3.6 `<think>...</think>`는 일반 토큰이라 `skip_special_tokens: false` 불필요.
-> Gemma 4로 교체 시에만 `<|channel>...<channel|>` 경계 토큰이 스페셜 토큰이므로 요청에 `skip_special_tokens: false` 추가 필요.
+> **`skip_special_tokens`는 클라이언트가 신경 쓸 필요가 없습니다.** Gemma 4의 `<|channel>...<channel|>`는 스페셜 토큰이라 기본 설정으로는 제거되어 reasoning 분리가 깨지는데, vLLM 0.20.2의 `Gemma4ReasoningParser.adjust_request()`가 요청마다 `skip_special_tokens=False`를 자동으로 넣어줍니다(`vllm/reasoning/gemma4_reasoning_parser.py:60-65`, 호출은 `vllm/parser/abstract_parser.py:513-520`). Qwen의 `<think>...</think>`는 일반 토큰이라 애초에 무관합니다.
+> 예전 가이드가 요구하던 요청 본문의 `skip_special_tokens: false`는 이제 불필요합니다.
 
 #### Tool Calling (`tool`)
 

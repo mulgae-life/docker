@@ -135,6 +135,22 @@ class OverloadConfig(BaseModel):
     retry_after_seconds: int = 5
 
 
+class CompatConfig(BaseModel):
+    """모델 교체 호환 계층.
+
+    백엔드 모델을 Gemma ↔ Qwen ↔ GLM으로 갈아끼워도 클라이언트가 코드를 고치지
+    않게 만든다. 사용자에게 노출되는 모델명은 인스턴스 yaml의 served_model_name
+    으로 고정하고, 모델마다 다른 요청 파라미터는 여기서 흡수한다.
+    """
+
+    translate_reasoning_effort: bool = True  # effort 값을 백엔드가 아는 값으로 번역
+    mask_model_path: bool = True             # /v1/models의 root를 별칭으로 가림
+    # 모델 계열별 effort 매핑. 키는 /v1/models의 root(체크포인트 경로)에 대한
+    # 부분 문자열(대소문자 무시), 값은 {클라이언트 값: 백엔드 값}.
+    # 비워두면 _DEFAULT_EFFORT_PROFILES를 쓴다.
+    effort_profiles: dict[str, dict[str, str]] = {}
+
+
 class GatewayConfig(BaseModel):
     gateway: GatewayServerConfig = GatewayServerConfig()
     discover_from: str = ""                # 인스턴스 yaml 디렉토리 (gateway_port 매칭)
@@ -145,6 +161,7 @@ class GatewayConfig(BaseModel):
     prefix_cache_warmup: PrefixCacheWarmupConfig = PrefixCacheWarmupConfig()
     http_client: HttpClientConfig = HttpClientConfig()
     overload: OverloadConfig = OverloadConfig()
+    compat: CompatConfig = CompatConfig()
 
 
 def _resolve_actual_port(instance_dir: str, yaml_path: str, yaml_port: int) -> tuple[int, str]:
@@ -277,6 +294,10 @@ class BackendServer:
     consecutive_failures: int = 0
     consecutive_successes: int = 0
     last_health_check: float = 0.0
+    # /v1/models의 root(실제 체크포인트 경로). served_model_name으로 별칭을 씌워도
+    # root에는 실경로가 남으므로(vLLM api_server.py의 BaseModelPath) 모델 계열 판정에 쓴다.
+    # 웜업 시 채워지고, 비어 있으면 reasoning_effort를 제거하는 쪽으로 동작한다.
+    model_root: str = ""
 
     @property
     def base_url(self) -> str:
@@ -458,8 +479,14 @@ class WarmupManager:
                     if resp.status_code == 200:
                         s.is_healthy = True
                         s.is_ready = True
+                        # 웜업을 껐어도 모델 정보는 받아둔다. model_root가 비면
+                        # 호환 계층이 백엔드 계열을 판정하지 못해 reasoning_effort를
+                        # 무조건 제거하게 된다.
+                        await self._detect_model(s)
                 except httpx.HTTPError:
                     pass
+                except (ValueError, KeyError) as e:
+                    logger.warning("[%s] 모델 정보 조회 실패: %s", s.label, e)
             return
 
         # 빠른 프로브: 현재 떠있는 서버 감지
@@ -540,7 +567,11 @@ class WarmupManager:
         raise TimeoutError(f"[{label}] 서버 기동 대기 타임아웃 ({poll.timeout_seconds}s)")
 
     async def _detect_model(self, server: BackendServer) -> str:
-        """GET /v1/models에서 모델명을 자동 감지한다."""
+        """GET /v1/models에서 모델명을 자동 감지한다.
+
+        모델 계열 판정용 root(실제 체크포인트 경로)도 함께 기록한다. 별칭
+        (served_model_name)을 씌우면 id로는 어떤 모델인지 알 수 없기 때문이다.
+        """
         resp = await self._client.get(
             f"{server.base_url}/v1/models", timeout=10.0, headers=self._auth_headers,
         )
@@ -549,6 +580,8 @@ class WarmupManager:
         models = data.get("data", [])
         if not models:
             raise ValueError(f"[{server.label}] /v1/models 응답에 모델이 없습니다")
+        server.model_root = models[0].get("root") or ""
+        logger.info("[%s] 모델 경로: %s", server.label, server.model_root or "(미확인)")
         return models[0]["id"]
 
     async def _run_inference_warmup(self, server: BackendServer, model: str) -> None:
@@ -701,12 +734,13 @@ _client: httpx.AsyncClient
 _health_checker: HealthChecker
 _admission: AdmissionController
 _start_time: float
+_compat: CompatConfig
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """앱 수명주기: 기동 시 웜업/헬스체크, 종료 시 정리."""
-    global _lb, _client, _health_checker, _admission, _start_time
+    global _lb, _client, _health_checker, _admission, _start_time, _compat
 
     # ── 설정 로드 ──
     config_path = os.environ.get("VLLM_GATEWAY_CONFIG")
@@ -717,6 +751,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
     config = load_config(config_path)
     logger.info("설정 로드: %s", config_path)
+
+    _compat = config.compat
+    logger.info(
+        "호환 계층: effort 번역 %s / 모델 경로 마스킹 %s",
+        "on" if _compat.translate_reasoning_effort else "off",
+        "on" if _compat.mask_model_path else "off",
+    )
 
     # ── httpx 클라이언트 (앱 수명주기로 관리) ──
     _client = httpx.AsyncClient(
@@ -784,6 +825,144 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(title="vLLM Gateway", lifespan=lifespan)
 
 
+# ═══════════════════════════════════════════════════════
+# 모델 교체 호환 계층
+# ═══════════════════════════════════════════════════════
+#
+# 클라이언트에게 노출되는 모델은 항상 하나(served_model_name)이고, 그 뒤에서
+# Gemma/Qwen/GLM을 자유롭게 교체한다. 모델마다 다른 요청 파라미터는 여기서
+# 흡수해 클라이언트가 400/422를 보지 않게 한다.
+#
+# reasoning_effort가 유일한 비호환 파라미터다. 미지원 모델은 값을 무시하지만
+# (Gemma 템플릿은 이 변수를 참조하지 않는다), 지원 모델은 자기가 아는 값이
+# 아니면 템플릿에서 예외를 던진다. 즉 위험한 쪽은 지원 모델이다.
+
+# vLLM이 최상위 reasoning_effort로 허용하는 값(chat_completion/protocol.py의 Literal).
+# 이 밖의 문자열은 백엔드에서 422가 되므로 게이트웨이가 먼저 걷어낸다.
+_OPENAI_EFFORT_VALUES = frozenset(
+    {"none", "minimal", "low", "medium", "high", "xhigh", "max"}
+)
+
+# 모델 계열별 번역표. 키는 /v1/models의 root(체크포인트 경로)에 대한 부분 문자열,
+# 값은 {클라이언트가 보낸 값: 백엔드에 넣을 값}.
+# Qwen3.8 채팅 템플릿은 xhigh/medium/low만 받고 그 외에는 raise_exception →
+# HTTP 400 "Unexpected reasoning effort ..."를 낸다(2026-08-20 실측).
+# 여기에 없는 계열은 effort를 지원하지 않는 것으로 보고 필드를 제거한다.
+_DEFAULT_EFFORT_PROFILES: dict[str, dict[str, str]] = {
+    "qwen3.8": {
+        "minimal": "low",
+        "low": "low",
+        "medium": "medium",
+        "high": "xhigh",
+        "xhigh": "xhigh",
+        "max": "xhigh",
+    },
+}
+
+# X-Effort-Applied 헤더에 실을 값. 실제 적용된 effort이거나 아래 둘 중 하나다.
+_EFFORT_DROPPED = "dropped"        # 백엔드가 모르는 파라미터라 제거함
+_EFFORT_THINKING_OFF = "none"      # effort=none → thinking 자체를 끔
+
+
+def _select_effort_profile(
+    model_root: str, profiles: dict[str, dict[str, str]]
+) -> dict[str, str] | None:
+    """백엔드 체크포인트 경로로 effort 번역표를 고른다. 미등록 계열은 None."""
+    if not model_root:
+        return None
+    root = model_root.lower()
+    for key, mapping in profiles.items():
+        if key.lower() in root:
+            return mapping
+    return None
+
+
+def _translate_effort(
+    payload: dict, server: BackendServer, compat: CompatConfig
+) -> tuple[dict | None, str | None]:
+    """reasoning_effort를 백엔드가 아는 값으로 번역한다.
+
+    클라이언트는 OpenAI 표준값을 그대로 보내면 되고, 백엔드가 그 값을 모르면
+    조용히 제거되어 200으로 응답한다. 값이 바뀐 사실은 X-Effort-Applied 헤더와
+    로그에 남긴다 — 조용히 바꾸기만 하면 디버깅이 불가능해지기 때문이다.
+
+    Returns:
+        (백엔드로 보낼 payload, 헤더에 실을 값). payload가 None이면 변경 없음이라
+        호출자가 원본 body를 그대로 흘려보내면 된다.
+    """
+    if not compat.translate_reasoning_effort:
+        return None, None
+
+    kwargs = payload.get("chat_template_kwargs")
+    kwargs = kwargs if isinstance(kwargs, dict) else {}
+    # 최상위 필드가 우선한다. vLLM은 최상위 값을 chat_template_kwargs에 병합하되
+    # None이면 클라이언트가 직접 넣은 값을 남기므로(renderers/params.py의
+    # merge_kwargs), 두 위치를 모두 봐야 누락이 없다.
+    requested = payload.get("reasoning_effort") or kwargs.get("reasoning_effort")
+    if not isinstance(requested, str) or not requested:
+        return None, None
+
+    profile = _select_effort_profile(server.model_root, compat.effort_profiles
+                                     or _DEFAULT_EFFORT_PROFILES)
+    resolved = profile.get(requested.lower()) if profile else None
+
+    new_payload = dict(payload)
+    new_kwargs = dict(kwargs)
+    new_payload.pop("reasoning_effort", None)
+    new_kwargs.pop("reasoning_effort", None)
+
+    if requested.lower() == "none":
+        # OpenAI에서 none은 "추론하지 말라"는 뜻이다. effort 값으로는 어느 모델도
+        # 받지 않으므로 thinking 스위치 자체를 끄는 것으로 옮긴다.
+        new_kwargs["enable_thinking"] = False
+        applied = _EFFORT_THINKING_OFF
+    elif resolved:
+        new_payload["reasoning_effort"] = resolved
+        applied = resolved
+    else:
+        # 백엔드가 effort를 모르거나(프로파일 없음), 알아도 받지 않는 값이거나,
+        # vLLM 스펙 밖의 문자열이다. 셋 다 제거하면 정상 응답이 된다.
+        applied = _EFFORT_DROPPED
+
+    if new_kwargs:
+        new_payload["chat_template_kwargs"] = new_kwargs
+    else:
+        new_payload.pop("chat_template_kwargs", None)
+
+    if applied != requested:
+        known = "" if requested.lower() in _OPENAI_EFFORT_VALUES else " (스펙 밖 값)"
+        logger.info(
+            "[%s] reasoning_effort 번역: %s%s → %s", server.label, requested, known, applied,
+        )
+    return new_payload, applied
+
+
+def _mask_model_list(data: dict) -> dict:
+    """모델 목록에서 실제 체크포인트 경로를 지운다.
+
+    served_model_name으로 id에 별칭을 씌워도 root에는 실경로가 남아 어떤 모델이
+    떠 있는지 그대로 드러난다. 사용자에게는 별칭 하나만 보여야 하므로 root를
+    id와 같은 값으로 덮는다. max_model_len은 클라이언트가 컨텍스트 한도를
+    확인하는 용도라 남긴다.
+    """
+    models = data.get("data")
+    if not isinstance(models, list):
+        return data
+    masked = []
+    for card in models:
+        if not isinstance(card, dict):
+            masked.append(card)
+            continue
+        card = dict(card)
+        alias = card.get("id")
+        if alias and card.get("root"):
+            card["root"] = alias
+        if card.get("parent"):
+            card["parent"] = alias
+        masked.append(card)
+    return {**data, "data": masked}
+
+
 # ── GET /health ──────────────────────────────────────
 
 
@@ -816,7 +995,10 @@ async def list_models(request: Request) -> JSONResponse:
         if auth:
             headers["Authorization"] = auth
         resp = await _client.get(f"{server.base_url}/v1/models", timeout=10.0, headers=headers)
-        return JSONResponse(content=resp.json(), status_code=resp.status_code)
+        data = resp.json()
+        if _compat.mask_model_path and resp.status_code == 200:
+            data = _mask_model_list(data)
+        return JSONResponse(content=data, status_code=resp.status_code)
     except httpx.HTTPError as e:
         logger.error("[%s] /v1/models 프록시 실패: %s", server.label, e)
         return JSONResponse(content={"error": "백엔드 연결 실패"}, status_code=502)
@@ -874,10 +1056,17 @@ async def chat_completions(request: Request) -> JSONResponse | StreamingResponse
     if auth:
         headers["Authorization"] = auth
 
+    # 모델 교체 호환: 백엔드가 모르는 reasoning_effort를 번역하거나 제거한다.
+    # 번역이 일어난 경우에만 재직렬화한다 — 이미지가 실린 요청은 본문이 크다.
+    translated, effort_applied = _translate_effort(payload, server, _compat)
+    if translated is not None:
+        body = json.dumps(translated).encode()
+    extra_headers = {"X-Effort-Applied": effort_applied} if effort_applied else {}
+
     if is_stream:
-        return await _proxy_streaming(server, url, body, headers)
+        return await _proxy_streaming(server, url, body, headers, extra_headers)
     else:
-        return await _proxy_non_streaming(server, url, body, headers)
+        return await _proxy_non_streaming(server, url, body, headers, extra_headers)
 
 
 async def _proxy_non_streaming(
@@ -885,11 +1074,14 @@ async def _proxy_non_streaming(
     url: str,
     body: bytes,
     headers: dict[str, str],
+    extra_headers: dict[str, str] | None = None,
 ) -> JSONResponse:
     """논스트리밍 프록시."""
     try:
         resp = await _client.post(url, content=body, headers=headers)
-        return JSONResponse(content=resp.json(), status_code=resp.status_code)
+        return JSONResponse(
+            content=resp.json(), status_code=resp.status_code, headers=extra_headers or None,
+        )
     except httpx.TimeoutException:
         logger.error("[%s] 타임아웃", server.label)
         return JSONResponse(content={"error": "백엔드 타임아웃"}, status_code=504)
@@ -906,6 +1098,7 @@ async def _proxy_streaming(
     url: str,
     body: bytes,
     headers: dict[str, str],
+    extra_headers: dict[str, str] | None = None,
 ) -> StreamingResponse | JSONResponse:
     """SSE 스트리밍 프록시. 상태 코드 확인 후 바이트 단위로 패스스루한다."""
     # 스트림 연결을 열고 상태 코드를 먼저 확인한다
@@ -916,23 +1109,35 @@ async def _proxy_streaming(
         logger.error("[%s] 스트리밍 연결 타임아웃", server.label)
         await _lb.release(server)
         await _admission.release()
-        return JSONResponse(content={"error": "백엔드 타임아웃"}, status_code=504)
+        return JSONResponse(
+            content={"error": "백엔드 타임아웃"}, status_code=504, headers=extra_headers or None,
+        )
     except httpx.HTTPError as e:
         logger.error("[%s] 스트리밍 연결 실패: %s", server.label, e)
         await _lb.release(server)
         await _admission.release()
-        return JSONResponse(content={"error": "백엔드 연결 실패"}, status_code=502)
+        return JSONResponse(
+            content={"error": "백엔드 연결 실패"}, status_code=502, headers=extra_headers or None,
+        )
 
-    # 백엔드 에러 시 상태 코드를 정확히 전달
+    # 백엔드 에러 시 상태 코드를 정확히 전달.
+    # 실패 응답에도 X-Effort-Applied를 실어야 한다 — 번역 결과를 확인하려는 상황은
+    # 대개 요청이 실패했을 때다. 성공 경로에만 붙이면 정작 필요할 때 없다.
     if resp.status_code != 200:
         error_body = await resp.aread()
         await resp.aclose()
         await _lb.release(server)
         await _admission.release()
         try:
-            return JSONResponse(content=json.loads(error_body), status_code=resp.status_code)
+            return JSONResponse(
+                content=json.loads(error_body), status_code=resp.status_code,
+                headers=extra_headers or None,
+            )
         except (json.JSONDecodeError, UnicodeDecodeError):
-            return JSONResponse(content={"error": "백엔드 에러"}, status_code=resp.status_code)
+            return JSONResponse(
+                content={"error": "백엔드 에러"}, status_code=resp.status_code,
+                headers=extra_headers or None,
+            )
 
     # 200 — SSE 스트리밍 시작
     async def _stream() -> AsyncGenerator[bytes, None]:
@@ -951,7 +1156,11 @@ async def _proxy_streaming(
     return StreamingResponse(
         _stream(),
         media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            **(extra_headers or {}),
+        },
     )
 
 

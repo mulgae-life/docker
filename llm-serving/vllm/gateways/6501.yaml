@@ -53,3 +53,10 @@ overload:
   max_queue_size: 40           # 추가 대기 허용 요청 수
   queue_timeout_seconds: 180   # 슬롯 대기 최대 시간 → 초과 시 429
   retry_after_seconds: 10      # 429 Retry-After 값
+
+# 모델 교체 호환 계층 (기본 활성 — 키 상세: ./_SCHEMA.txt)
+compat:
+  translate_reasoning_effort: true  # effort를 백엔드가 아는 값으로 번역 (미지원이면 제거 → 400 방지)
+  mask_model_path: true             # /v1/models의 root(실제 체크포인트 경로)를 별칭으로 가림
+  # effort_profiles:                # 계열별 번역표 재정의 (비우면 코드 기본값 = qwen3.8만 등록)
+  #   qwen3.8: {minimal: low, low: low, medium: medium, high: xhigh, xhigh: xhigh, max: xhigh}

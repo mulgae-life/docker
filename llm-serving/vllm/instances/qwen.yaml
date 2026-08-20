@@ -11,7 +11,9 @@ model: Qwen/Qwen3.8-27B-FP8      # HF 모델 ID (런처가 download_dir과 조�
 download_dir: /models/LLM        # 모델 로컬 저장 루트 ({download_dir}/{model})
 # quantization: fp8              # 온더플라이 FP8 양자화 (사전 양자화 모델은 주석 유지 — 자동 감지)
 dtype: auto                      # 활성화 dtype (auto=config.json 따름)
-# served_model_name: [<별칭>]    # API 모델 별칭 (미설정 시 model에서 자동 추출)
+served_model_name: [gemma-4]     # API 노출명 고정. 백엔드 모델을 바꿔도 사용자에겐 이 이름만 보인다
+                                 #    (게이트웨이 compat이 /v1/models의 root도 이 값으로 가린다)
+                                 #    .env의 CHAT_MODEL·HF_MODEL과 일치해야 한다
 # trust_remote_code: true        # 네이티브 미지원 모델만
 
 # 서버

@@ -1,7 +1,7 @@
 ---
 name: project
 description: docker 레포 핵심 요약. 서버·운영 구성 자산 모음으로 디렉토리 분리 원칙과 기술 스택 파악용.
-last-updated: 2026-07-21 (gemma-26b·5015 직접 게이트웨이·download 명령·pii ner.yaml 반영)
+last-updated: 2026-08-20 (모델명 gemma-4 고정 + 게이트웨이 호환 계층 반영)
 ---
 
 # 프로젝트 개요
@@ -124,7 +124,7 @@ docker/
 | **베이스 OS** | Ubuntu 24.04, NVIDIA CUDA 12.6.3-devel-ubuntu24.04 |
 | **GPU 호스트** | NVIDIA Open Driver, NVIDIA Container Toolkit, Fabric Manager (H100/H200/A100/B100/B200) |
 | **클라우드** | AWS EC2 (g6e/p4/p5), EBS, IAM/S3, SSM Session Manager |
-| **서빙** | vLLM (chat + audio + realtime), FastAPI 게이트웨이 (OpenAI 호환 + 대기열 기반 과부하 차단). LLM(Gemma/Qwen :5015/:5016) + STT(Voxtral :5018, 비교 PoC :5017). 향후 SGLang 추가 예정 |
+| **서빙** | vLLM (chat + audio + realtime), FastAPI 게이트웨이 (OpenAI 호환 + 대기열 기반 과부하 차단 + 모델 교체 호환 계층). LLM(:5015/:5016 — API 노출명은 백엔드 모델과 무관하게 `gemma-4` 고정) + STT(Voxtral :5018, 비교 PoC :5017). 향후 SGLang 추가 예정 |
 | **런타임** | Python 3.12, Node.js LTS (nvm) |
 | **개발 도구** | Claude Code, OpenAI Codex, GitHub CLI, tmux, fzf, ripgrep |
 | **풀스택 SDK** | Next.js, FastAPI, LangChain, ChromaDB, Supabase CLI, Playwright |
@@ -146,7 +146,7 @@ docker/
 | `aws/Dockerfile.llm` | vLLM 베이스 + SSH. dev/prd 모드 분기 |
 | `aws/docker-compose.yml` | 메인 컨테이너 정의 (`.env`로 GPU/메모리/포트 제어) |
 | `llm-serving/vllm/vllm_server_launcher.py` | 다중 vLLM 서버 기동 (GPU 분할, yaml-relative runtime json) — LLM/STT 공용. `--download-only`로 모델+drafter 증분 동기화(서빙 경로는 네트워크 미접근), `speculative_config.model`의 `${model}` 치환 |
-| `llm-serving/vllm/vllm_gateway.py` | OpenAI 호환 게이트웨이 (chat/completions + audio/transcriptions + realtime WebSocket) — LLM/STT 공용 |
+| `llm-serving/vllm/vllm_gateway.py` | OpenAI 호환 게이트웨이 (chat/completions + audio/transcriptions + realtime WebSocket) — LLM/STT 공용. 모델 교체 호환 계층 포함(`reasoning_effort` 번역, `/v1/models`의 `root` 마스킹 — `compat` 설정) |
 | `llm-serving/vllm/tests/test_vllm_server.py` | 서버 헬스/추론 9 카테고리 QA — 진입점 `./start.sh test [name\|all\|URL]` |
 | `llm-serving/vllm/tests/traffic_test_vllm.py` | 운영 서버 보호를 우선한 smoke/overload 트래픽 테스트 — 진입점 `./start.sh traffic <포트>` (게이트웨이 전용, 대상 명시 필수) |
 | `llm-serving/vllm/tests/speed_test.py` | 게이트웨이 단위 속도 매트릭스 측정 (모델명 자동 추출, results/speed_results.md 누적 append) — 진입점 `./start.sh speed [name\|all\|URL]` |

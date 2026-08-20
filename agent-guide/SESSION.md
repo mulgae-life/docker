@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-08-10 (start.sh test/speed/traffic 신설 + sync.sh → start.sh 배포 진입점 통일)
+last-updated: 2026-08-20 (모델명 gemma-4 고정 + 게이트웨이 호환 계층 신설)
 ---
 
 # 세션 상태
@@ -24,6 +24,7 @@ last-updated: 2026-08-10 (start.sh test/speed/traffic 신설 + sync.sh → start
 
 | 우선순위 | 작업 | 상태 |
 |---------|------|------|
+| P1 | **`gemma-4` 별칭 운영계 반영**: 8/20 연구계 적용·검증 완료. 잔존 — ① `./start.sh push` 후 대표님이 운영계에서 인스턴스·게이트웨이 **둘 다** 재기동(게이트웨이만 하면 호환 계층은 붙고 별칭은 옛 이름) ② `chatbot-poc`의 `.env` `CHAT_MODEL`·`RERANKER_MODEL`을 `gemma-4`로(레포 밖, 안 바꾸면 404). | 연구계 ✅, 운영계 대기 |
 | P1 | **:5015 운영 프로파일 (26B 기준)**: 2026-07-21부터 :5015 = 비PII 직접 게이트웨이 + gemma-26b(fp8·TP2·gmu 0.9·max_len 32768, overload 20/40). 잔존: 장문 트래픽 기준 latency·429 비율 측정. | 갱신(모델 교체), 장문 검증 잔존 |
 | P1 | **MTP 실기동 검증 (31B/26B/Qwen)**: 31B·Qwen 27B(5/13) + 26B-A4B(7/21, QA 통과) 실기동 확인. 잔존: ① Qwen 5016 재기동·가용성 ② acceptance/TPOT 사내 벤치(`slm_research/mtp.md` §5 참고). | 부분 완료, 벤치 잔존 |
 | P1 | **모델 간 속도 매트릭스**: `./start.sh speed [name\|all]` (8/10 진입점 신설 — 무인자면 기동된 게이트웨이를 순회하며 같은 파일에 누적). 26B-A4B 6행 확보(c=1 TPS 168.5 / c=10 TPS 81 — 31B quick 64.8 대비 단발 약 2.6배). 잔존: 31B·Qwen 풀 매트릭스로 3모델 비교 완성. | 부분 완료(26B 측정) |
@@ -49,6 +50,23 @@ last-updated: 2026-08-10 (start.sh test/speed/traffic 신설 + sync.sh → start
 ---
 
 ## 최근 세션
+
+### 2026-08-20 (모델명 `gemma-4` 고정 + 게이트웨이 호환 계층)
+
+- **목표**: API 노출 모델명을 `gemma-4`로 고정해 뒤에서 Gemma·Qwen·GLM을 자유롭게 교체. 모델별로 다른 요청 파라미터는 게이트웨이가 흡수.
+- **변경**: `vllm_gateway.py`(호환 계층 신설 + 웜업 비활성 시 `model_root` 미수집 버그픽스) · `instances/*.yaml` 6개(`served_model_name: [gemma-4]`) · `gateways/*.yaml` 6개(`compat`) · `_SCHEMA.txt` 2개 · `VLLM_API_GUIDE.md`(단일 모델 기준 개편, Thinking 절 축약) · `VLLM_OPS_GUIDE.md`(§10.4 신설, 샘플링표 수용) · `speed_results.md`(라벨 주의)
+- **결정**:
+  - `served_model_name`만으론 `/v1/models`의 `root`에 실경로가 남아 게이트웨이가 마스킹. 별칭은 백엔드가 보고한 `id`를 쓰므로 코드에 하드코딩 없음
+  - `reasoning_effort`는 제거가 아니라 번역(`high→xhigh`, 미지원 계열은 제거). 위험한 쪽은 미지원 모델이 아니라 **지원 모델** — Qwen3.8은 모르는 값에 400을 낸다
+  - 번역 흔적은 `X-Effort-Applied` 헤더와 로그에 남긴다. 조용히 바꾸면 추적 불가
+- **발견**: Gemma Thinking의 `skip_special_tokens: false`는 vLLM 0.20.2가 서버에서 자동 처리(`gemma4_reasoning_parser.py:60-65`) — 문서에서 삭제. 모델 무관 Thinking 규약을 막던 유일한 항목
+- **상태**: 완료. 연구계 재기동 후 실환경 14항목 + 단위 33건 통과(effort 8값 전부 200, 백엔드 직결은 여전히 400). 잔존은 "다음 작업" P1 참조
+
+### 2026-08-19~20 (한국어 능력 비교 + Qwen3.8 조사)
+
+- **목표**: 메인 챗 후보 3종(Gemma 4 26B-A4B/31B, Qwen3.8-27B) 한국어 능력 비교 + 연구계 현행 모델의 추론·코딩 근거 확보
+- **변경**: `slm_research/korean.md`·`qwen38.md` 신설 · `comparison.md` 갱신(기존 표는 Qwen3.6-35B-A3B 기준이라 낡음) · `data/2026-08-19_korean/` 원본 보존
+- **상태**: 완료 (`6e5848d`, `a01b97b`). 27B 3세대(3.5/3.6/3.8) `config.json` 실차이는 `transformers_version` 한 줄뿐 → 서빙 프로필 재조정 불필요
 
 ### 2026-08-10 (start.sh QA 명령 3종 신설 + S3 배포 진입점을 start.sh로 통일)
 

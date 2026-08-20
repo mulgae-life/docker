@@ -1,7 +1,7 @@
 # vLLM SLM API 가이드 (사용자용)
 
 > **대상**: API 사용자 (개발자, 챗봇/RAG 통합)
-> **메인 모델**: `gemma-4-26B-A4B-it` (Google Gemma 4 MoE, 멀티모달, MTP 가속)
+> **모델명**: `gemma-4` — 요청의 `model` 필드에 항상 이 값을 씁니다. 뒤에서 어떤 모델이 돌든 이 이름은 바뀌지 않습니다.
 > **Base URL**: `http://43.203.142.247:5015/v1` (외부, 연구계). 운영계는 동일 인터페이스의 **`:5501`**(외부 주소는 운영자에게 확인 — 연구계와 격리된 별도 서버).
 > **API 호환**: OpenAI Chat Completions 100% — 기존 OpenAI SDK · LangChain `ChatOpenAI` · `curl` 그대로
 > **인증**: 불필요 (`Authorization` 헤더 생략 가능)
@@ -29,21 +29,25 @@
 
 ## 1. 한눈에 보기
 
-| 항목 | **Gemma (메인)** | Qwen3.6 (옵션) |
-|------|------------------|----------------|
-| Base URL | `http://43.203.142.247:5015/v1` | `http://43.203.142.247:5016/v1` |
-| 모델명 (`model` 필드) | **`gemma-4-26B-A4B-it`** | `Qwen3.6-27B-FP8` |
-| 추론 가속 | MTP(speculative decoding) | MTP(speculative decoding) |
-| API 키 | 불필요 | 불필요 |
-| 멀티모달 (이미지) | ✅ | ✅ |
-| Tool Calling | ✅ | ✅ |
-| 스트리밍 (SSE) | ✅ | ✅ |
-| Thinking 기본값 | OFF (요청에서 활성화) | OFF (요청에서 활성화) |
-| Thinking 활성화 옵션 | `enable_thinking: true` + `skip_special_tokens: false` | `enable_thinking: true` |
-| Thinking 토큰 형식 | `<\|channel>...<channel\|>` (스페셜 토큰) | `<think>...</think>` (일반 토큰) |
+| 항목 | 값 |
+|------|-----|
+| Base URL | `http://43.203.142.247:5015/v1` (연구계) · `:5501` (운영계) |
+| 모델명 (`model` 필드) | **`gemma-4`** — 고정 |
+| API 키 | 불필요 |
+| 멀티모달 (이미지) | ✅ |
+| Tool Calling | ✅ |
+| 스트리밍 (SSE) | ✅ |
+| Thinking | 기본 OFF. `enable_thinking`으로 요청 단위 제어 ([§3.2](#32-thinking-모드-사고-과정-분리)) |
+| 컨텍스트 길이 | `GET /v1/models`의 `max_model_len` 참조 ([§2.5](#25-모델-목록-확인)) |
 
-> 컨텍스트 길이·동시 이미지 한도 등은 운영 튜닝값에 따라 달라집니다. 현재 값은 `GET /v1/models` 응답의 `max_model_len` 또는 운영자에게 확인.
-> 서버가 이전 메인 모델 `gemma-4-31B-it` 프로파일로 떠 있는 기간에는 모델명이 다를 수 있습니다 — `GET /v1/models`([§2.5](#25-모델-목록-확인))로 실제 모델명을 확인하고 그 값을 `model` 필드에 쓰세요.
+> 📌 **모델명은 `gemma-4` 하나뿐입니다.** 서버 뒤에서는 상황에 따라 다른 모델이 돌 수 있지만,
+> API가 노출하는 이름은 바뀌지 않습니다. `model` 필드에 다른 값을 넣으면 404가 납니다.
+>
+> 모델이 바뀌어도 클라이언트 코드를 고칠 일이 없도록 게이트웨이가 요청을 맞춰줍니다. 아래 두 가지만
+> 지키면 됩니다.
+>
+> - **사고 과정은 `reasoning` 필드로 읽습니다.** 모델마다 다른 사고 토큰 형식은 서버가 처리합니다.
+> - **컨텍스트 한도는 코드에 박지 말고 `/v1/models`에서 읽습니다.** 운영 튜닝값에 따라 달라집니다.
 
 **API 호환성**: vLLM은 OpenAI Chat Completions API와 **100% 호환**. `OpenAI` SDK · `langchain_openai.ChatOpenAI` · `fetch` · `curl` 어떤 클라이언트도 `base_url`만 바꾸면 그대로 동작합니다.
 
@@ -77,7 +81,7 @@
 curl http://43.203.142.247:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-26B-A4B-it",
+    "model": "gemma-4",
     "messages": [
       {"role": "system", "content": "간결하게 답변해."},
       {"role": "user",   "content": "대한민국의 수도는?"}
@@ -92,7 +96,7 @@ curl http://43.203.142.247:5015/v1/chat/completions \
 {
   "id": "chatcmpl-abc123",
   "object": "chat.completion",
-  "model": "gemma-4-26B-A4B-it",
+  "model": "gemma-4",
   "choices": [{
     "index": 0,
     "message": {"role": "assistant", "content": "서울입니다."},
@@ -113,7 +117,7 @@ client = OpenAI(
 )
 
 resp = client.chat.completions.create(
-    model="gemma-4-26B-A4B-it",
+    model="gemma-4",
     messages=[
         {"role": "system", "content": "간결하게 답변해."},
         {"role": "user",   "content": "파이썬이란?"},
@@ -131,7 +135,7 @@ from langchain_openai import ChatOpenAI
 
 llm = ChatOpenAI(
     base_url="http://43.203.142.247:5015/v1",
-    model="gemma-4-26B-A4B-it",
+    model="gemma-4",
     api_key="not-needed",
     temperature=0.7,
     max_tokens=200,
@@ -151,7 +155,7 @@ const client = new OpenAI({
 });
 
 const resp = await client.chat.completions.create({
-  model: "gemma-4-26B-A4B-it",
+  model: "gemma-4",
   messages: [{ role: "user", content: "안녕" }],
   max_tokens: 100,
 });
@@ -165,7 +169,18 @@ console.log(resp.choices[0].message.content);
 curl http://43.203.142.247:5015/v1/models
 ```
 
-응답에 `served_model_name` (예: `gemma-4-26B-A4B-it`)과 `max_model_len`(현재 컨텍스트 한도)이 들어 있어, 클라이언트에서 모델명·컨텍스트 한도를 자동 감지하는 데 쓸 수 있습니다.
+```json
+{"object": "list", "data": [{
+  "id": "gemma-4",
+  "max_model_len": 65536,
+  "object": "model", "owned_by": "vllm"
+}]}
+```
+
+`max_model_len`이 **프롬프트와 출력을 합친 현재 컨텍스트 한도**입니다. 운영 튜닝에 따라 달라지므로
+코드에 숫자를 박지 말고 여기서 읽으세요. 초과하면 400이 납니다.
+
+`id`는 항상 `gemma-4`입니다.
 
 ---
 
@@ -183,7 +198,7 @@ curl http://43.203.142.247:5015/v1/models
 curl http://43.203.142.247:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-26B-A4B-it",
+    "model": "gemma-4",
     "messages": [{"role": "user", "content": "긴 시 한 편 써줘"}],
     "max_tokens": 500,
     "stream": true,
@@ -211,7 +226,7 @@ data: [DONE]
 
 ```python
 stream = client.chat.completions.create(
-    model="gemma-4-26B-A4B-it",
+    model="gemma-4",
     messages=[{"role": "user", "content": "긴 시 한 편"}],
     max_tokens=500,
     stream=True,
@@ -225,41 +240,28 @@ for chunk in stream:
 
 ### 3.2 Thinking 모드 (사고 과정 분리)
 
-모델이 답변 전에 **"생각"하는 과정**을 `reasoning` 필드로 **분리**해서 받을 수 있습니다. 추론·수학·복잡한 분석 등 사고 과정이 가치 있는 워크로드에 사용.
+모델이 답변 전에 **"생각"하는 과정**을 `reasoning` 필드로 분리해서 받습니다. 추론·수학·복잡한 분석처럼 사고 과정 자체가 쓸모 있는 작업에 씁니다.
 
-> 📌 **필드명 주의**: 현재 운영(vLLM 0.19.0+)은 `reasoning` 키를 사용합니다. OpenAI 공식 스펙은 `reasoning_content`이므로 vLLM 버전이 올라가면 키가 바뀔 수 있습니다. 안전한 클라이언트 코드는 `msg.get("reasoning") or msg.get("reasoning_content")` 패턴 권장.
+**기본값은 OFF입니다** (챗봇 응답 지연을 줄이기 위해). 요청 단위로 켭니다.
 
-**기본값**: 서버 기본 OFF (챗봇 응답 지연 최소화). 요청 단위로 ON/OFF.
-
-**활성화 방법** (Gemma 4):
+**켜는 법** — 이 한 줄이 전부입니다.
 
 ```json
-{
-  "chat_template_kwargs": {"enable_thinking": true},
-  "skip_special_tokens": false
-}
+{"chat_template_kwargs": {"enable_thinking": true}}
 ```
 
-> ⚠️ **Gemma 4는 `skip_special_tokens: false` 필수**. Gemma 4의 thinking 토큰(`<|channel>...<channel|>`)은 스페셜 토큰이라 기본값으로는 제거되어 reasoning 분리가 안 됩니다.
-> Qwen3.6은 `<think>...</think>`가 일반 토큰이라 이 옵션 불필요.
-
-**curl 예시**:
+**읽는 법** — 응답 메시지의 `reasoning` 필드를 봅니다. Thinking을 끈 응답에서는 `null`입니다.
 
 ```bash
 curl http://43.203.142.247:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-26B-A4B-it",
-    "messages": [
-      {"role": "user", "content": "한 자리 소수를 모두 나열해줘. 이유도 설명해."}
-    ],
+    "model": "gemma-4",
+    "messages": [{"role": "user", "content": "한 자리 소수를 모두 나열해줘. 이유도 설명해."}],
     "max_tokens": 1000,
-    "chat_template_kwargs": {"enable_thinking": true},
-    "skip_special_tokens": false
+    "chat_template_kwargs": {"enable_thinking": true}
   }'
 ```
-
-응답:
 
 ```json
 {
@@ -274,58 +276,66 @@ curl http://43.203.142.247:5015/v1/chat/completions \
 }
 ```
 
-**Python 예시** (OpenAI SDK는 vLLM 전용 옵션을 `extra_body`로 전달):
+**Python** (OpenAI SDK는 vLLM 전용 옵션을 `extra_body`로 전달합니다):
 
 ```python
 resp = client.chat.completions.create(
-    model="gemma-4-26B-A4B-it",
+    model="gemma-4",
     messages=[{"role": "user", "content": "12를 소인수분해해줘"}],
     max_tokens=1500,
-    extra_body={
-        "chat_template_kwargs": {"enable_thinking": True},
-        "skip_special_tokens": False,
-    },
+    extra_body={"chat_template_kwargs": {"enable_thinking": True}},
 )
-print("🤔 사고 과정:")
-print(resp.choices[0].message.reasoning)
-print("\n💬 최종 답변:")
-print(resp.choices[0].message.content)
+print("🤔 사고 과정:", resp.choices[0].message.reasoning)   # 꺼져 있으면 None
+print("💬 최종 답변:", resp.choices[0].message.content)
 ```
+
+> 📌 **모델이 바뀌어도 이 코드는 그대로입니다.** 사고 과정을 감싸는 토큰은 모델마다 다르지만
+> (`<think>…</think>`, `<|channel>…<channel|>` 등), 서버가 그 차이를 처리해서 항상 `reasoning`
+> 필드로 넘겨줍니다. 클라이언트가 토큰 형식을 알아야 할 일은 없습니다.
+>
+> 필드명은 `reasoning`입니다. OpenAI 공식 스펙은 `reasoning_content`라서, 방어적으로 쓰려면
+> `msg.get("reasoning") or msg.get("reasoning_content")` 패턴을 권합니다.
 
 **주의 사항**:
 
-- Thinking ON이면 응답 토큰이 보통 2~4배(2K~4K 추가)로 늘어납니다 → `max_tokens`를 1,000 이상으로 잡으세요.
-- 멀티턴 히스토리에 **사고 과정은 다시 넣지 마세요** — `messages`엔 최종 `content`만 포함. Reasoning은 일회용입니다.
-- Thinking OFF 응답에는 `reasoning` 필드가 `null`.
+- Thinking을 켜면 응답 토큰이 보통 2~4배로 늘어납니다. `max_tokens`를 1,000 이상으로 잡으세요.
+- 멀티턴 히스토리에 **사고 과정을 다시 넣지 마세요**. `messages`에는 최종 `content`만 넣습니다. 사고 과정은 그 턴에서만 씁니다.
 
-**사고 길이 조절 (`reasoning_effort`)** — Qwen3.8 전용:
+#### 사고 길이 조절 (`reasoning_effort`)
 
-Thinking을 켠 상태에서 **얼마나 오래 생각할지**를 요청 단위로 조절합니다. `enable_thinking`이 켜고 끄는 스위치라면, 이쪽은 강약 조절입니다.
+Thinking을 켠 상태에서 **얼마나 오래 생각할지**를 조절합니다. `enable_thinking`이 스위치라면 이쪽은 강약입니다.
 
 | 값 | 동작 | 언제 |
 |----|------|------|
-| `xhigh` | 가정 검증·대안 검토까지 길게 사고 | 어려운 추론·분석. 생성량이 2배 이상 늘어 그만큼 오래 걸림 |
-| `medium` | **서버 기본값**. 중립 | 대부분의 호출 |
-| `low` | 짧게 생각하고 결론으로 직행 | 지연이 중요할 때 |
+| `low` | 짧게 생각하고 결론으로 | 지연이 중요할 때 |
+| `medium` | 중립 | 대부분의 호출 |
+| `high` | 가정 검증·대안 검토까지 길게 | 어려운 추론·분석. 생성량이 배로 늘어 그만큼 오래 걸림 |
+| (생략) | 서버 기본값 | 특별한 이유가 없으면 |
 
 ```bash
 curl http://43.203.142.247:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "Qwen3.8-27B-FP8",
+    "model": "gemma-4",
     "messages": [{"role": "user", "content": "이 설계의 병목을 찾아줘"}],
     "max_tokens": 8000,
-    "reasoning_effort": "xhigh",
+    "reasoning_effort": "high",
     "chat_template_kwargs": {"enable_thinking": true}
   }'
 ```
 
-> ⚠️ **허용값은 `xhigh`·`medium`·`low` 3개뿐**입니다. `high`처럼 OpenAI 스펙에는 있는 값을 주면 **HTTP 400**(`Unexpected reasoning effort high`)이 납니다. 단, Thinking OFF 요청에서는 값 자체를 안 보므로 에러가 나지 않습니다.
-> Gemma 4와 Qwen3.5/3.6은 이 옵션을 **무시**합니다(에러 없음) — 모델을 바꿔도 필드를 지울 필요는 없습니다.
-> 서버 기본값은 `medium`으로 고정돼 있습니다. 지정하지 않으면 그대로 `medium`입니다.
+> 📌 **아무 값이나 보내도 에러가 나지 않습니다.** 모델마다 받아들이는 값이 다르지만, 게이트웨이가
+> 현재 모델이 아는 값으로 번역하고, 지원하지 않는 모델이면 조용히 무시합니다.
+>
+> 실제로 적용된 값은 응답 헤더 **`X-Effort-Applied`** 에 실립니다. `high`를 보냈는데 헤더에
+> `xhigh`가 오면 번역된 것이고, `dropped`면 현재 모델이 이 옵션을 지원하지 않아 무시된 것입니다.
+> 사고 길이가 기대와 다르면 이 헤더부터 확인하세요.
 
-> ⚠️ **`xhigh` + 큰 `max_tokens`는 비스트리밍에서 504가 납니다.** 5015 게이트웨이의 업스트림 타임아웃은 **300초**입니다(`pii/config.py:90`). 비스트리밍은 생성이 다 끝나야 첫 바이트가 오므로 그 자리에서 걸립니다 — `max_tokens: 32000` + `xhigh`로 재보니 요청당 4~8분이 걸려 `{"error":{"type":"upstream_timeout"}}`와 함께 504로 끊겼습니다.
-> 스트리밍(`"stream": true`)은 청크가 도착할 때마다 타임아웃 타이머가 갱신돼 이 제한에 걸리지 않습니다(같은 조건에서 200으로 완주). 비스트리밍으로 길게 사고시켜야 하면 `max_tokens`를 낮추세요.
+> ⚠️ **`high` + 큰 `max_tokens`는 비스트리밍에서 504가 납니다.** 게이트웨이 업스트림 타임아웃이
+> 300초인데, 비스트리밍은 생성이 다 끝나야 첫 바이트가 오기 때문입니다. `max_tokens: 32000` +
+> 최대 강도로 재보니 요청당 4~8분이 걸려 `upstream_timeout`으로 끊겼습니다.
+> 스트리밍(`"stream": true`)은 청크가 올 때마다 타이머가 갱신되어 이 제한에 걸리지 않습니다.
+> 비스트리밍으로 길게 사고시켜야 하면 `max_tokens`를 낮추세요.
 
 ---
 
@@ -350,7 +360,7 @@ curl http://43.203.142.247:5015/v1/chat/completions \
 curl http://43.203.142.247:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-26B-A4B-it",
+    "model": "gemma-4",
     "messages": [{
       "role": "user",
       "content": [
@@ -373,7 +383,7 @@ B64=$(base64 -w0 ./screenshot.png)
 curl http://43.203.142.247:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d "{
-    \"model\": \"gemma-4-26B-A4B-it\",
+    \"model\": \"gemma-4\",
     \"messages\": [{
       \"role\": \"user\",
       \"content\": [
@@ -397,7 +407,7 @@ with open("./document.png", "rb") as f:
     b64 = base64.b64encode(f.read()).decode()
 
 resp = client.chat.completions.create(
-    model="gemma-4-26B-A4B-it",
+    model="gemma-4",
     messages=[{
         "role": "user",
         "content": [
@@ -416,7 +426,7 @@ print(resp.choices[0].message.content)
 
 ```python
 resp = client.chat.completions.create(
-    model="gemma-4-26B-A4B-it",
+    model="gemma-4",
     messages=[{
         "role": "user",
         "content": [
@@ -426,10 +436,7 @@ resp = client.chat.completions.create(
         ],
     }],
     max_tokens=2000,
-    extra_body={
-        "chat_template_kwargs": {"enable_thinking": True},
-        "skip_special_tokens": False,
-    },
+    extra_body={"chat_template_kwargs": {"enable_thinking": True}},
 )
 print("사고:", resp.choices[0].message.reasoning)
 print("답변:", resp.choices[0].message.content)
@@ -453,7 +460,7 @@ print("답변:", resp.choices[0].message.content)
 curl http://43.203.142.247:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-26B-A4B-it",
+    "model": "gemma-4",
     "messages": [{"role": "user", "content": "서울 날씨 알려줘"}],
     "tools": [{
       "type": "function",
@@ -501,7 +508,7 @@ curl http://43.203.142.247:5015/v1/chat/completions \
 curl http://43.203.142.247:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "gemma-4-26B-A4B-it",
+    "model": "gemma-4",
     "messages": [
       {"role": "user", "content": "서울 날씨 알려줘"},
       {
@@ -550,7 +557,7 @@ def get_weather(city: str) -> str:
 
 llm = ChatOpenAI(
     base_url="http://43.203.142.247:5015/v1",
-    model="gemma-4-26B-A4B-it",
+    model="gemma-4",
     api_key="not-needed",
 )
 llm_with_tools = llm.bind_tools([get_weather])
@@ -574,13 +581,13 @@ messages = [
 ]
 
 resp1 = client.chat.completions.create(
-    model="gemma-4-26B-A4B-it", messages=messages, max_tokens=100,
+    model="gemma-4", messages=messages, max_tokens=100,
 )
 messages.append({"role": "assistant", "content": resp1.choices[0].message.content})
 
 messages.append({"role": "user", "content": "내 이름이 뭐였지?"})
 resp2 = client.chat.completions.create(
-    model="gemma-4-26B-A4B-it", messages=messages, max_tokens=100,
+    model="gemma-4", messages=messages, max_tokens=100,
 )
 print(resp2.choices[0].message.content)   # → "홍길동님이라고 하셨습니다."
 ```
@@ -617,7 +624,7 @@ curl http://43.203.142.247:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "X-PII-Ignore-Types: org" \
   -d '{
-    "model": "gemma-4-26B-A4B-it",
+    "model": "gemma-4",
     "messages": [{"role": "user",
       "content": "작성부서 디지털AI센터, 담당자 홍길동 010-1234-5678 기준으로 보고서 헤더를 만들어줘."}]
   }'
@@ -655,7 +662,7 @@ PII가 전혀 필요 없는 호출(예: 비식별 사내 문서 가공, PII가 �
 curl http://43.203.142.247:5015/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "X-PII-Mode: bypass" \
-  -d '{"model": "gemma-4-26B-A4B-it",
+  -d '{"model": "gemma-4",
        "messages": [{"role": "user", "content": "비식별 공지문 초안을 다듬어줘 ..."}]}'
 ```
 
@@ -669,22 +676,25 @@ curl http://43.203.142.247:5015/v1/chat/completions \
 
 | 파라미터 | 필수 | 기본값 | 설명 |
 |----------|:----:|--------|------|
-| `model` | O | — | `gemma-4-26B-A4B-it` 또는 `Qwen3.6-27B-FP8` |
+| `model` | O | — | `gemma-4` (고정) |
 | `messages` | O | — | 대화 메시지 배열 |
 | `max_tokens` | — | 모델 한계 | 최대 생성 토큰 수. Thinking ON이면 1,000+ 권장 |
-| `temperature` | — | 모델별 | 0=결정적, 1.0=기본. Gemma 4 권장 1.0, Qwen3.6 코딩 0.6 |
-| `top_p` | — | 0.95 | Nucleus sampling |
-| `top_k` | — | 모델별 | Gemma 4: 64, Qwen3.6: 20 |
+| `temperature` | — | 서버 기본 | 0=결정적. 생략하면 모델 기본값이 적용됩니다 |
+| `top_p` | — | 서버 기본 | Nucleus sampling |
+| `top_k` | — | 서버 기본 | 후보 토큰 수 |
 | `seed` | — | — | 재현 가능한 출력 (`temperature=0`과 함께) |
 | `stop` | — | — | 생성 중단 토큰(들) |
 | `stream` | — | false | true면 SSE 스트리밍 |
 | `stream_options` | — | — | `{"include_usage": true}`면 스트리밍 마지막 청크에 usage 포함 |
 | `tools` | — | — | Tool Calling 함수 정의 |
-| `chat_template_kwargs` | — | — | 템플릿 인자. `{"enable_thinking": true}` 등 |
-| `reasoning_effort` | — | `medium` | **Qwen3.8 전용**, Thinking ON일 때만 실효. `xhigh`/`medium`/`low`만 허용 — 그 외는 400 ([§3.2](#32-thinking-모드-사고-과정-분리)) |
-| `skip_special_tokens` | — | true | **Gemma 4 Thinking 시 false 필수** |
-| `presence_penalty` | — | 0 | Qwen3.6 Thinking에선 1.0~1.5 권장 (반복 붕괴 방지) |
+| `chat_template_kwargs` | — | — | 템플릿 인자. `{"enable_thinking": true}` ([§3.2](#32-thinking-모드-사고-과정-분리)) |
+| `reasoning_effort` | — | 서버 기본 | 사고 길이. `low`/`medium`/`high`. 어떤 값을 보내도 에러가 나지 않습니다 ([§3.2](#32-thinking-모드-사고-과정-분리)) |
+| `presence_penalty` | — | 0 | 같은 표현 반복이 보이면 1.0~1.5 |
 | `extra_body` (Python SDK) | — | — | OpenAI 표준 외 vLLM 옵션 wrapping용 |
+
+> 샘플링 파라미터는 **생략을 권합니다.** 서버가 현재 모델에 맞는 기본값을 적용하므로, 값을 박아두면
+> 모델이 바뀌었을 때 오히려 품질이 떨어질 수 있습니다. 결정적 출력이 필요할 때만 `temperature: 0` +
+> `seed`를 명시하세요.
 
 ### 4.2 응답 형식
 
@@ -693,7 +703,7 @@ curl http://43.203.142.247:5015/v1/chat/completions \
   "id": "chatcmpl-xxx",
   "object": "chat.completion",
   "created": 1738200000,
-  "model": "gemma-4-26B-A4B-it",
+  "model": "gemma-4",
   "choices": [{
     "index": 0,
     "message": {
@@ -744,16 +754,16 @@ curl http://43.203.142.247:5015/v1/chat/completions \
 }
 ```
 
-### 4.4 모델별 권장 샘플링
+### 4.4 샘플링 파라미터
 
-| 모델 | 모드 | temperature | top_p | top_k | presence_penalty | 출처 |
-|------|------|:-----------:|:-----:|:-----:|:----------------:|------|
-| Gemma 4 (26B-A4B·31B) | 일반 | 1.0 | 0.95 | 64 | 0 | 모델 `generation_config.json` 기본값 (두 모델 동일 확인) |
-| Qwen3.6-27B | Thinking·일반 | 1.0 | 0.95 | 20 | **1.5** | Qwen3.6 모델 카드 |
-| Qwen3.6-27B | Thinking·코딩 | 0.6 | 0.95 | 20 | 0 | Qwen3.6 모델 카드 |
-| Qwen3.6-27B | Instruct·일반 | 0.7 | 0.8 | 20 | **1.5** | Qwen3.6 모델 카드 |
+모델의 `generation_config.json`이 서버에서 자동 적용되므로 **보통 아무것도 명시하지 않는 게 낫습니다.**
+모델별 권장값은 모델을 교체할 때마다 달라지므로 운영자용 문서인
+[`VLLM_OPS_GUIDE.md`](VLLM_OPS_GUIDE.md)에서 관리합니다.
 
-> 모델 `generation_config.json`이 자동 적용되므로 보통 명시 생략 가능. 한국어 응답에서 언어 혼합이 보이면 `presence_penalty` 1.0~1.2 권장. 결정적 출력이 필요하면 `temperature: 0` + `seed` 명시.
+명시가 필요한 경우는 둘뿐입니다.
+
+- **결정적 출력**: `temperature: 0` + `seed` 고정
+- **같은 표현 반복**: `presence_penalty` 1.0~1.5. 한국어 응답에 다른 언어가 섞일 때도 효과가 있습니다
 
 ---
 
@@ -763,11 +773,12 @@ LangChain `ChatOpenAI` 기반 chatbot-poc는 `.env`만 바꾸면 즉시 vLLM SLM
 
 ```env
 PROVIDER=huggingface
-HF_BASE_URL=http://43.203.142.247:5015/v1   # Gemma 게이트웨이
-# HF_BASE_URL=http://43.203.142.247:5016/v1 # Qwen (:5016 — 현재 PII 모드 구성만 존재)
-CHAT_MODEL=gemma-4-26B-A4B-it             # 또는 Qwen3.6-27B-FP8
-RERANKER_MODEL=gemma-4-26B-A4B-it
+HF_BASE_URL=http://43.203.142.247:5015/v1   # 연구계 (운영계는 :5501)
+CHAT_MODEL=gemma-4
+RERANKER_MODEL=gemma-4
 ```
+
+> 서버 모델이 교체돼도 이 값들은 그대로 둡니다. `CHAT_MODEL`을 실제 모델명으로 바꾸면 404가 납니다.
 
 > ⚠️ **`PROVIDER`는 단일 스택** — Chat과 Embedding이 함께 전환됩니다. 임베딩은 OpenAI 유지하면서 Chat만 vLLM으로 쓰려면 provider 분리가 필요합니다.
 

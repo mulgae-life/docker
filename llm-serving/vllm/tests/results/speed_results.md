@@ -10,6 +10,7 @@
 - `TTFT_ms`: 첫 토큰까지 지연 (ms, prefill 성능)
 - `TPS`: 요청당 출력 토큰 생성 속도 (output tok/s, decode 성능 = 텍스트 출력 속도)
 - `ok/N`: 성공 요청 / 전체 요청 (실패 섞이면 TPS가 왜곡되니 확인용)
+- `model`: `--label` 값. 생략하면 `/v1/models`에서 자동 추출하는데, 2026-08-20부터 API 노출명이 백엔드와 무관하게 `gemma-4`로 고정돼 무엇을 잰 기록인지 알 수 없게 됩니다. **측정 시 `--label`로 실제 모델을 남기세요.**
 
 | timestamp | model | concurrency | max_tok | ok/N | TTFT_ms | TPS |
 |---|---|---|---|---|---|---|

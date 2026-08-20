@@ -34,8 +34,14 @@ backends로 등록한다(vllm_server_launcher.py:_LAUNCHER_KEYS가 vllm serve
   dtype
       활성화 dtype. auto = config.json 따름(권장).
   served_model_name
-      API 모델 별칭. 미설정 시 model에서 자동 추출. .env의 CHAT_MODEL과
-      일치 필요.
+      API에 노출되는 모델명. 미설정 시 model에서 자동 추출한다.
+      전 인스턴스가 [gemma-4]로 고정돼 있다 — 백엔드 모델을 Gemma/Qwen/GLM으로
+      교체해도 사용자에게는 같은 이름만 보이게 하기 위해서다. 값을 바꾸면
+      .env의 CHAT_MODEL·HF_MODEL도 함께 바꿔야 한다.
+      리스트에 이름을 여러 개 넣으면 전부 /v1/models에 노출되고 요청에서도
+      전부 받아들여진다. 응답 body의 model 필드와 메트릭 라벨은 첫 번째 값이다.
+      실제 체크포인트 경로는 /v1/models의 root에 남으므로, 그것까지 가리는 일은
+      게이트웨이 compat.mask_model_path가 맡는다.
   trust_remote_code
       모델 코드에 custom Python 포함 시. Gemma 4/Qwen3.5/3.6은 네이티브
       지원이라 불필요.
