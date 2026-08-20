@@ -834,6 +834,7 @@ cmd_help() {
 "
         traffic_ex="  ./start.sh traffic ${first_gw:-<포트>} --concurrency 50   # 부하 강도 지정
   ./start.sh traffic ${first_gw:-<포트>} --image-ratio 0     # 텍스트만 (기본은 절반이 이미지)
+  ./start.sh traffic ${first_gw:-<포트>} --label Qwen3.8-27B-FP8  # 리포트에 백엔드 실모델 기록
 "
         traffic_policy="           traffic은 부하가 크므로 무인자/all 호출을 아예 거부한다.
 "

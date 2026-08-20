@@ -180,8 +180,6 @@ curl http://43.203.142.247:5015/v1/models
 `max_model_len`이 **프롬프트와 출력을 합친 현재 컨텍스트 한도**입니다. 운영 튜닝에 따라 달라지므로
 코드에 숫자를 박지 말고 여기서 읽으세요. 초과하면 400이 납니다.
 
-`id`는 항상 `gemma-4`입니다.
-
 ---
 
 ## 3. 핵심 기능
@@ -190,7 +188,7 @@ curl http://43.203.142.247:5015/v1/models
 
 `stream: true`를 주면 토큰이 생성되는 즉시 Server-Sent Events로 흘러나옵니다.
 
-> 🔒 **PII 모드 한정 제약**: 비PII 모드(현재 기본)에서는 토큰이 생성 즉시 점진적으로 흘러나옵니다. **PII 모드**의 `:5015`는 응답 PII 마스킹을 보장하기 위해 스트리밍을 **완결 후 1회 방출**합니다. 즉 `stream:true`를 줘도 토큰이 점진적으로 오지 않고, 마스킹이 끝난 전체 응답이 도착합니다. 단, **응답 구조는 보존**됩니다 — `id`/`created`/`model`, `usage`(`include_usage` 시), `finish_reason`, `reasoning`↔`content` 분리, `tool_calls` 인자가 그대로 유지되어 OpenAI 클라이언트 파싱이 정상 동작합니다. 토큰 점진(progressive) 출력은 **현재 미지원**입니다(PII 경계 누출 위험으로 별도 설계 후 도입 예정). PII가 불필요한 호출이면 [§3.7](#37-pii-우회-bypass-헤더) 우회로 원문 스트리밍을 받을 수 있습니다.
+> 🔒 **PII 모드 한정 제약**: 비PII 모드(현재 기본)에서는 토큰이 생성 즉시 점진적으로 흘러나옵니다. **PII 모드**의 `:5015`는 응답 PII 마스킹을 보장하기 위해 스트리밍을 **완결 후 1회 방출**합니다. 즉 `stream:true`를 줘도 토큰이 점진적으로 오지 않고, 마스킹이 끝난 전체 응답이 도착합니다. 단, **응답 구조는 보존**됩니다 — `id`/`created`/`model`, `usage`(`include_usage` 시), `finish_reason`, `reasoning`↔`content` 분리, `tool_calls` 인자가 그대로 유지되어 OpenAI 클라이언트 파싱이 정상 동작합니다. 토큰 점진 출력은 **현재 미지원**입니다(PII 경계 누출 위험으로 별도 설계 후 도입 예정). PII가 불필요한 호출이면 [§3.7](#37-pii-우회-bypass-헤더) 우회로 원문 스트리밍을 받을 수 있습니다.
 
 **curl**:
 
@@ -293,8 +291,9 @@ print("💬 최종 답변:", resp.choices[0].message.content)
 > (`<think>…</think>`, `<|channel>…<channel|>` 등), 서버가 그 차이를 처리해서 항상 `reasoning`
 > 필드로 넘겨줍니다. 클라이언트가 토큰 형식을 알아야 할 일은 없습니다.
 >
-> 필드명은 `reasoning`입니다. OpenAI 공식 스펙은 `reasoning_content`라서, 방어적으로 쓰려면
-> `msg.get("reasoning") or msg.get("reasoning_content")` 패턴을 권합니다.
+> 필드명은 `reasoning`입니다. 예전 vLLM과 DeepSeek 계열 서버는 `reasoning_content`를 썼고
+> 지금도 입력 쪽에 남아 있지만 폐기 예정입니다. 다른 서버와 코드를 공유한다면
+> `msg.get("reasoning") or msg.get("reasoning_content")` 패턴으로 받으세요.
 
 **주의 사항**:
 
@@ -308,7 +307,7 @@ Thinking을 켠 상태에서 **얼마나 오래 생각할지**를 조절합니�
 | 값 | 동작 | 언제 |
 |----|------|------|
 | `low` | 짧게 생각하고 결론으로 | 지연이 중요할 때 |
-| `medium` | 중립 | 대부분의 호출 |
+| `medium` | 기본 수준 | 대부분의 호출 |
 | `high` | 가정 검증·대안 검토까지 길게 | 어려운 추론·분석. 생성량이 배로 늘어 그만큼 오래 걸림 |
 | (생략) | 서버 기본값 | 특별한 이유가 없으면 |
 
@@ -341,7 +340,7 @@ curl http://43.203.142.247:5015/v1/chat/completions \
 
 ### 3.3 이미지 멀티모달 (Vision)
 
-이미지 + 텍스트를 함께 보내 비전 추론을 받습니다. Gemma 4는 OCR·차트·문서 QA를 지원하는 vision 모델입니다.
+이미지와 텍스트를 함께 보내면 이미지를 읽고 답합니다. 문서 글자 인식, 차트 해석, 화면 캡처 질의에 씁니다.
 
 > 🔒 **PII 가드 (PII 모드 한정)**: 멀티모달 요청의 **텍스트 파트(`{"type":"text"}`)는 정상적으로 in/out 검사·마스킹**됩니다. 단, **이미지 바이트 자체**(픽셀 내 글자 등)는 검사 대상이 아닙니다. 개인정보가 담긴 문서 **이미지**를 보낼 때는 이미지 안의 PII가 가려지지 않는다는 점에 유의하세요.
 
@@ -352,7 +351,7 @@ curl http://43.203.142.247:5015/v1/chat/completions \
 | `image_url` | 공개 URL (외부 접근 가능 이미지) |
 | `data URL (base64)` | 로컬 파일, 스크린샷 등 |
 
-> 한 요청당 첨부 가능 이미지 수는 운영 튜닝값(`limit_mm_per_prompt.image`)에 따라 달라집니다. 초과 시 HTTP 422가 반환되니 작게 시작해 늘려보세요. 정확한 현재 한도는 운영자에게 확인.
+> 한 요청당 첨부 가능 이미지 수는 운영 튜닝값(`limit_mm_per_prompt.image`)에 따라 달라집니다. 초과 시 HTTP 422가 반환되니 작게 시작해 늘려보세요. 정확한 현재 한도는 운영자에게 확인하세요.
 
 **curl — URL 입력**:
 
@@ -454,7 +453,7 @@ print("답변:", resp.choices[0].message.content)
 
 모델이 외부 함수를 **호출하기로 결정**하면 OpenAI 호환 JSON으로 자동 파싱되어 옵니다. `tools` 정의 → 모델이 `tool_calls` 응답 → 클라이언트가 실제 함수 실행 → 결과를 `role: "tool"` 메시지로 다시 전달 → 최종 답변.
 
-**1단계 — Tool 정의 + 사용자 질문**:
+**1단계 — 툴 정의 + 사용자 질문**:
 
 ```bash
 curl http://43.203.142.247:5015/v1/chat/completions \
@@ -566,7 +565,7 @@ print(resp.tool_calls)
 # → [{'name': 'get_weather', 'args': {'city': '서울'}, 'id': 'chatcmpl-tool-...'}]
 ```
 
-> Tool이 필요 없다고 모델이 판단하면 `tool_calls` 없이 `content`로 바로 답변합니다.
+> 툴이 필요 없다고 모델이 판단하면 `tool_calls` 없이 `content`로 바로 답변합니다.
 
 ---
 
@@ -599,7 +598,7 @@ print(resp2.choices[0].message.content)   # → "홍길동님이라고 하셨습
 | `system` | 모델의 역할·톤 지시 (선택, 1개 권장, 맨 앞) |
 | `user` | 사용자 입력 |
 | `assistant` | 모델의 이전 응답 (멀티턴 누적) |
-| `tool` | Tool 실행 결과 (Tool Calling 시) |
+| `tool` | 툴 실행 결과 (Tool Calling 시) |
 
 **프리픽스 캐싱**: 동일 `system` 프롬프트로 반복 호출하면 vLLM이 KV 캐시를 재사용해 TTFT(첫 토큰 대기시간)를 크게 줄여줍니다 — 챗봇 시나리오에 자동 적용. 별도 옵션 불필요.
 
@@ -680,7 +679,7 @@ curl http://43.203.142.247:5015/v1/chat/completions \
 | `messages` | O | — | 대화 메시지 배열 |
 | `max_tokens` | — | 모델 한계 | 최대 생성 토큰 수. Thinking ON이면 1,000+ 권장 |
 | `temperature` | — | 서버 기본 | 0=결정적. 생략하면 모델 기본값이 적용됩니다 |
-| `top_p` | — | 서버 기본 | Nucleus sampling |
+| `top_p` | — | 서버 기본 | 누적 확률 상위 토큰만 후보로 |
 | `top_k` | — | 서버 기본 | 후보 토큰 수 |
 | `seed` | — | — | 재현 가능한 출력 (`temperature=0`과 함께) |
 | `stop` | — | — | 생성 중단 토큰(들) |
@@ -690,7 +689,7 @@ curl http://43.203.142.247:5015/v1/chat/completions \
 | `chat_template_kwargs` | — | — | 템플릿 인자. `{"enable_thinking": true}` ([§3.2](#32-thinking-모드-사고-과정-분리)) |
 | `reasoning_effort` | — | 서버 기본 | 사고 길이. `low`/`medium`/`high`. 어떤 값을 보내도 에러가 나지 않습니다 ([§3.2](#32-thinking-모드-사고-과정-분리)) |
 | `presence_penalty` | — | 0 | 같은 표현 반복이 보이면 1.0~1.5 |
-| `extra_body` (Python SDK) | — | — | OpenAI 표준 외 vLLM 옵션 wrapping용 |
+| `extra_body` (Python SDK) | — | — | OpenAI 표준에 없는 vLLM 옵션을 실어 보낼 때 |
 
 > 샘플링 파라미터는 **생략을 권합니다.** 서버가 현재 모델에 맞는 기본값을 적용하므로, 값을 박아두면
 > 모델이 바뀌었을 때 오히려 품질이 떨어질 수 있습니다. 결정적 출력이 필요할 때만 `temperature: 0` +
@@ -709,7 +708,7 @@ curl http://43.203.142.247:5015/v1/chat/completions \
     "message": {
       "role": "assistant",
       "content": "...",                  // 텍스트 답변
-      "reasoning": "...",                // (Thinking ON 시) 사고 과정 — vLLM 0.19.0 기준
+      "reasoning": "...",                // (Thinking ON 시) 사고 과정
       "tool_calls": [...]                // (함수 호출 시)
     },
     "finish_reason": "stop"
@@ -724,7 +723,7 @@ curl http://43.203.142.247:5015/v1/chat/completions \
 |----|------|
 | `stop` | 자연 종료 (EOS 토큰 생성) |
 | `length` | `max_tokens` 도달로 잘림 — `max_tokens`를 늘리세요 |
-| `tool_calls` | Tool 호출 요청 |
+| `tool_calls` | 툴 호출 요청 |
 
 ### 4.3 에러 코드
 
@@ -743,7 +742,7 @@ curl http://43.203.142.247:5015/v1/chat/completions \
 > ```
 > `request_id`는 감사로그 추적용입니다(원문 PII는 저장되지 않음).
 
-응답 형식:
+일반 에러 응답 형식:
 
 ```json
 {

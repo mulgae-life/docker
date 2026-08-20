@@ -4,9 +4,9 @@
 > **API 호출 사용법**: [`VLLM_API_GUIDE.md`](VLLM_API_GUIDE.md) 참고.
 
 > **서비스 구성 — 2-모드 운용**: 각 진입 포트는 **① 비PII 모드**(게이트웨이가 곧 외부 입구 — **현재 기본**)와 **② PII 모드**(프록시가 같은 포트를 인수, 게이트웨이는 내부로) 중 하나로 운영합니다. 외부 호출 주소는 모드와 무관하게 불변(gemma 연구 `:5015`/운영 `:5501`, qwen 연구 `:5016`/운영 `:5502`).
->   - **연구계 비PII (현재 프로파일)**: `:5015`(`gateways/5015.yaml`) ← `gemma-26b.yaml` (Gemma 4 26B-A4B fp8, GPU 0·1 TP2, vLLM `:7071`, MTP)
->   - 연구계 PII: `:5015`(프록시) → gw `:6015` ← `gemma.yaml` (Gemma 4 31B, vLLM `:7070`) · `:5016`(프록시) → gw `:6016` ← `qwen.yaml` (Qwen3.6 27B FP8, vLLM `:7080`)
->   - **운영계 비PII (현재 운용)**: `:5501`(`gateways/5501.yaml`) ← `prd-gemma.yaml` (Gemma 4 31B, GPU 0, vLLM `:7070`)
+>   - **연구계 비PII (현재 프로파일)**: `:5015`(`gateways/5015.yaml`) ← `gemma-26b.yaml` (Gemma 4 26B-A4B fp8, GPU 0·1 TP2, vLLM `:7071`, MTP) **또는** `qwen.yaml` (Qwen3.8 27B FP8, GPU 0·1 TP2, vLLM `:7080`). 두 인스턴스 모두 `gateway_port: 5015`라 기동한 쪽이 백엔드가 됩니다 — GPU가 겹쳐 동시 기동은 불가. **현재는 `qwen.yaml`**.
+>   - 연구계 PII: `:5015`(프록시) → gw `:6015` ← `gemma.yaml` (Gemma 4 31B, vLLM `:7070`). `:5016`/gw `:6016`은 `qwen.yaml`이 5015로 옮겨간 뒤 매칭 인스턴스가 없어 비어 있습니다.
+>   - **운영계 비PII (현재 운용)**: `:5501`(`gateways/5501.yaml`) ← `prd-gemma.yaml` (Gemma 4 26B-A4B, GPU 0, vLLM `:7070`)
 >   - 운영계 PII: `:5501`(프록시) → gw `:6501` ← `prd-pii-gemma.yaml` · `:5502`(프록시) → gw `:6502` ← `prd-pii-qwen.yaml`
 >   - 📌 **아래 기동·테스트 명령 예시는 연구계 비PII(`:5015`/`gemma-26b.yaml`) 기준**입니다. 운영계는 `:5501` / `prd-gemma` 등으로 치환하세요.
 > **인프라**: AWS L40S 46GB × 4장.
@@ -136,7 +136,9 @@ Qwen도 gemma와 **동일하게 PII 프록시 구성이 준비**되어 있습니
 | PII 검사 | ✅ in/out | ✅ in/out |
 | NER 풀 | GPU3 :8911/:8901 | 같은 서버 풀 공유 |
 
-구성: `gateways/6016.yaml`·`6502.yaml`(내부 전용) + `instances/qwen.yaml`(gateway_port 6016)·`prd-pii-qwen.yaml`(6502) + `pii/configs/proxy.5016.yaml`·`proxy.5502.yaml`. 같은 서버의 gemma·qwen 프록시는 NER 풀(8911/8901)을 공유하므로 NER은 한 번만 기동된다. 기동은 [§7.9](#79-pii-가드-포함-기동) 또는 gemma와 동일 패턴(안쪽부터: vLLM → 게이트웨이 → 프록시).
+구성: `gateways/6016.yaml`·`6502.yaml`(내부 전용) + `instances/prd-pii-qwen.yaml`(gateway_port 6502) + `pii/configs/proxy.5016.yaml`·`proxy.5502.yaml`. 같은 서버의 gemma·qwen 프록시는 NER 풀(8911/8901)을 공유하므로 NER은 한 번만 기동된다. 기동은 [§7.9](#79-pii-가드-포함-기동) 또는 gemma와 동일 패턴(안쪽부터: vLLM → 게이트웨이 → 프록시).
+
+> ⚠️ 연구계 쪽 `qwen.yaml`은 2026-08-18(`5a8fd1b`)에 `gateway_port`가 6016에서 5015로 옮겨갔다. 그래서 **`:6016`에는 매칭되는 인스턴스가 없다** — 연구계 PII로 qwen을 다시 열려면 인스턴스 yaml을 하나 더 만들어야 한다.
 
 > STT(:5017/:5018)는 음성 전용이라 텍스트 PII 정책 대상이 아니며 모드 구분 없이 항상 게이트웨이가 외부 입구다.
 
@@ -374,7 +376,7 @@ python vllm_server_launcher.py -c instances/gemma.yaml --download-only
 HF_TOKEN=hf_xxx python vllm_server_launcher.py -c instances/<name>.yaml --download-only
 
 # 3) 모델 override (yaml의 model을 무시하고 다른 모델 받기)
-python vllm_server_launcher.py -c instances/qwen.yaml --download-only -m Qwen/Qwen3.6-27B-FP8
+python vllm_server_launcher.py -c instances/qwen.yaml --download-only -m Qwen/Qwen3.6-27B-FP8   # yaml은 3.8
 ```
 
 > `--download-only`는 내부적으로 `download_model()`을 호출하므로 **실제 서빙과 동일한 경로 규칙**을 씁니다. `./start.sh download`는 이 호출의 wrapper입니다.
@@ -425,7 +427,7 @@ llm-serving/vllm/   (비PII/PII 페어가 파일명으로 구분된다 — prd-*
 ├── instances/
 │   ├── gemma-26b.yaml      (gateway_port: 5015, port: 7071, gpus: [0,1])  # 연구 비PII (현재 기본)
 │   ├── gemma.yaml          (gateway_port: 6015, port: 7070)               # 연구 PII (외부는 프록시 :5015)
-│   ├── qwen.yaml           (gateway_port: 6016, port: 7080)               # 연구 PII (외부는 프록시 :5016)
+│   ├── qwen.yaml           (gateway_port: 5015, port: 7080, gpus: [0,1])  # 연구 비PII (gemma-26b와 택일)
 │   ├── prd-gemma.yaml      (gateway_port: 5501, port: 7070, gpus: [0])    # 운영 비PII (현재 운용)
 │   ├── prd-pii-gemma.yaml  (gateway_port: 6501, port: 7070, gpus: [0])    # 운영 PII (외부는 프록시 :5501)
 │   └── prd-pii-qwen.yaml   (gateway_port: 6502, port: 7080, gpus: [0])    # 운영 PII (외부는 프록시 :5502)
@@ -676,7 +678,7 @@ curl -sS http://43.203.142.247:5016/v1/chat/completions \
 **자주 하는 실수**:
 
 - `\` 줄바꿈 뒤에 **공백이 붙으면** 이어쓰기가 깨져서 첫 줄만 GET으로 가 `{"detail":"Method Not Allowed"}`가 돌아옵니다. **파일 방식(`-d @`)을 권장**합니다.
-- `chat_template_kwargs`는 **top-level 필드**입니다. `extra_body` 래핑 불필요 (단, OpenAI Python SDK는 `extra_body`로 wrapping해야 전달됨).
+- `chat_template_kwargs`는 **top-level 필드**입니다. `extra_body` 래핑 불필요 (단, OpenAI Python SDK는 `extra_body`로 감싸야 전달됨).
 - Thinking 토큰이 쉽게 2~4K를 먹으므로 복잡한 질의엔 `max_tokens`를 10,000 이상 잡으세요.
 
 ### 10.3 vLLM 인스턴스 직접 호출 (게이트웨이 우회)
@@ -771,7 +773,7 @@ compat:
 
 ### 11.1 지원 모델 비교
 
-| | **Qwen3.6-27B-FP8 (현재)** | Qwen3.5-27B-FP8 | Gemma 4 26B-A4B-it | Gemma 4 31B-it |
+| | **Qwen3.6-27B-FP8** | Qwen3.5-27B-FP8 | **Gemma 4 26B-A4B-it (운영계)** | Gemma 4 31B-it |
 |---|---|---|---|---|
 | **HF 모델 ID** | `Qwen/Qwen3.6-27B-FP8` | `Qwen/Qwen3.5-27B-FP8` | `google/gemma-4-26B-A4B-it` | `google/gemma-4-31B-it` |
 | **파라미터** | 27B (Dense, Mamba-hybrid) | 27B (Dense) | 26B active / ~45B total (MoE) | 30.7B (Dense) |
@@ -792,7 +794,8 @@ compat:
 | **vLLM 최소 버전** | 0.19.0 | 0.18.0 | 0.19.0 | 0.19.0 |
 | **transformers 최소 버전** | ≥4.56.0 | ≥4.56.0 | ≥5.5.0 | ≥5.5.0 |
 
-> 두 Qwen3.5 vs 3.6, Gemma 4 vs Qwen 3.6 상세 비교는 [`vllm/slm_research/comparison.md`](vllm/slm_research/comparison.md) 참고.
+> 연구계에 현재 떠 있는 **Qwen3.8-27B-FP8은 이 표에 없습니다** — 조사 내용은 [`vllm/slm_research/qwen38.md`](vllm/slm_research/qwen38.md)에 따로 정리해 뒀습니다.
+> Qwen3.5 vs 3.6, Gemma 4 vs Qwen3.6 상세 비교는 [`vllm/slm_research/comparison.md`](vllm/slm_research/comparison.md) 참고.
 
 **모델별 권장 샘플링** (모델 카드·`generation_config.json` 기준):
 
@@ -1339,6 +1342,12 @@ grep -B1 -A20 "FAIL " tests/logs/test_20260430_144909.log
 ./start.sh traffic 5015 --mode overload       # 뒤 인자는 traffic_test_vllm.py로 그대로 전달
 ./start.sh traffic http://호스트:5015 --requests 20 --concurrency 20
 ```
+
+> ⚠️ **기록으로 남길 측정에는 `--label`을 붙이세요.** 리포트의 `config.model`은 API 노출명이라 어느 백엔드를 재도 `gemma-4`입니다([§10.4](#104-모델-교체-호환-계층-compat)). `--label`은 요청에 실리지 않고 리포트의 `config.label`과 진행 화면 헤더에만 남는 표시용 값이라, 나중에 어느 모델의 부하 특성이었는지 되짚을 수 있습니다. 생략하면 실행 첫 화면에 경고 한 줄이 뜨고 `config.label`에는 노출명이 그대로 들어갑니다.
+>
+> ```bash
+> ./start.sh traffic 5015 --label "Qwen3.8-27B-FP8"
+> ```
 
 아래는 스크립트를 직접 호출하는 방법입니다.
 

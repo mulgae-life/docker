@@ -6,6 +6,8 @@
 
 테스트 단계:
   1. 모델 확인: --model 미지정 시 /v1/models에서 첫 모델명을 자동 추출.
+       API 노출명은 백엔드와 무관하게 고정돼 있으므로(gemma-4), 무엇을 잰
+       기록인지 남기려면 --label로 백엔드 실모델을 찍어야 한다.
   2. 사전 스냅샷: /health, /server-status, /v1/models 상태 저장.
   3. 조건 확정: 요청 수, 동시성, 생성 토큰 수, 타임아웃을 CLI 인자로 확정.
   4. 진행 화면: 기본으로 로컬 URL에서 요청별 생성 상태 표시.
@@ -101,6 +103,7 @@ class DashboardState:
         self._status = "준비 중"
         self._config: dict[str, Any] = {}
         self._model: str | None = None
+        self._label: str | None = None
         self._requests: dict[int, dict[str, Any]] = {}
         self._summary: dict[str, Any] = {}
         self._postcheck: dict[str, Any] = {}
@@ -108,7 +111,12 @@ class DashboardState:
         self._report_path = ""
         self._error = ""
 
-    def configure(self, args: argparse.Namespace, model: str | None = None) -> None:
+    def configure(
+        self,
+        args: argparse.Namespace,
+        model: str | None = None,
+        label: str | None = None,
+    ) -> None:
         with self._lock:
             self._config = {
                 "base_url": args.base_url,
@@ -119,6 +127,7 @@ class DashboardState:
                 "stream": args.stream,
             }
             self._model = model
+            self._label = label
             self._status = "테스트 준비 중"
 
     def set_status(self, status: str) -> None:
@@ -206,6 +215,7 @@ class DashboardState:
                 "status": self._status,
                 "config": dict(self._config),
                 "model": self._model,
+                "label": self._label,
                 "requests": [dict(item) for _, item in sorted(self._requests.items())],
                 "summary": dict(self._summary),
                 "postcheck": dict(self._postcheck),
@@ -642,7 +652,9 @@ _DASHBOARD_HTML = """<!doctype html>
       const progress = total > 0 ? Math.min(100, Math.round((finished / total) * 100)) : 0;
 
       statusEl.textContent = state.status || '준비 중';
-      targetEl.textContent = `${config.base_url || '-'} · ${state.model || '모델 확인 중'}`;
+      const modelText = state.model || '모델 확인 중';
+      const labelText = state.label && state.label !== state.model ? ` (${state.label})` : '';
+      targetEl.textContent = `${config.base_url || '-'} · ${modelText}${labelText}`;
       barEl.style.width = `${progress}%`;
 
       metricsEl.innerHTML = [
@@ -1255,7 +1267,10 @@ def _write_report(args: argparse.Namespace, report: dict[str, Any]) -> str:
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="vLLM 게이트웨이 하드 트래픽 테스트")
     p.add_argument("--base-url", default="http://localhost:5015", help="게이트웨이 URL")
-    p.add_argument("--model", default=None, help="모델명. 미지정 시 /v1/models에서 자동 추출")
+    p.add_argument("--model", default=None, help="요청에 실을 모델명. 미지정 시 /v1/models에서 자동 추출")
+    p.add_argument("--label", default=None,
+                   help="리포트에 남길 백엔드 실모델 표시명 (예: Qwen3.8-27B-FP8). "
+                        "요청에는 쓰이지 않는다. 미지정 시 --model/자동 추출값과 동일")
     p.add_argument("--mode", choices=("smoke", "overload"), default=None, help=argparse.SUPPRESS)
     p.add_argument("--requests", type=int, default=None, help="총 요청 수")
     p.add_argument("--concurrency", type=int, default=None, help="동시 요청 수")
@@ -1347,12 +1362,19 @@ def main() -> None:
             _wait_for_dashboard_shutdown(dashboard_server, dashboard_url)
             sys.exit(1)
         raise
+    # API 노출명은 백엔드 모델과 무관하게 고정돼 있어(게이트웨이 compat), 리포트의
+    # model만으로는 무엇을 잰 기록인지 알 수 없다. --label이 그 공백을 메운다.
+    label = args.label or model
     if dashboard:
-        dashboard.configure(args, model)
+        dashboard.configure(args, model, label)
 
     print("vLLM 트래픽 테스트")
     print(f"  서버: {args.base_url}")
     print(f"  모델: {model}")
+    if args.label:
+        print(f"  실모델: {label}")
+    else:
+        print("  실모델: (--label 미지정 — 리포트에 백엔드 모델이 남지 않습니다)")
     print(f"  요청: {args.requests}, 동시성: {args.concurrency}, stream={args.stream}")
     if args.image_ratio > 0:
         print(f"  이미지: 비율 {args.image_ratio:.0%}, {args.image_edge}px, 풀 {len(_IMAGE_POOL)}장")
@@ -1374,6 +1396,7 @@ def main() -> None:
         "config": {
             "base_url": args.base_url,
             "model": model,
+            "label": label,
             "requests": args.requests,
             "concurrency": args.concurrency,
             "max_tokens": args.max_tokens,

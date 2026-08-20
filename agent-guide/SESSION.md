@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-08-20 (모델명 gemma-4 고정 + 게이트웨이 호환 계층 신설)
+last-updated: 2026-08-20 (모델명 gemma-4 고정 + 호환 계층 + traffic --label·문서 정합성)
 ---
 
 # 세션 상태
@@ -60,7 +60,8 @@ last-updated: 2026-08-20 (모델명 gemma-4 고정 + 게이트웨이 호환 계�
   - `reasoning_effort`는 제거가 아니라 번역(`high→xhigh`, 미지원 계열은 제거). 위험한 쪽은 미지원 모델이 아니라 **지원 모델** — Qwen3.8은 모르는 값에 400을 낸다
   - 번역 흔적은 `X-Effort-Applied` 헤더와 로그에 남긴다. 조용히 바꾸면 추적 불가
 - **발견**: Gemma Thinking의 `skip_special_tokens: false`는 vLLM 0.20.2가 서버에서 자동 처리(`gemma4_reasoning_parser.py:60-65`) — 문서에서 삭제. 모델 무관 Thinking 규약을 막던 유일한 항목
-- **상태**: 완료. 연구계 재기동 후 실환경 14항목 + 단위 33건 통과(effort 8값 전부 200, 백엔드 직결은 여전히 400). 잔존은 "다음 작업" P1 참조
+- **후속(같은 날)**: `traffic_test_vllm.py`에 `--label` 추가(`speed_test.py`와 같은 의미 — 요청엔 안 실리고 리포트 `config.label`·진행 화면에만 남는다. 미지정 시 경고 1줄). 이어 문서 정합성 점검에서 낡은 사실 5건을 잡음 — API 가이드가 §3.3에서 백엔드를 "Gemma 4"로 단정(모델명 고정 전제와 충돌), `reasoning_content`를 OpenAI 스펙으로 잘못 표기(실제로는 vLLM 폐기 예정 구필드), OPS 헤더의 `qwen.yaml`·`prd-gemma.yaml` 모델명·게이트웨이 포트가 `5a8fd1b` 이후 미갱신(`:6016`은 매칭 인스턴스 없음), §11.1 "(현재)" 마커가 두 세대 전
+- **상태**: 완료. 연구계 재기동 후 실환경 14항목 + 단위 33건 통과(effort 8값 전부 200, 백엔드 직결은 여전히 400). 문서 수정 후 QA 스위트 31/31 재통과. 잔존은 "다음 작업" P1 참조
 
 ### 2026-08-19~20 (한국어 능력 비교 + Qwen3.8 조사)
 
