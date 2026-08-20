@@ -438,6 +438,10 @@ def main() -> int:
 
     print(f"[speed_test] base_url={endpoint.base_url}")
     print(f"[speed_test] model={endpoint.model}  label={endpoint.label}")
+    # API 노출명이 백엔드와 무관하게 고정돼 있어, 라벨이 없으면 결과 표의 model 열이
+    # 전부 같은 이름으로 쌓여 모델 간 비교가 불가능해진다.
+    if not args.label:
+        print("[speed_test] --label 미지정 — 결과 표에 백엔드 실모델이 남지 않습니다")
     print(f"[speed_test] 시나리오 {len(scenarios)}개 → 결과: {args.results_path}")
 
     if not args.no_warmup:

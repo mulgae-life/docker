@@ -773,35 +773,36 @@ compat:
 
 ### 11.1 지원 모델 비교
 
-| | **Qwen3.6-27B-FP8** | Qwen3.5-27B-FP8 | **Gemma 4 26B-A4B-it (운영계)** | Gemma 4 31B-it |
-|---|---|---|---|---|
-| **HF 모델 ID** | `Qwen/Qwen3.6-27B-FP8` | `Qwen/Qwen3.5-27B-FP8` | `google/gemma-4-26B-A4B-it` | `google/gemma-4-31B-it` |
-| **파라미터** | 27B (Dense, Mamba-hybrid) | 27B (Dense) | 26B active / ~45B total (MoE) | 30.7B (Dense) |
-| **아키텍처** | Gated DeltaNet 75% + Gated Attention 25% (Mamba-hybrid) | Transformer | MoE | Transformer |
-| **기본 dtype** | FP8 (사전 양자화) | FP8 (사전 양자화) | BF16 | BF16 |
-| **양자화 필요?** | 불필요 | 불필요 | `quantization: fp8` (온라인) | `quantization: fp8` (온라인) |
-| **가중치 크기** | ~29 GB | ~27 GB | ~25 GB | ~29 GB |
-| **라이선스** | Apache 2.0 | Apache 2.0 | Gemma | Apache 2.0 |
-| **HF 토큰** | 불필요 | 불필요 | 불필요 | 불필요 |
-| **컨텍스트 (네이티브/YaRN)** | 262K / 1.01M | 131K | 128K | 256K |
-| **멀티모달** | 텍스트 + 이미지 + 비디오 | 텍스트 전용 | 텍스트 + 이미지 | 텍스트 + 이미지 |
-| **Thinking 기본값** | ON (서버 OFF 덮음) | ON | OFF | OFF |
-| **Thinking 형식** | `<think>...</think>` | `<think>...</think>` | `<\|channel>thought...<channel\|>` | `<\|channel>thought...<channel\|>` |
-| **tool_call_parser** | `qwen3_xml` (카드 권장: `qwen3_coder`) | `qwen3_xml` | `gemma4` | `gemma4` |
-| **reasoning_parser** | `qwen3` | `qwen3` | `gemma4` | `gemma4` |
-| **샘플링 (Thinking)** | temp=1.0, top_k=20, top_p=0.95, presence_penalty=1.5 | temp=0.6, top_k=20, top_p=0.95 | temp=1.0, top_k=64, top_p=0.95 | temp=1.0, top_k=64, top_p=0.95 |
-| **MTP Speculative Decoding** | ✅ | ✅ | ❌ | ❌ |
-| **vLLM 최소 버전** | 0.19.0 | 0.18.0 | 0.19.0 | 0.19.0 |
-| **transformers 최소 버전** | ≥4.56.0 | ≥4.56.0 | ≥5.5.0 | ≥5.5.0 |
+| | **Qwen3.8-27B-FP8 (연구계)** | Qwen3.6-27B-FP8 | Qwen3.5-27B-FP8 | **Gemma 4 26B-A4B-it (운영계)** | Gemma 4 31B-it |
+|---|---|---|---|---|---|
+| **HF 모델 ID** | `Qwen/Qwen3.8-27B-FP8` | `Qwen/Qwen3.6-27B-FP8` | `Qwen/Qwen3.5-27B-FP8` | `google/gemma-4-26B-A4B-it` | `google/gemma-4-31B-it` |
+| **파라미터** | 27B (Dense, Mamba-hybrid) | 27B (Dense, Mamba-hybrid) | 27B (Dense) | 26B active / ~45B total (MoE) | 30.7B (Dense) |
+| **아키텍처** | linear 48 + full 16 레이어 (Mamba-hybrid, 3.6과 동일 구성) | Gated DeltaNet 75% + Gated Attention 25% (Mamba-hybrid) | Transformer | MoE | Transformer |
+| **기본 dtype** | FP8 (사전 양자화, e4m3) | FP8 (사전 양자화) | FP8 (사전 양자화) | BF16 | BF16 |
+| **양자화 필요?** | 불필요 | 불필요 | 불필요 | `quantization: fp8` (온라인) | `quantization: fp8` (온라인) |
+| **가중치 크기** | 29 GB | ~29 GB | ~27 GB | ~25 GB | ~29 GB |
+| **라이선스** | Apache 2.0 | Apache 2.0 | Apache 2.0 | Gemma | Apache 2.0 |
+| **HF 토큰** | 불필요 | 불필요 | 불필요 | 불필요 | 불필요 |
+| **컨텍스트 (네이티브/YaRN)** | 262K / 1.05M | 262K / 1.01M | 131K | 128K | 256K |
+| **멀티모달** | 텍스트 + 이미지 + 비디오 | 텍스트 + 이미지 + 비디오 | 텍스트 전용 | 텍스트 + 이미지 | 텍스트 + 이미지 |
+| **Thinking 기본값** | ON (서버 OFF 덮음) | ON (서버 OFF 덮음) | ON | OFF | OFF |
+| **Thinking 형식** | `<think>...</think>` | `<think>...</think>` | `<think>...</think>` | `<\|channel>thought...<channel\|>` | `<\|channel>thought...<channel\|>` |
+| **tool_call_parser** | `qwen3_xml` | `qwen3_xml` (카드 권장: `qwen3_coder`) | `qwen3_xml` | `gemma4` | `gemma4` |
+| **reasoning_parser** | `qwen3` | `qwen3` | `qwen3` | `gemma4` | `gemma4` |
+| **샘플링 (Thinking)** | temp=1.0, top_k=20, top_p=0.95, presence_penalty=0 | temp=1.0, top_k=20, top_p=0.95, presence_penalty=1.5 | temp=0.6, top_k=20, top_p=0.95 | temp=1.0, top_k=64, top_p=0.95 | temp=1.0, top_k=64, top_p=0.95 |
+| **MTP Speculative Decoding** | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **vLLM 최소 버전** | 0.20.2 실기동 확인 | 0.19.0 | 0.18.0 | 0.19.0 | 0.19.0 |
+| **transformers 최소 버전** | 5.8.0 (config.json 기재) | ≥4.56.0 | ≥4.56.0 | ≥5.5.0 | ≥5.5.0 |
 
-> 연구계에 현재 떠 있는 **Qwen3.8-27B-FP8은 이 표에 없습니다** — 조사 내용은 [`vllm/slm_research/qwen38.md`](vllm/slm_research/qwen38.md)에 따로 정리해 뒀습니다.
-> Qwen3.5 vs 3.6, Gemma 4 vs Qwen3.6 상세 비교는 [`vllm/slm_research/comparison.md`](vllm/slm_research/comparison.md) 참고.
+> Qwen3.8 열은 로컬 체크포인트(`/models/LLM/Qwen/Qwen3.8-27B-FP8`)의 `config.json`·`chat_template.jinja`·모델 카드에서 직접 확인한 값입니다. 벤치마크와 세대 비교는 [`vllm/slm_research/qwen38.md`](vllm/slm_research/qwen38.md), Qwen3.5 vs 3.6와 Gemma 4 vs Qwen3.6 비교는 [`vllm/slm_research/comparison.md`](vllm/slm_research/comparison.md) 참고.
 
 **모델별 권장 샘플링** (모델 카드·`generation_config.json` 기준):
 
 | 모델 | 모드 | temperature | top_p | top_k | presence_penalty |
 |------|------|:-----------:|:-----:|:-----:|:----------------:|
 | Gemma 4 (26B-A4B·31B) | 일반 | 1.0 | 0.95 | 64 | 0 |
+| **Qwen3.8-27B** | Thinking | 1.0 | 0.95 | 20 | **0** |
+| **Qwen3.8-27B** | Instruct(비Thinking) | 0.7 | 0.80 | 20 | **1.5** |
 | Qwen3.6-27B | Thinking·일반 | 1.0 | 0.95 | 20 | **1.5** |
 | Qwen3.6-27B | Thinking·코딩 | 0.6 | 0.95 | 20 | 0 |
 | Qwen3.6-27B | Instruct·일반 | 0.7 | 0.8 | 20 | **1.5** |
@@ -1370,7 +1371,7 @@ python tests/traffic_test_vllm.py --base-url http://43.203.142.247:5015 --mode s
 
 `tests/speed_test.py`는 게이트웨이 단위 속도 측정 도구입니다. 모델명은 `{base_url}/v1/models`에서 자동 추출하며, 결과는 `tests/results/speed_results.md`에 Markdown 테이블 행으로 누적 append 됩니다. 여러 모델 비교는 게이트웨이별로 두 번 호출하면 같은 파일에 이어 쌓입니다.
 
-> ⚠️ **모델 비교 측정에는 `--label`이 필수입니다.** 자동 추출되는 이름은 이제 어느 백엔드든 `gemma-4`라서([§10.4](#104-모델-교체-호환-계층-compat)), 라벨 없이 재면 결과 표의 `model` 열이 전부 `gemma-4`가 되어 무엇을 잰 기록인지 구분할 수 없습니다. 실제 모델을 라벨로 남기세요.
+> ⚠️ **모델 비교 측정에는 `--label`이 필수입니다.** 자동 추출되는 이름은 이제 어느 백엔드든 `gemma-4`라서([§10.4](#104-모델-교체-호환-계층-compat)), 라벨 없이 재면 결과 표의 `model` 열이 전부 `gemma-4`가 되어 무엇을 잰 기록인지 구분할 수 없습니다. 생략하면 실행 첫 화면에 경고 한 줄이 뜹니다.
 >
 > ```bash
 > ./start.sh speed 5015 --label "Qwen3.8-27B-FP8"
