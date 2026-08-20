@@ -320,5 +320,6 @@ HF 토론에 「Very bad results with model quant and KV cache quant, only BF16 
 ## 부록: 관련 문서
 
 - [comparison.md](comparison.md) — Gemma 4 vs Qwen 3.6 운영 관점 비교 (서빙 효율·안정성)
+- [qwen38.md](qwen38.md) — Qwen3.8-27B 스펙·벤치마크·Thinking 제어. **한국어 밖의 성능 축**(추론·코딩·에이전트)은 이쪽이다
 - [gemma4.md](gemma4.md) — Gemma 4 전 라인업 스펙
 - [qwen36.md](qwen36.md) · [qwen35.md](qwen35.md) — Qwen 계열 스펙

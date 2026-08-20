@@ -8,11 +8,23 @@
 
 | 경로 | 내용 |
 |------|------|
+| `cards/` | HuggingFace 모델카드 로컬 사본 |
 | `bench/` | 서드파티 벤치마크 원본 |
 | `papers/` | arXiv 논문 전문 (텍스트 추출본) |
 | `community/` | 커뮤니티·블로그 글 원문 |
 | `probe/` | Qwen3.8 라이브 프로브 스크립트와 실측 기록 |
 | `collect/` | 수집에 쓴 스크립트 |
+
+## cards/
+
+수집 당시의 모델카드 사본이다. 카드는 갱신되므로 인용 시점을 고정하려고 남긴다.
+
+| 파일 | 설명 |
+|------|------|
+| `hf_Qwen_Qwen3.8-27B.md` | Qwen3.8-27B 모델카드. 텍스트·비전 벤치마크 표, 아키텍처 구성, `reasoning_effort`·`preserve_thinking` 설명, YaRN 설정이 들어 있다 |
+| `hf_google_gemma-4-31b-it.md` | Gemma 4 31B 모델카드. 벤치마크 표에 31B·26B-A4B·12B·E4B·E2B와 Gemma 3 27B가 한 표로 실려 있어 26B 수치의 출처이기도 하다 |
+
+두 카드를 나란히 읽은 결과는 [`qwen38.md`](../../qwen38.md) 2.3절에 정리했다. 같은 이름으로 겹치는 벤치마크는 GPQA Diamond, LiveCodeBench v6, HLE 세 개뿐이다.
 
 ## bench/
 

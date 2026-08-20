@@ -3,11 +3,14 @@
 > 조사일: 2026-04-20
 > 대상: L40S 46GB × 2 (chatbot-poc 현재 운영 프로필) 기준 모델 선택 가이드
 > 비교 버전
->   - **Qwen 3.6-35B-A3B-FP8** (2026-04-16 출시) — 조사 당시 운영 모델 (현재는 동일 Qwen3.6 계열 **27B-FP8**로 교체)
+>   - **Qwen 3.6-35B-A3B-FP8** (2026-04-16 출시) — 조사 당시 운영 모델
 >   - **Gemma 4 31B-it** (2026-04-02 출시) — 주 비교 대상 (Dense 플래그십)
 >   - **Gemma 4 26B-A4B-it** (2026-04-02 출시) — 보조 비교 대상 (MoE)
 >
-> 상세 스펙 원문: [qwen36.md](qwen36.md) · [gemma4.md](gemma4.md)
+> ⚠️ **현행 모델은 이 표와 다르다** (2026-08-20 기준). 연구계 `qwen.yaml`은 **Qwen3.8-27B-FP8**,
+> 운영계 `prd-gemma.yaml`은 **Gemma 4 26B-A4B-it**이다. Qwen 쪽 세대 갱신분은 [2.6](#26-qwen38-27b-갱신-2026-08-20)에 정리했다.
+>
+> 상세 스펙 원문: [qwen38.md](qwen38.md) · [qwen36.md](qwen36.md) · [gemma4.md](gemma4.md)
 
 ---
 
@@ -104,6 +107,25 @@
 - **Qwen 3.6 강점**: 수학(AIME, HMMT), SWE-bench·Terminal-Bench 계열 에이전트 코딩, 비디오 멀티모달, MoE 활성 3B 효율.
 - **Gemma 4 강점**: 다국어(MMMLU), 경쟁 코딩(Codeforces ELO), 비전 일부(MMMU-Pro).
 - **비교 불가 영역**: Qwen 3.6이 Tau2/HLE 수치 미공개, Gemma 4가 SWE-bench 수치 미공개. **동일 벤치 직접 비교 가능한 항목에서는 대부분 Qwen 3.6 우세**.
+
+### 2.6 Qwen3.8-27B 갱신 (2026-08-20)
+
+연구계 인스턴스가 Qwen3.8-27B-FP8로 교체되면서 위 표의 Qwen 열은 두 세대 뒤처진 값이 됐다. **두 모델카드가 같은 이름으로 싣는 벤치마크는 세 개뿐이다.**
+
+| 벤치마크 | **Qwen3.8-27B** | Gemma 4 31B | Gemma 4 26B-A4B |
+|------|:---:|:---:|:---:|
+| **GPQA Diamond** | **89.2** | 84.3 | 82.3 |
+| **LiveCodeBench v6** | **90.3** | 80.0 | 77.1 |
+| **HLE** | **30.8** | 19.5 (검색 사용 26.5) | 8.7 (검색 사용 17.2) |
+
+Qwen3.8 카드에만 있는 항목은 SWE-bench Pro 61.7, Terminal Bench 2.1 73.0, IFBench 79.5이고, Gemma 4 카드에만 있는 항목은 MMLU-Pro 85.2, AIME 2026 89.2, Tau2 76.9, MMMLU 88.4다. 서로 비는 칸이 많아 종합 우열은 위 세 항목 밖으로 넓힐 수 없다.
+
+> ⚠️ **세 가지를 함께 볼 것.**
+> - **측정 조건이 다르다.** Qwen 쪽 코딩·에이전트 수치는 Claude Code 하네스에 256K 컨텍스트, `temperature=1.0` 기준이고 HLE는 GPT-4o가 채점했다. 두 자릿수 격차만 신호로 본다.
+> - **thinking을 켠 기준이다.** 현행 `qwen.yaml`은 `enable_thinking: false`라 위 수치가 그대로 재현되지 않는다.
+> - **한국어는 방향이 반대다.** 디노티시아 한국어 0.9000(Gemma 31B) 대 0.8775(Qwen3.5-27B), NOLLI 거시평균 48.3 대 44.4로 Gemma가 앞선다. 상세는 [korean.md](korean.md).
+>
+> 아키텍처·서빙 설정은 [qwen38.md](qwen38.md) 참조. 27B 계열은 3.5·3.6·3.8의 `config.json`이 `transformers_version`만 다를 정도로 동일해 서빙 프로필을 다시 잡을 필요가 없다.
 
 ---
 
@@ -311,11 +333,14 @@ mm_processor_cache_type: shm
 
 chatbot-poc는 현재 Qwen 3.6로 운영 중이며, Mamba-hybrid 전용 방어선(`async_scheduling: false`, `disable_chunked_mm_input` 금지 등)이 `instances/qwen.yaml`에 반영되어 있습니다. 모델 교체 시 위 플래그 차이를 체크하세요.
 
+> 📌 **2026-08-20 갱신** — 연구계는 Qwen3.8-27B-FP8, 운영계 메인 챗은 Gemma 4 26B-A4B-it입니다. 위 표는 조사 시점(Qwen3.6-35B-A3B) 기준이라 서빙 효율 항목의 "활성 3B" 근거가 27B Dense에는 적용되지 않습니다. 방어 플래그는 아키텍처 클래스가 같아 그대로 유효합니다. 상세는 [qwen38.md](qwen38.md)를 보세요.
+
 ---
 
 ## 부록: 원본 조사 문서
 
 - [korean.md](korean.md) — 한국어 능력 전용 비교 (Gemma 4 26B/31B vs Qwen3.8 27B, 2026-08-19)
+- [qwen38.md](qwen38.md) — **현행 연구계 모델**. Qwen3.8-27B 벤치마크·아키텍처·Thinking 제어·서빙
 - [qwen36.md](qwen36.md) — Qwen 3.6 벤치마크·아키텍처·서빙·알려진 이슈 전문
 - [qwen35.md](qwen35.md) — Qwen 3.5 전 라인업 (Qwen 3.6 전신)
 - [gemma4.md](gemma4.md) — Gemma 4 전 라인업·Thinking 모드·운영 플래그
