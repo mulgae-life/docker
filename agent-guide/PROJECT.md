@@ -17,7 +17,7 @@ last-updated: 2026-08-20 (모델명 gemma-4 고정 + 게이트웨이 호환 계�
 | **프로젝트** | docker (서버 세팅 & 운영 구성 모음) |
 | **목적** | 인프라(어디에 띄우는가) ↔ 서빙(무엇을 어떻게 띄우는가)을 한 레포에서 관리하면서 디렉토리로 책임 분리 |
 | **기술 스택** | Docker, Ubuntu 24.04, NVIDIA CUDA 12.6, AWS EC2 GPU, vLLM, Python 3.12 / Node.js LTS |
-| **운영 자산** | `my-docker-server/` (로컬 dev/GPU) + `aws/` (EC2 GPU 인프라) + `llm-serving/vllm/` (서빙) |
+| **운영 자산** | `my-docker-server/` (로컬 dev/GPU) + `aws/` (EC2 GPU 인프라) + `on-prem/` (사내 H200 호스트 셋업) + `llm-serving/vllm/` (서빙) |
 | **작업 관리** | 별도 도구 없음 → `git log` + `SESSION.md` "다음 작업" |
 
 ---
@@ -27,7 +27,7 @@ last-updated: 2026-08-20 (모델명 gemma-4 고정 + 게이트웨이 호환 계�
 | 레이어 | 책임 | 위치 | 안 다루는 것 |
 |--------|------|------|------------|
 | **개발 환경** | 로컬 PC·사내 서버에 띄우는 컨테이너 (개발자 PC) | `my-docker-server/` | EC2 호스트 셋업, 모델 서빙 |
-| **인프라** | EC2 호스트 셋업, 드라이버, 다중 사용자, 포트/볼륨 정책 | `aws/` | 모델 추론 로직, 게이트웨이 라우팅 |
+| **인프라** | 호스트 셋업, 드라이버, 다중 사용자, 포트/볼륨 정책 | `aws/` (EC2, 컨테이너 계층 포함) / `on-prem/` (사내 RHEL 10 H200 — 호스트 계층만, `.env`·compose·`user.sh`는 `aws/` 공유) | 모델 추론 로직, 게이트웨이 라우팅 |
 | **서빙** | LLM 모델 서빙 프레임워크 설정·게이트웨이·운영 가이드 | `llm-serving/` | 어디에 띄울지 (인프라), 컨테이너 OS 설정 |
 
 > 신규 파일을 만들 때는 위 책임 표를 보고 디렉토리를 결정하세요. 예: vLLM의 새로운 멀티모달 설정은 `llm-serving/vllm/`, EC2 자동 스케일 정책은 `aws/`, 새로운 로컬 GPU 워크플로우는 `my-docker-server/`.
@@ -124,6 +124,7 @@ docker/
 | **베이스 OS** | Ubuntu 24.04, NVIDIA CUDA 12.6.3-devel-ubuntu24.04 |
 | **GPU 호스트** | NVIDIA Open Driver, NVIDIA Container Toolkit, Fabric Manager (H100/H200/A100/B100/B200) |
 | **클라우드** | AWS EC2 (g6e/p4/p5), EBS, IAM/S3, SSM Session Manager |
+| **온프레미스** | RHEL 10, H200, 드라이버 580 LTSB 고정(`dnf versionlock`), Docker CE 저장소, 폐쇄망 대비 사전 pull |
 | **서빙** | vLLM (chat + audio + realtime), FastAPI 게이트웨이 (OpenAI 호환 + 대기열 기반 과부하 차단 + 모델 교체 호환 계층). LLM(:5015/:5016 — API 노출명은 백엔드 모델과 무관하게 `gemma-4` 고정) + STT(Voxtral :5018, 비교 PoC :5017). 향후 SGLang 추가 예정 |
 | **런타임** | Python 3.12, Node.js LTS (nvm) |
 | **개발 도구** | Claude Code, OpenAI Codex, GitHub CLI, tmux, fzf, ripgrep |

@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-08-20 (모델명 gemma-4 고정 + 호환 계층 + traffic --label·문서 정합성 + 정체성 프롬프트 주입 + fingerprint 고정)
+last-updated: 2026-08-28 (on-prem/ 신설 — RHEL 10 H200 호스트 셋업 + 폐쇄망 점검)
 ---
 
 # 세션 상태
@@ -24,6 +24,7 @@ last-updated: 2026-08-20 (모델명 gemma-4 고정 + 호환 계층 + traffic --l
 
 | 우선순위 | 작업 | 상태 |
 |---------|------|------|
+| P1 | **온프레미스 H200 서버 셋업 (`on-prem/`)**: 8/28 골격 신설 — `setup-host.sh`(RHEL 10, 드라이버 580.178.04 LTSB 고정 + versionlock, Docker CE, Fabric Manager는 `/dev/nvidia-nvswitch*`로 판단, 베이스 이미지 사전 pull), `start.sh check`(폐쇄망 준비 점검), `.env.prd`(H200 8장 기준, git 미추적). 컨테이너 계층은 `aws/` 공유. 잔존: ① 설치팀 회신 대기 — HGX/PCIe 구성, 데이터 NVMe 경로(`VOLUME_DEVICE`), RAM ② 실서버에서 `setup-host.sh` 최초 실행 검증(문법·`check` 로직만 연구계에서 확인, RHEL 실기동 미검증) ③ `docker-compose.yml`의 `apparmor=unconfined`가 RHEL Docker에서 무시되는지 확인 ④ 5-3 pip 오프라인 절차 실측. | 골격 ✅, 실서버 검증 대기 |
 | P1 | **`gemma-4` 별칭 + 정체성 프롬프트 운영계 반영**: 8/20 연구계 적용·검증 완료. 잔존 — `./start.sh push` 후 운영계에서 인스턴스·게이트웨이 **둘 다** 재기동. 게이트웨이 재기동만으로 걸리는 것은 호환 계층과 정체성 주입(코드 기본값 on)이고, 별칭과 `fingerprint_mode: custom`은 **인스턴스 재기동이 있어야** 반영된다. 클라이언트 `.env`(`CHAT_MODEL` 등)는 `VLLM_OPS_GUIDE.md` §9.4 참고. | 연구계 ✅, 운영계 대기 |
 | P1 | **:5015 운영 프로파일 (26B 기준)**: 2026-07-21부터 :5015 = 비PII 직접 게이트웨이 + gemma-26b(fp8·TP2·gmu 0.9·max_len 32768, overload 20/40). 잔존: 장문 트래픽 기준 latency·429 비율 측정. | 갱신(모델 교체), 장문 검증 잔존 |
 | P1 | **MTP 실기동 검증 (31B/26B/Qwen)**: 31B·Qwen 27B(5/13) + 26B-A4B(7/21, QA 통과) 실기동 확인. 잔존: ① Qwen 5016 재기동·가용성 ② acceptance/TPOT 사내 벤치(`slm_research/mtp.md` §5 참고). | 부분 완료, 벤치 잔존 |
