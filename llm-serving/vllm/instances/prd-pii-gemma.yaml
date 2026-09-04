@@ -27,7 +27,7 @@ uvicorn_log_level: info          # HTTP 서버 로그 레벨
 # GPU / 메모리
 gpus: [0]                        # 사용 GPU 번호 목록
 tensor_parallel_size: 1          # 텐서 병렬 크기 (gpus 개수와 일치)
-gpu_memory_utilization: 0.8      # GPU 메모리 비율 (0.85 멀티모달~0.92 가중치 큼)
+gpu_memory_utilization: 0.9      # GPU 메모리 비율 (0.85 멀티모달~0.92 가중치 큼)
                                  # ⚠️ 이 비율 안에 가중치+활성화+KV가 모두 들어간다. 올리면
                                  #    KV만 늘고 활성화 여유가 줄어 대형 배치에서 OOM
 
@@ -38,7 +38,7 @@ env:
                                  # ⚠️ KV connector(Nixl/Mooncake) 쓰면 vLLM이 기동 거부
 
 # 추론
-max_model_len: 32768             # 컨텍스트 길이 (프롬프트+출력 합산)
+max_model_len: 65536             # 컨텍스트 길이 (프롬프트+출력 합산)
 max_num_seqs: 20                 # 동시 처리 시퀀스 수
 max_num_batched_tokens: 32768    # 배치 최대 토큰 수 (멀티모달은 encoder_cache로 복제)
 seed: 42                         # 재현용 전역 시드

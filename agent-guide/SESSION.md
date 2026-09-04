@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-08-28 (on-prem/ 신설 — RHEL 10 H200 호스트 셋업 + 폐쇄망 점검)
+last-updated: 2026-09-04 (운영계 gemma를 31B 덴스로 전환 + gemma 4형제 메모리·컨텍스트 정합)
 ---
 
 # 세션 상태
@@ -26,7 +26,8 @@ last-updated: 2026-08-28 (on-prem/ 신설 — RHEL 10 H200 호스트 셋업 + �
 |---------|------|------|
 | P1 | **온프레미스 H200 서버 셋업 (`on-prem/`)**: 8/28 골격 신설 — `setup-host.sh`(RHEL 10, 드라이버 580.178.04 LTSB 고정 + versionlock, Docker CE, Fabric Manager는 `/dev/nvidia-nvswitch*`로 판단, 베이스 이미지 사전 pull), `start.sh check`(폐쇄망 준비 점검), `.env.prd`(H200 8장 기준, git 미추적). 컨테이너 계층은 `aws/` 공유. 잔존: ① 설치팀 회신 대기 — HGX/PCIe 구성, 데이터 NVMe 경로(`VOLUME_DEVICE`), RAM ② 실서버에서 `setup-host.sh` 최초 실행 검증(문법·`check` 로직만 연구계에서 확인, RHEL 실기동 미검증) ③ `docker-compose.yml`의 `apparmor=unconfined`가 RHEL Docker에서 무시되는지 확인 ④ 5-3 pip 오프라인 절차 실측. | 골격 ✅, 실서버 검증 대기 |
 | P1 | **`gemma-4` 별칭 + 정체성 프롬프트 운영계 반영**: 8/20 연구계 적용·검증 완료. 잔존 — `./start.sh push` 후 운영계에서 인스턴스·게이트웨이 **둘 다** 재기동. 게이트웨이 재기동만으로 걸리는 것은 호환 계층과 정체성 주입(코드 기본값 on)이고, 별칭과 `fingerprint_mode: custom`은 **인스턴스 재기동이 있어야** 반영된다. 클라이언트 `.env`(`CHAT_MODEL` 등)는 `VLLM_OPS_GUIDE.md` §9.4 참고. | 연구계 ✅, 운영계 대기 |
-| P1 | **:5015 운영 프로파일 (26B 기준)**: 2026-07-21부터 :5015 = 비PII 직접 게이트웨이 + gemma-26b(fp8·TP2·gmu 0.9·max_len 32768, overload 20/40). 잔존: 장문 트래픽 기준 latency·429 비율 측정. | 갱신(모델 교체), 장문 검증 잔존 |
+| P1 | **운영계 31B 전환 반영**: 9/4 `prd-gemma`를 26B-A4B → 31B 덴스로 교체(yaml만). 잔존 — ① 운영계 `/models/LLM/google/`에 `gemma-4-31B-it` **본체와 `-assistant` drafter 둘 다** 확보(폐쇄망이라 S3 경유, `${model}-assistant` 치환이라 yaml 수정은 불필요) ② `./start.sh push` → 운영계 `pull` → 인스턴스·게이트웨이 재기동(바로 위 별칭 반영과 같은 재기동에 묶인다) ③ 기동 로그의 `GPU KV cache size`·`Maximum concurrency` 확인 — 31B는 토큰당 KV가 26B의 4배라 `max_num_seqs: 20`이 실효하는지는 이 값으로만 판정된다 ④ 부하 시 `PreemptionMode.RECOMPUTE` 경고가 뜨면 `max_num_seqs`와 게이트웨이 `max_inflight_requests`를 함께 하향. | yaml ✅, 운영계 대기 |
+| P1 | **:5015 운영 프로파일 (26B 기준)**: 2026-07-21부터 :5015 = 비PII 직접 게이트웨이 + gemma-26b(fp8·TP2·gmu 0.9·max_len 65536 — `5a8fd1b`에서 32768→65536, overload 20/40). 잔존: 장문 트래픽 기준 latency·429 비율 측정. | 갱신(모델 교체), 장문 검증 잔존 |
 | P1 | **MTP 실기동 검증 (31B/26B/Qwen)**: 31B·Qwen 27B(5/13) + 26B-A4B(7/21, QA 통과) 실기동 확인. 잔존: ① Qwen 5016 재기동·가용성 ② acceptance/TPOT 사내 벤치(`slm_research/mtp.md` §5 참고). | 부분 완료, 벤치 잔존 |
 | P1 | **모델 간 속도 매트릭스**: `./start.sh speed [name\|all]` (8/10 진입점 신설 — 무인자면 기동된 게이트웨이를 순회하며 같은 파일에 누적). 26B-A4B 6행 확보(c=1 TPS 168.5 / c=10 TPS 81 — 31B quick 64.8 대비 단발 약 2.6배). 잔존: 31B·Qwen 풀 매트릭스로 3모델 비교 완성. | 부분 완료(26B 측정) |
 | P1 | `llm-serving/sglang/` 디렉토리 골격 (운영 가이드 + 런처 + 설정 + 테스트) | Todo |
@@ -51,6 +52,20 @@ last-updated: 2026-08-28 (on-prem/ 신설 — RHEL 10 H200 호스트 셋업 + �
 ---
 
 ## 최근 세션
+
+### 2026-09-04 (운영계 gemma 31B 덴스 전환 + gemma 4형제 파라미터 정합)
+
+- **목표**: `prd-gemma`의 백엔드를 26B-A4B(MoE)에서 31B 덴스로 교체하고, 같은 모델을 쓰는 나머지 gemma 인스턴스의 메모리·컨텍스트 값을 하나로 맞춘다.
+- **변경**: `instances/prd-gemma.yaml`(model 26B-A4B → 31B) · `instances/gemma.yaml`(gmu 0.95 → 0.9, max_model_len 32768 → 65536) · `instances/prd-pii-gemma.yaml`(gmu 0.8 → 0.9, max_model_len 32768 → 65536) · `SESSION.md`
+- **결정**:
+  - **정합 기준은 `prd-gemma`, 근거는 `qwen.yaml`** — 같은 연구계 L40S TP2에서 8/18 OOM 대응으로 조정된 그 파일이 `gmu 0.9` + `max_model_len 65536`이다. 두 값 모두 이미 실증된 조합이라 여기에 맞췄다.
+  - **`gemma.yaml`의 0.95는 8/18 OOM 대응 누락분**이었다. 같은 GPU 구성에서 Qwen3.8(`intermediate_size` 17,408)이 0.93으로 죽었는데, `intermediate_size`가 21,504로 더 큰 31B가 더 높은 0.95를 쓰고 있었다. 정합 이전에 안전 문제라 함께 내렸다.
+  - **`host: 127.0.0.1`은 정합 대상에서 제외** — `prd-pii-gemma`는 PII 프록시 뒤라 vLLM 직행 우회를 막는 값이다. 0.0.0.0으로 맞추면 PII 검사를 건너뛰는 경로가 열린다.
+  - **`max_num_seqs`·`num_speculative_tokens`는 손대지 않았다** — 네 파일이 이미 같고(20 / 4), 값을 바꾸는 것은 정합이 아니라 튜닝이다. 판단은 실측 뒤로 미뤘다.
+- **분석**: 31B 덴스는 26B-A4B 대비 full-attention 레이어가 5 → 10개, KV head가 8 → 16개라 **토큰당 KV가 정확히 4배**(40 KiB → 160 KiB)다. `intermediate_size`는 2,112 → 21,504로 10배라 활성화 피크도 커진다. 다만 vLLM은 KV가 모자라도 기동에 실패하지 않고 preempt로 미루므로, 모델명만 바꿔 띄우면 증상이 보이지 않는다. 판정은 추정이 아니라 기동 로그의 `Maximum concurrency`와 부하 중 `PreemptionMode.RECOMPUTE` 경고로 한다.
+- **부수**: "다음 작업"의 :5015 프로파일 행이 `max_len 32768`로 남아 있던 것을 65536으로 정정(`5a8fd1b`에서 바뀐 뒤 미반영).
+- **상태**: yaml 완료, 운영계 반영 대기. 검증은 `yaml.safe_load` 파싱과 파일 간 diff로 확인 — `prd-gemma`↔`prd-pii-gemma`는 `gateway_port`·`host` 두 줄, `prd-gemma`↔`gemma`는 `gateway_port`·`gpus`/`tensor_parallel_size`만 남았고 전부 존재 이유가 있는 차이다. 연구계·운영계 모두 실기동은 하지 않았다.
+- **미확인**: `prd-pii-gemma`의 기존 `gmu 0.8`은 근거를 코드·문서에서 찾지 못해 0.9로 맞췄다. 운영계에서 GPU 0을 다른 프로세스와 나눠 쓰려던 의도였다면 되돌려야 한다.
 
 ### 2026-08-20 (모델명 `gemma-4` 고정 + 게이트웨이 호환 계층)
 
