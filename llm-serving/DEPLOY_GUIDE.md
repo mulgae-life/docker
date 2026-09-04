@@ -203,7 +203,9 @@ cd /workspace/llm-serving/vllm && ./start.sh download <name>   # 이후 네트�
 cd /workspace/llm-serving/pii && bash start.sh down 5501 && bash start.sh up 5501  # 연구계는 5015
 ```
 
-> 로컬에서 파일을 지우거나 이름을 바꿨어도 별도 옵션이 필요 없다. `push`가 S3 프리픽스를 비우고 다시 올리고, `pull`이 `--delete`로 받으므로 로컬 → S3 → 운영계가 그대로 일치한다. 제외 목록(`logs/`·`.runtime/`·`audit.salt` 등)은 `--delete`에서도 보호되어 운영계의 로그와 시크릿은 지워지지 않는다. 규모를 먼저 보려면 `--dryrun`을 붙인다.
+> 로컬에서 파일을 지우거나 이름을 바꿨어도 별도 옵션이 필요 없다. `push`가 S3 프리픽스를 비우고 다시 올리고, `pull`이 `--delete --exact-timestamps`로 받으므로 로컬 → S3 → 운영계가 그대로 일치한다. 제외 목록(`logs/`·`.runtime/`·`audit.salt` 등)은 `--delete`에서도 보호되어 운영계의 로그와 시크릿은 지워지지 않는다. 규모를 먼저 보려면 `--dryrun`을 붙인다.
+>
+> **`pull` 전에 운영계 디렉토리를 지울 필요가 없다.** `aws s3 sync`는 체크섬을 보지 않고 크기와 수정시각만 비교하는데, 기본 규칙이 "크기가 같고 받는 쪽이 더 새로우면 스킵"이라 갱신된 파일이 조용히 넘어가는 일이 있었다. 받은 파일의 mtime이 S3 객체의 시각이 아니라 다운로드한 시각으로 찍혀 로컬이 늘 더 새롭기 때문이다. `--exact-timestamps`가 그 판정을 막는다. 디렉토리를 통째로 지우는 방식과 달리 위 제외 목록이 살아남는 것도 이점이다.
 
 ---
 

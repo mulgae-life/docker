@@ -255,6 +255,10 @@ docker compose build --no-cache && docker compose up -d
 sudo ~/aws/user.sh rebuild              # 사용자 컨테이너 일괄 갱신
 ```
 
+> 🔁 `pull` 전에 `~/aws`를 지울 필요가 없습니다. `aws s3 sync`는 체크섬을 보지 않고 크기와 수정시각만 비교하는데, 기본 규칙이 "크기가 같고 받는 쪽이 더 새로우면 스킵"이라 갱신된 파일이 조용히 넘어가는 일이 있었습니다. 받은 파일의 mtime이 S3 객체의 시각이 아니라 다운로드한 시각으로 찍혀 로컬이 늘 더 새롭기 때문입니다.
+>
+> `start.sh`가 `--exact-timestamps`로 그 판정을 막으므로 `pull` 한 번이면 S3와 같은 상태가 됩니다. 디렉토리를 통째로 지우고 받는 방식과 달리 제외 목록(`.env` 등)은 그대로 남습니다.
+
 ### 9-2. `.env`만 수정한 경우 (이미지 재빌드 불필요)
 ```bash
 docker compose up -d --force-recreate

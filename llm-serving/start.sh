@@ -26,12 +26,16 @@ cd "$SCRIPT_DIR"
 S3_URI="${LLM_SERVING_S3_URI:-s3://hgi-ai-res/hjjo/llm-serving/}"
 
 # push(로컬→S3) / pull(S3→로컬) 공통 제외 목록.
-# logs/, __pycache__/, 런처 임시 config(.vllm_serve_*), 포트 회피 상태(.runtime/),
-# samples/ 는 런타임 산출물이라 제외 (.gitignore와 동일 기준).
+# logs/, __pycache__/, .pytest_cache/, .ruff_cache/, 런처 임시 config(.vllm_serve_*),
+# 포트 회피 상태(.runtime/), samples/ 는 런타임 산출물이라 제외 (.gitignore와 동일 기준).
+# 두 캐시는 도구가 디렉토리 안에 자기 .gitignore를 심어 git에서는 저절로 빠지지만,
+# aws s3 sync는 .gitignore를 모르므로 여기 명시하지 않으면 S3를 오간다.
 SYNC_EXCLUDES=(
     --exclude '*/logs/*'
     --exclude '*/__pycache__/*'
     --exclude '*.pyc'
+    --exclude '*/.pytest_cache/*'
+    --exclude '*/.ruff_cache/*'
     --exclude '*/.vllm_serve_*'
     --exclude '*/.runtime/*'
     --exclude '*/samples/*'
@@ -85,11 +89,17 @@ cmd_push() {
 # S3 → 로컬 다운로드 (운영계 컨테이너에서 코드 받기)
 # --delete: S3에서 사라진 파일을 로컬에서도 지워 push(전체 교체)와 정확히 일치시킨다.
 # 제외 목록(logs/·.runtime/·audit.salt 등)은 --delete에서도 삭제되지 않고 보호된다.
+# --exact-timestamps: 크기가 같은 파일은 타임스탬프가 정확히 일치할 때만 건너뛴다.
+#   기본 규칙은 "크기가 같고 로컬이 더 새로우면 스킵"인데, sync로 받은 파일의 mtime은 S3
+#   객체의 시각이 아니라 다운로드한 시각으로 찍혀 로컬이 늘 더 새로워진다. 여기에 받은 쪽에서
+#   파일을 한 번 건드렸거나 두 서버 시계가 어긋나면 갱신된 파일이 조용히 스킵된다. sync는
+#   체크섬을 보지 않으므로 크기까지 같은 수정(yaml의 0.95 → 0.90 같은 자릿수 동일 치환)에서
+#   특히 잘 걸린다. 이 옵션이 그 판정을 막아 rm -rf 후 재다운로드와 같은 정합을 준다.
 cmd_pull() {
     require_aws pull
 
     echo "[pull] S3 → 로컬 동기화(잔재 삭제 포함): $S3_URI → $SCRIPT_DIR"
-    if ! aws s3 sync "$S3_URI" "$SCRIPT_DIR" --delete "${SYNC_EXCLUDES[@]}" "$@"; then
+    if ! aws s3 sync "$S3_URI" "$SCRIPT_DIR" --delete --exact-timestamps "${SYNC_EXCLUDES[@]}" "$@"; then
         echo "[pull] S3 다운로드 실패 — 경로/권한(IAM Role) 확인 후 재시도"
         exit 1
     fi

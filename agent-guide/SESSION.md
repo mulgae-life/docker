@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-09-04 (운영계 gemma를 31B 덴스로 전환 + gemma 4형제 메모리·컨텍스트 정합)
+last-updated: 2026-09-04 (gemma 31B 전환 + 파라미터 정합 / S3 pull 정합성 — exact-timestamps)
 ---
 
 # 세션 상태
@@ -53,7 +53,7 @@ last-updated: 2026-09-04 (운영계 gemma를 31B 덴스로 전환 + gemma 4형�
 
 ## 최근 세션
 
-### 2026-09-04 (운영계 gemma 31B 덴스 전환 + gemma 4형제 파라미터 정합)
+### 2026-09-04 (운영계 gemma 31B 덴스 전환 + 파라미터 정합 + S3 `pull` 정합성)
 
 - **목표**: `prd-gemma`의 백엔드를 26B-A4B(MoE)에서 31B 덴스로 교체하고, 같은 모델을 쓰는 나머지 gemma 인스턴스의 메모리·컨텍스트 값을 하나로 맞춘다.
 - **변경**: `instances/prd-gemma.yaml`(model 26B-A4B → 31B) · `instances/gemma.yaml`(gmu 0.95 → 0.9, max_model_len 32768 → 65536) · `instances/prd-pii-gemma.yaml`(gmu 0.8 → 0.9, max_model_len 32768 → 65536) · `SESSION.md`
@@ -66,6 +66,11 @@ last-updated: 2026-09-04 (운영계 gemma를 31B 덴스로 전환 + gemma 4형�
 - **부수**: "다음 작업"의 :5015 프로파일 행이 `max_len 32768`로 남아 있던 것을 65536으로 정정(`5a8fd1b`에서 바뀐 뒤 미반영).
 - **상태**: yaml 완료, 운영계 반영 대기. 검증은 `yaml.safe_load` 파싱과 파일 간 diff로 확인 — `prd-gemma`↔`prd-pii-gemma`는 `gateway_port`·`host` 두 줄, `prd-gemma`↔`gemma`는 `gateway_port`·`gpus`/`tensor_parallel_size`만 남았고 전부 존재 이유가 있는 차이다. 연구계·운영계 모두 실기동은 하지 않았다.
 - **미확인**: `prd-pii-gemma`의 기존 `gmu 0.8`은 근거를 코드·문서에서 찾지 못해 0.9로 맞췄다. 운영계에서 GPU 0을 다른 프로세스와 나눠 쓰려던 의도였다면 되돌려야 한다.
+- **후속(같은 날) — `pull` 정합성**: 대표님이 배포 때마다 `rm -rf /workspace/llm-serving` 후 다시 받아오던 이유가 "갱신된 파일인데 안 내려오는 경우"였다. 원인은 `aws s3 sync`가 **체크섬을 보지 않고 크기와 수정시각만 비교**하는 것이다. 기본 규칙이 "크기가 같고 받는 쪽이 더 새로우면 스킵"인데, sync로 받은 파일의 mtime은 S3 객체의 시각이 아니라 다운로드한 시각으로 찍혀 받는 쪽이 늘 더 새로워진다. 여기에 받은 쪽에서 파일을 한 번 건드렸거나 시계가 어긋나면 갱신분이 조용히 넘어간다.
+  - **조치**: 두 `start.sh`의 `cmd_pull`에 `--exact-timestamps` 추가(다운로드 방향 전용 옵션이라 `cmd_push`는 그대로). 판정이 "타임스탬프가 정확히 일치할 때만 스킵"으로 바뀌어 `pull` 한 번이 `rm -rf` 후 재다운로드와 같은 정합을 준다. `rm -rf`와 달리 제외 목록(`.env`·`audit.salt`)은 살아남는 것이 오히려 낫다.
+  - **실측**: 같은 조건 `--dryrun` 비교에서 기존 18건 → 변경 후 270건. 252개 파일이 "이미 최신"으로 스킵되고 있었다. 옵션 수용 여부는 오타 옵션(`--exact-timestampsXX` → `Unknown options`)과 대조해 aws-cli 1.44.81에서 확인.
+  - **부수**: `pii/.pytest_cache/`·`.ruff_cache/`가 S3를 오가고 있어(15개 객체) `SYNC_EXCLUDES`에 추가 → 전송 대상 270 → 255건. 두 캐시는 도구가 디렉토리 안에 자기 `.gitignore`를 심어 git에서는 저절로 빠지지만 `aws s3 sync`는 그것을 모른다. S3의 기존 객체는 다음 `push`가 프리픽스를 비우면서 정리된다.
+  - **문서**: `DEPLOY_GUIDE.md`·`SETUP_GUIDE.md` §9-1에 "pull 전에 디렉토리를 지울 필요가 없다"와 그 근거 반영.
 
 ### 2026-08-20 (모델명 `gemma-4` 고정 + 게이트웨이 호환 계층)
 
