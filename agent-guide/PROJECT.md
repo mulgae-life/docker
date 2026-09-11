@@ -47,6 +47,8 @@ docker/
 │   ├── docker-compose.yml            # cfd + dev-fullstack 서비스
 │   ├── entrypoint.sh                 # 홈 디렉토리 초기화 + chown
 │   ├── .env.example                  # USERNAME/PASSWORD/UID=2000/GID=2000
+│   ├── sshd-hardening.conf           # 컨테이너 sshd 브루트포스 대응 (이미지에 COPY)
+│   ├── ssh-guard.sh / .service       # 호스트 DOCKER-USER 방화벽 (Tailscale·LAN 통과, 그 외 rate-limit)
 │   └── README.md
 │
 ├── aws/                              # AWS EC2 GPU 인프라

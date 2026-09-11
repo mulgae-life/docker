@@ -85,6 +85,9 @@ RUN mkdir -p /etc/docker-home-init && cp -a /home/${USERNAME} /etc/docker-home-i
 RUN mkdir -p /run/sshd \
     && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config \
     && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+# 브루트포스 대응 설정 (컨테이너 안에서 수동으로 넣었던 50-hardening.conf 를 이미지에 고정)
+COPY sshd-hardening.conf /etc/ssh/sshd_config.d/50-hardening.conf
+RUN echo "AllowUsers ${USERNAME}" >> /etc/ssh/sshd_config.d/50-hardening.conf
 
 # ============================================
 # 작업 디렉토리
@@ -97,4 +100,5 @@ COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 EXPOSE 22 5001-5009
 
 ENTRYPOINT ["entrypoint.sh"]
-CMD ["/usr/sbin/sshd", "-D"]
+# -e: 컨테이너에 syslog 가 없으므로 sshd 로그를 표준 에러로 내보내 `docker logs cfd` 로 본다
+CMD ["/usr/sbin/sshd", "-D", "-e"]

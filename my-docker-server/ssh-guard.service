@@ -1,0 +1,12 @@
+[Unit]
+Description=cfd/dev-fullstack SSH 브루트포스 차단 규칙 (DOCKER-USER)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/workspace/docker/my-docker-server/ssh-guard.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -105,6 +105,39 @@ GID=2000             # 호스트 사용자의 GID (id -g 로 확인)
 | cfd | 5000 | 5001-5009 | 24g |
 | dev-fullstack | 5010 | 5011-5019 | 24g |
 
+## 🛡️ SSH 브루트포스 대응
+
+SSH 포트(5000/5010)를 공유기에서 외부로 열어두면 봇이 하루 수만 번 두드리며 sshd의 미인증 연결 좌석(`MaxStartups`)을 점유해, 정상 접속이 간헐적으로 거절됩니다. 두 계층으로 대응합니다.
+
+### 1) 컨테이너 sshd 설정 (이미지에 포함, 별도 작업 불필요)
+
+`sshd-hardening.conf`가 빌드 시 `/etc/ssh/sshd_config.d/50-hardening.conf`로 들어갑니다.
+
+| 항목 | 값 | 효과 |
+|------|----|------|
+| `MaxStartups` | 30:50:100 | 미인증 좌석을 기본 10에서 30으로 |
+| `LoginGraceTime` | 30 | 좌석 점유 시간을 기본 120초에서 30초로 |
+| `MaxAuthTries` | 3 | 연결당 비밀번호 시도 횟수 제한 |
+| `PerSourceMaxStartups` | 3 | IP당 동시 미인증 연결 제한 |
+| `AllowUsers` | `.env`의 USERNAME | 다른 계정명 시도는 즉시 거부 |
+
+sshd는 `-e` 옵션으로 실행되어 로그가 `docker logs <컨테이너>`로 나옵니다 (컨테이너에 syslog가 없어 기본값으로는 로그가 버려짐).
+
+### 2) 호스트 방화벽 (`ssh-guard.sh`, 재부팅 후 자동 적용)
+
+Docker가 포트를 공개하면 호스트 `INPUT` 체인이 아니라 `DOCKER-USER` 체인을 지나므로 거기에 규칙을 넣습니다. Tailscale(`100.64.0.0/10`)과 집 LAN(`192.168.75.0/24`)은 무조건 통과, 그 외 출처는 IP당 10분에 새 연결 20회를 넘으면 차단합니다. 컨테이너·Docker 재시작 없이 적용됩니다.
+
+```bash
+# 환경에 맞게 스크립트의 LAN 대역(192.168.75.0/24)과 PORTS 확인 후
+chmod +x ssh-guard.sh
+sudo ./ssh-guard.sh                                  # 즉시 적용 (여러 번 실행해도 안전)
+sudo cp ssh-guard.service /etc/systemd/system/       # ExecStart 경로가 이 레포 위치와 맞는지 확인
+sudo systemctl daemon-reload && sudo systemctl enable --now ssh-guard.service
+sudo iptables -L DOCKER-USER -v -n                   # 카운터로 차단 동작 확인
+```
+
+> 임계값을 바꾸려면 스크립트의 `--hitcount`를 수정하고 기존 규칙을 지운 뒤 다시 실행합니다. 봇을 원천 차단하려면 모든 기기를 Tailscale로 접속하게 하고 공유기 포트포워딩을 닫는 것이 가장 확실합니다.
+
 ## 📂 프로젝트 셋업
 
 컨테이너 접속 후:

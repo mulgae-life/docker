@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-09-04 (gemma 31B 전환 + 파라미터 정합 / S3 pull 정합성 — exact-timestamps)
+last-updated: 2026-09-11 (my-docker-server SSH 브루트포스 대응 — sshd 강화 + DOCKER-USER 방화벽, 개인 데탑 서버 체크아웃 정합)
 ---
 
 # 세션 상태
@@ -52,6 +52,22 @@ last-updated: 2026-09-04 (gemma 31B 전환 + 파라미터 정합 / S3 pull 정�
 ---
 
 ## 최근 세션
+
+### 2026-09-11 (my-docker-server SSH 브루트포스 대응 + 개인 데탑 서버 체크아웃 정합)
+
+- **배경**: 개인 데탑 서버(hjjo-desktop, cfd·dev-fullstack 운영 중)에서 VSCode Remote-SSH 접속이 간헐적으로 첫 시도에 거절되는 증상. 이 서버의 체크아웃은 4/29 재편 이전(루트 Dockerfile 구조)에 멈춰 있었다.
+- **원인**: 공유기가 공인 5000/5010을 컨테이너 sshd로 포워딩하고 있어 약 36개 IP의 분산 브루트포스(신규 연결 분당 ~227회, IP당 9~14회)가 sshd `MaxStartups 10` 좌석을 5~14개로 상시 점유 → 10 초과분은 확률적으로 거절. Tailscale 경유든 공인 경유든 같은 sshd를 쓰므로 경로와 무관하게 영향. 컨테이너 `/var/log/btmp`가 13.5GB까지 자란 상태.
+- **변경**:
+  - `my-docker-server/sshd-hardening.conf` 신설 + 두 Dockerfile에 `COPY` → `sshd_config.d/50-hardening.conf`(MaxStartups 30:50:100, LoginGraceTime 30, MaxAuthTries 3, PerSourceMaxStartups 3) + `RUN echo "AllowUsers ${USERNAME}"`. CMD에 `-e` 추가(컨테이너에 syslog가 없어 sshd 로그가 버려지던 것을 `docker logs`로).
+  - `my-docker-server/ssh-guard.sh` + `ssh-guard.service` 신설: 호스트 `DOCKER-USER` 체인에 5000/5010 규칙 — Tailscale(100.64.0.0/10)·LAN(192.168.75.0/24) RETURN, 그 외 `xt_recent` 600초 20회 초과 DROP. 멱등(`iptables -C` 후 삽입), `After=docker.service` oneshot으로 재부팅 후 자동 복구.
+  - `README.md`에 "SSH 브루트포스 대응" 절, `PROJECT.md` 트리 갱신.
+- **결정**:
+  - **컨테이너·sshd 무중단 원칙**: cfd에서 CFD 실험(수 시간 잔여)이 돌고 있고 sshd가 PID 1이라 reload(SIGHUP)조차 재exec 실패 시 컨테이너 종료 위험 → sshd 설정은 파일만 고쳐 두고(`sshd -t` 검증) 다음 재시작 때 적용, 즉시 효과는 호스트 방화벽만으로 확보. 결과: 봇 좌석 점유 5~14 → 0, 신규 봇 연결 227/분 → 4/분.
+  - **rate-limit 임계값 20/600s**: 첫 시도 15/60s는 무효였다 — 봇이 `PerSourceMaxStartups 3`에 스로틀되어 IP당 9~14/분으로 바로 아래에 머문다. 8/600s로 효과 확인 후 사용자 여유를 위해 20으로 상향(사용자는 Tailscale·LAN 경로라 어차피 RETURN).
+  - **이 서버 UID는 1000 유지**: 재편 후 기본값 2000은 클라우드 계정 기준. 데탑은 호스트 계정·기존 컨테이너·`/workspace` 소유권이 모두 1000이라 `.env`에 `UID=1000`/`GID=1000` 명시(git 외).
+- **정합 작업**: 이 서버에서 변경분 커밋 → `git pull --rebase`(rename 추적으로 Dockerfile 수정이 `my-docker-server/`로 이동) → 신규 3파일 `git mv` → `.env`를 `my-docker-server/`로 이동 → service `ExecStart` 경로 갱신.
+- **교훈**: ① Docker 공개 포트는 호스트 `INPUT`이 아니라 `DOCKER-USER`(FORWARD)를 지나고 DNAT 이후라 `--ctorigdstport`로 원래 포트를 매칭해야 한다. ② Tailscale 경유 포워딩 트래픽은 SNAT되어 컨테이너 안에서 `172.18.0.1`로 보인다(100.x 아님). ③ `last`는 pty 세션만 기록해 VSCode(notty) 세션은 안 보인다. ④ 컨테이너 root는 CAP_SYS_PTRACE가 없어 sshd `/proc/PID/fd`를 못 읽는다.
+- **잔존**: ① 데탑 컨테이너는 아직 루트 compose 라벨(`/workspace/docker/docker-compose.yml`)로 떠 있어 재생성 시 `my-docker-server/`에서 `down`→`up`으로 프로젝트 전환 필요(실험 종료 후). ② 휴대폰 터미널(KT 공인 IP)을 Tailscale로 옮기면 공유기 5000/5010 포워딩을 닫을 수 있음. ③ 컨테이너에 logrotate가 없어 `btmp`는 수동 truncate(9/11 비움).
 
 ### 2026-09-04 (운영계 gemma 31B 덴스 전환 + 파라미터 정합 + S3 `pull` 정합성)
 
