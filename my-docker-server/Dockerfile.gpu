@@ -76,6 +76,21 @@ RUN existing_user=$(getent passwd ${UID} | cut -d: -f1 || true); \
 RUN su - ${USERNAME} -c "curl -fsSL https://claude.ai/install.sh | bash"
 RUN su - ${USERNAME} -c ". /usr/local/nvm/nvm.sh && npm install -g @openai/codex"
 
+# ============================================
+# 추가 도구 (2026-09 컨테이너 안에서 수동 설치하던 것을 이미지에 고정)
+# ============================================
+# 문서/미디어 처리: pandoc·latexdiff(TeX), poppler-utils·qpdf(PDF), imagemagick·librsvg2-bin(이미지), ffmpeg
+# 한글 폰트: pandoc HTML·imagemagick·rsvg 출력에서 한글이 네모로 깨지지 않도록 (dev 와 동일 패키지)
+# GPU 모니터링: nvtop
+RUN apt update && apt install -y \
+    ffmpeg imagemagick librsvg2-bin \
+    pandoc latexdiff \
+    poppler-utils qpdf \
+    fonts-nanum fonts-noto-cjk \
+    nvtop zip unzip \
+    && rm -rf /var/lib/apt/lists/*
+RUN su - ${USERNAME} -c ". /usr/local/nvm/nvm.sh && npm install -g @google/gemini-cli"
+
 # 홈 디렉토리 초기 파일 백업 (bind mount 시 복원용)
 RUN mkdir -p /etc/docker-home-init && cp -a /home/${USERNAME} /etc/docker-home-init/
 

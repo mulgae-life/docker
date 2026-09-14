@@ -22,7 +22,8 @@
 | **프레임워크** | Next.js, FastAPI, LangChain |
 | **DB/검색** | PostgreSQL client, Supabase CLI, ChromaDB |
 | **크롤링/테스트** | Playwright + Chromium, BeautifulSoup |
-| **도구** | Git, GitHub CLI, Claude Code, Codex, tmux, fzf, ripgrep |
+| **문서 변환** | LibreOffice (Writer/Impress), poppler-utils |
+| **도구** | Git, GitHub CLI, Claude Code, Codex, tmux, fzf, ripgrep, zip/unzip |
 | **로케일** | 한국어 (ko_KR.UTF-8), 서울 타임존 |
 
 ### cfd (GPU 연산)
@@ -31,7 +32,9 @@
 |------|------|
 | **런타임** | Node.js LTS (nvm), Python 3.12, CUDA 12.6 |
 | **라이브러리** | NumPy, Numba, CuPy, Matplotlib |
-| **도구** | Git, Claude Code, Codex, tmux, cmake |
+| **문서/미디어** | pandoc, latexdiff, poppler-utils, qpdf, ImageMagick, librsvg, ffmpeg, 한글 폰트 (Nanum, Noto CJK) |
+| **GPU 모니터링** | nvitop, nvtop |
+| **도구** | Git, Claude Code, Codex, Gemini CLI, tmux, cmake, zip/unzip |
 | **로케일** | 한국어 (ko_KR.UTF-8), 서울 타임존 |
 
 ## 🚀 빠른 시작

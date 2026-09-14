@@ -117,6 +117,17 @@ RUN existing_user=$(getent passwd ${UID} | cut -d: -f1 || true); \
 RUN su - ${USERNAME} -c "curl -fsSL https://claude.ai/install.sh | bash"
 RUN su - ${USERNAME} -c ". /usr/local/nvm/nvm.sh && npm install -g @openai/codex"
 
+# ============================================
+# 추가 도구 (2026-09 컨테이너 안에서 수동 설치하던 것을 이미지에 고정)
+# ============================================
+# 문서 변환: libreoffice(writer/impress → PDF 변환 등), poppler-utils(PDF 텍스트/이미지 추출)
+# libxfixes3: headless 브라우저/GUI 라이브러리 의존성, zip: cfd 와 맞춤
+RUN apt update && apt install -y \
+    libreoffice-writer libreoffice-impress \
+    poppler-utils \
+    libxfixes3 zip \
+    && rm -rf /var/lib/apt/lists/*
+
 # 홈 디렉토리 초기 파일 백업 (bind mount 시 복원용)
 RUN mkdir -p /etc/docker-home-init && cp -a /home/${USERNAME} /etc/docker-home-init/
 

@@ -11,7 +11,8 @@
 # 246MB 바이너리라 git 추적 제외 (Dockerfile.llm이 COPY + pip install로 사용).
 aws/wheels/
 
-.claude/scratch
+# Claude Code 세션 로컬 파일 (에이전트 메모리·스크래치) — 어느 하위 디렉토리에서 생기든 제외
+.claude/
 
 .archive/
 

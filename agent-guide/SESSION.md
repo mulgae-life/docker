@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-09-11 (my-docker-server SSH 브루트포스 대응 — sshd 강화 + DOCKER-USER 방화벽, 개인 데탑 서버 체크아웃 정합)
+last-updated: 2026-09-14 (my-docker-server 데탑 컨테이너 재생성 — 수동 설치 도구 Dockerfile 고정, compose 프로젝트 전환, sshd 강화 실적용)
 ---
 
 # 세션 상태
@@ -53,6 +53,18 @@ last-updated: 2026-09-11 (my-docker-server SSH 브루트포스 대응 — sshd �
 
 ## 최근 세션
 
+### 2026-09-14 (my-docker-server 데탑 컨테이너 재생성 + 수동 설치 도구 이미지 고정)
+
+- **배경**: 9/11 잔존 ①(compose 프로젝트 전환)과 sshd 강화 설정 실적용을 위해 데탑 재부팅 후 cfd·dev-fullstack을 재생성. 재생성은 writable layer를 버리므로, 컨테이너 안에서 손으로 깔아 쓰던 도구를 먼저 Dockerfile에 옮겨야 했다.
+- **조사 방법**: `docker diff` + `apt-mark showmanual`(베이스 이미지와 대조) + bash history로 후설치 목록 추출. `/etc` 변경·`/usr/local/bin`·시스템 pip·crontab은 없음 확인. TinyTeX(`~/.TinyTeX`)와 Antigravity CLI는 홈(바인드 마운트)에 있어 보존.
+- **변경**:
+  - `Dockerfile.gpu`: 추가 도구 블록 — `ffmpeg imagemagick librsvg2-bin pandoc latexdiff poppler-utils qpdf fonts-nanum fonts-noto-cjk nvtop zip unzip` + `npm install -g @google/gemini-cli`. 한글 폰트는 pandoc·ImageMagick 출력 깨짐 방지로 dev와 맞춤.
+  - `Dockerfile.dev`: `libreoffice-writer libreoffice-impress poppler-utils libxfixes3 zip`.
+  - `README.md` 포함 스택 표에 반영.
+- **결과**: `docker compose -p docker down` → `my-docker-server/`에서 `up -d --build`(전체 재빌드, cfd-gpu 19.1GB / dev-fullstack 7.69GB). 프로젝트 라벨 `my-docker-server`, sshd `-D -e`·`sshd -T`로 MaxStartups 30:50:100·AllowUsers hjjo 실적용 확인, uid 1000 매핑·홈·TinyTeX 정상. Node 22 → 24.21 LTS로 상승. openclaw(별도 프로젝트·네트워크)는 무영향.
+- **교훈**: ① nvm 전역 npm 패키지는 `/usr/local/nvm`(이미지 계층)에 들어가므로 재생성 때 사라진다 — CLI 도구는 Dockerfile에 고정. ② 이 서버는 RTC가 KST 로컬 시간인데 시스템 TZ가 UTC라 부팅 직후 9시간 앞서 있다가 NTP로 되돌아간다 → `docker ps`에 "Up Less than a second"로 보이는 표시 문제(동작 무관).
+- **잔존**: ① 휴대폰(KT 공인 IP)을 Tailscale로 옮기면 공유기 5000/5010 포워딩을 닫을 수 있음. ② 컨테이너에 logrotate가 없어 `btmp`는 수동 truncate.
+
 ### 2026-09-11 (my-docker-server SSH 브루트포스 대응 + 개인 데탑 서버 체크아웃 정합)
 
 - **배경**: 개인 데탑 서버(hjjo-desktop, cfd·dev-fullstack 운영 중)에서 VSCode Remote-SSH 접속이 간헐적으로 첫 시도에 거절되는 증상. 이 서버의 체크아웃은 4/29 재편 이전(루트 Dockerfile 구조)에 멈춰 있었다.
@@ -67,7 +79,7 @@ last-updated: 2026-09-11 (my-docker-server SSH 브루트포스 대응 — sshd �
   - **이 서버 UID는 1000 유지**: 재편 후 기본값 2000은 클라우드 계정 기준. 데탑은 호스트 계정·기존 컨테이너·`/workspace` 소유권이 모두 1000이라 `.env`에 `UID=1000`/`GID=1000` 명시(git 외).
 - **정합 작업**: 이 서버에서 변경분 커밋 → `git pull --rebase`(rename 추적으로 Dockerfile 수정이 `my-docker-server/`로 이동) → 신규 3파일 `git mv` → `.env`를 `my-docker-server/`로 이동 → service `ExecStart` 경로 갱신.
 - **교훈**: ① Docker 공개 포트는 호스트 `INPUT`이 아니라 `DOCKER-USER`(FORWARD)를 지나고 DNAT 이후라 `--ctorigdstport`로 원래 포트를 매칭해야 한다. ② Tailscale 경유 포워딩 트래픽은 SNAT되어 컨테이너 안에서 `172.18.0.1`로 보인다(100.x 아님). ③ `last`는 pty 세션만 기록해 VSCode(notty) 세션은 안 보인다. ④ 컨테이너 root는 CAP_SYS_PTRACE가 없어 sshd `/proc/PID/fd`를 못 읽는다.
-- **잔존**: ① 데탑 컨테이너는 아직 루트 compose 라벨(`/workspace/docker/docker-compose.yml`)로 떠 있어 재생성 시 `my-docker-server/`에서 `down`→`up`으로 프로젝트 전환 필요(실험 종료 후). ② 휴대폰 터미널(KT 공인 IP)을 Tailscale로 옮기면 공유기 5000/5010 포워딩을 닫을 수 있음. ③ 컨테이너에 logrotate가 없어 `btmp`는 수동 truncate(9/11 비움).
+- **잔존**: ① 데탑 컨테이너 compose 프로젝트 전환 → 9/14 완료. ② 휴대폰 터미널(KT 공인 IP)을 Tailscale로 옮기면 공유기 5000/5010 포워딩을 닫을 수 있음. ③ 컨테이너에 logrotate가 없어 `btmp`는 수동 truncate(9/11 비움).
 
 ### 2026-09-04 (운영계 gemma 31B 덴스 전환 + 파라미터 정합 + S3 `pull` 정합성)
 
