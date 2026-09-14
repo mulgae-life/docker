@@ -45,11 +45,11 @@ docker/
 │   ├── Dockerfile.dev                # Ubuntu 24.04 + Node/Python/Playwright/CC
 │   ├── Dockerfile.gpu                # CUDA 12.6 + CuPy/Numba
 │   ├── docker-compose.yml            # cfd + dev-fullstack 서비스
-│   ├── entrypoint.sh                 # 홈 디렉토리 초기화 + chown
+│   ├── entrypoint.sh                 # 홈 디렉토리 초기화 + chown + SSH 호스트 키 보관/복원
 │   ├── .env.example                  # USERNAME/PASSWORD/UID=2000/GID=2000
 │   ├── sshd-hardening.conf           # 컨테이너 sshd 브루트포스 대응 (이미지에 COPY)
 │   ├── ssh-guard.sh / .service       # 호스트 DOCKER-USER 방화벽 (Tailscale·LAN 통과, 그 외 rate-limit)
-│   └── README.md
+│   └── SETUP_GUIDE.md                # 설치·접속·운영·문제 해결 가이드 (aws/on-prem 과 같은 이름 규칙)
 │
 ├── aws/                              # AWS EC2 GPU 인프라
 │   ├── start.sh                      # S3 코드 배포 (push=전체 교체 / pull=--delete 받기)
@@ -211,7 +211,7 @@ curl http://localhost:5018/health   # 게이트웨이 health
 | [SESSION.md](SESSION.md) | 현재 상태, 다음 작업, 최근 세션 로그 |
 | [GUIDE.md](GUIDE.md) | 작업 원칙, 용어, 체크리스트 |
 | [../README.md](../README.md) | 레포 메타 안내 (디렉토리 진입점) |
-| [../my-docker-server/README.md](../my-docker-server/README.md) | 로컬 dev/GPU 환경 사용법 |
+| [../my-docker-server/SETUP_GUIDE.md](../my-docker-server/SETUP_GUIDE.md) | 로컬 dev/GPU 환경 설치·접속·운영·문제 해결 |
 | [../aws/SETUP_GUIDE.md](../aws/SETUP_GUIDE.md) | EC2 셋업·다중 사용자·dev/prd 모드 |
 | [../llm-serving/README.md](../llm-serving/README.md) | 서빙 프레임워크 인덱스 |
 | [../llm-serving/VLLM_API_GUIDE.md](../llm-serving/VLLM_API_GUIDE.md) | vLLM 사용자용 API 가이드 |

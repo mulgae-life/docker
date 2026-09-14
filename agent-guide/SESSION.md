@@ -61,9 +61,10 @@ last-updated: 2026-09-14 (my-docker-server 데탑 컨테이너 재생성 — 수
   - `Dockerfile.gpu`: 추가 도구 블록 — `ffmpeg imagemagick librsvg2-bin pandoc latexdiff poppler-utils qpdf fonts-nanum fonts-noto-cjk nvtop zip unzip` + `npm install -g @google/gemini-cli`. 한글 폰트는 pandoc·ImageMagick 출력 깨짐 방지로 dev와 맞춤.
   - `Dockerfile.dev`: `libreoffice-writer libreoffice-impress poppler-utils libxfixes3 zip`.
   - `README.md` 포함 스택 표에 반영.
+  - `my-docker-server/README.md` → **`SETUP_GUIDE.md`** 로 개명(aws/on-prem 과 같은 이름 규칙)하고 "한눈에 보기 → 사전 준비 → 설치 → 접속 → 보존/소실 → 운영 → 스택 → 브루트포스 → 문제 해결 → 커스터마이징" 순으로 재구성, 개조식으로 정리. 공개 레포라 SSH config 예시의 개인 주소는 자리표시자로. 루트 README·PROJECT.md 링크 갱신. `/work-verify` 점검으로 ImageMagick PDF 차단 서술(사실 아님 — 이 이미지는 policy에 PDF 규칙 없고 gs 포함) 정정, nvidia 문제 해결에 `nvidia-ctk runtime configure` 단계 추가, 조사 띄어쓰기를 레포 관행(`` `lsblk`로 ``)에 맞춤.
   - **SSH 호스트 키 영속화**(재생성 직후 발견한 문제의 재발 방지): 재빌드로 sshd 호스트 키가 새로 생겨 모든 클라이언트가 `known_hosts` 불일치로 접속 거부(`Connection reset ... [preauth]` 반복). compose 에 `/opt/docker-homes/<서비스>/ssh-hostkeys:/etc/ssh/hostkeys` 바인드 추가, `entrypoint.sh` 가 보관 키가 있으면 `/etc/ssh/` 로 복원하고 없으면(최초) 이미지 키를 보관. README 영속화 표에 행 추가.
 - **결과**: `docker compose -p docker down` → `my-docker-server/`에서 `up -d --build`(전체 재빌드, cfd-gpu 19.1GB / dev-fullstack 7.69GB). 프로젝트 라벨 `my-docker-server`, sshd `-D -e`·`sshd -T`로 MaxStartups 30:50:100·AllowUsers hjjo 실적용 확인, uid 1000 매핑·홈·TinyTeX 정상. Node 22 → 24.21 LTS로 상승. openclaw(별도 프로젝트·네트워크)는 무영향.
-- **교훈**: ① nvm 전역 npm 패키지는 `/usr/local/nvm`(이미지 계층)에 들어가므로 재생성 때 사라진다 — CLI 도구는 Dockerfile에 고정. ② 이 서버는 RTC가 KST 로컬 시간인데 시스템 TZ가 UTC라 부팅 직후 9시간 앞서 있다가 NTP로 되돌아간다 → `docker ps`에 "Up Less than a second"로 보이는 표시 문제(동작 무관).
+- **교훈**: ① nvm 전역 npm 패키지는 `/usr/local/nvm`(이미지 계층)에 들어가므로 재생성 때 사라진다 — CLI 도구는 Dockerfile에 고정. ② 이 서버는 RTC가 KST 로컬 시간인데 시스템 TZ가 UTC라 부팅 직후 9시간 앞서 있다가 NTP로 되돌아간다 → `docker ps`에 "Up Less than a second"로 보이는 표시 문제(동작 무관). ③ 점검 에이전트의 일반론("우분투 ImageMagick은 PDF 차단")도 실제 컨테이너에서 확인 후 문서화 — 이번 이미지에서는 사실이 아니었다.
 - **잔존**: ① 휴대폰(KT 공인 IP)을 Tailscale로 옮기면 공유기 5000/5010 포워딩을 닫을 수 있음. ② 컨테이너에 logrotate가 없어 `btmp`는 수동 truncate.
 
 ### 2026-09-11 (my-docker-server SSH 브루트포스 대응 + 개인 데탑 서버 체크아웃 정합)

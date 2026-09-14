@@ -17,7 +17,7 @@
 
 | 하고 싶은 것 | 시작 위치 |
 |--------------|----------|
-| 로컬 PC에 풀스택 dev/GPU 컨테이너 띄우기 | [`my-docker-server/README.md`](my-docker-server/README.md) |
+| 로컬 PC에 풀스택 dev/GPU 컨테이너 띄우기 | [`my-docker-server/SETUP_GUIDE.md`](my-docker-server/SETUP_GUIDE.md) |
 | AWS GPU 인스턴스에 vLLM 베이스 + 다중 사용자 운영 환경 셋업 | [`aws/SETUP_GUIDE.md`](aws/SETUP_GUIDE.md) |
 | 온프레미스 H200 서버(RHEL 10) 호스트 셋업 + 네트워크 끊기 전 점검 | [`on-prem/SETUP_GUIDE.md`](on-prem/SETUP_GUIDE.md) |
 | vLLM API 호출 (사용자) | [`llm-serving/VLLM_API_GUIDE.md`](llm-serving/VLLM_API_GUIDE.md) |
