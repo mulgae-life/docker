@@ -14,4 +14,19 @@ for INIT_DIR in /etc/docker-home-init/*/; do
     fi
 done
 
+# SSH 호스트 키 영속화: 이미지를 다시 빌드하면 키가 새로 생겨 클라이언트가
+# "호스트 키가 바뀌었다"며 접속을 거부한다. compose 가 /etc/ssh/hostkeys 를
+# 호스트 디렉토리로 마운트해 두면, 보관된 키가 있을 때는 복원하고
+# 없을 때(최초 기동)는 이미지가 만든 키를 보관한다.
+HOSTKEY_DIR=/etc/ssh/hostkeys
+if [ -d "$HOSTKEY_DIR" ]; then
+    if ls "$HOSTKEY_DIR"/ssh_host_*_key >/dev/null 2>&1; then
+        cp -a "$HOSTKEY_DIR"/ssh_host_* /etc/ssh/
+    else
+        cp -a /etc/ssh/ssh_host_* "$HOSTKEY_DIR"/
+    fi
+    chmod 600 /etc/ssh/ssh_host_*_key
+    chmod 644 /etc/ssh/ssh_host_*_key.pub
+fi
+
 exec "$@"

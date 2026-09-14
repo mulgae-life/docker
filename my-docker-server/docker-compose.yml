@@ -21,6 +21,7 @@ services:
     volumes:
       - /workspace:/workspace
       - /opt/docker-homes/cfd/${USERNAME}:/home/${USERNAME}
+      - /opt/docker-homes/cfd/ssh-hostkeys:/etc/ssh/hostkeys  # 재빌드 후에도 SSH 호스트 키 유지
     deploy:
       resources:
         limits:
@@ -53,6 +54,7 @@ services:
     volumes:
       - /workspace:/workspace
       - /opt/docker-homes/dev/${USERNAME}:/home/${USERNAME}
+      - /opt/docker-homes/dev/ssh-hostkeys:/etc/ssh/hostkeys  # 재빌드 후에도 SSH 호스트 키 유지
     deploy:
       resources:
         limits:
