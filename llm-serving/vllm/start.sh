@@ -17,7 +17,7 @@
 #   ./start.sh down              # 인자 없음 → 전체 중지 confirm 프롬프트 [y/N]
 #   ./start.sh down all          # 모든 인스턴스 + 게이트웨이 중지 (확인 없이)
 #   ./start.sh down qwen         # instances/qwen.yaml 단독 중지
-#   ./start.sh down 5016         # gateways/5016.yaml 단독 중지
+#   ./start.sh down 5501         # gateways/5501.yaml 단독 중지
 #   ./start.sh status            # 상태 확인
 #   ./start.sh restart           # 인자 없음 → 전체 재시작 confirm 프롬프트 [y/N]
 #   ./start.sh restart <name>    # 단일 대상 재시작 (내부적으로 down→up)
@@ -347,7 +347,7 @@ stop_gateway() {
     eval "$(parse_gateway_yaml "$yaml_path")"
 
     # set -e 환경에서 caller(cmd_down)가 비제로 반환에 의해 조기 종료되지 않도록
-    # 함수 내 모든 return은 명시적으로 return 0 (line 292의 함정 사고 학습).
+    # 함수 내 모든 return은 명시적으로 return 0 (아래 폴링 루프 주석 참고).
     if [ -z "$GW_PORT" ]; then
         return 0
     fi
@@ -834,7 +834,7 @@ cmd_help() {
 "
         traffic_ex="  ./start.sh traffic ${first_gw:-<포트>} --concurrency 50   # 부하 강도 지정
   ./start.sh traffic ${first_gw:-<포트>} --image-ratio 0     # 텍스트만 (기본은 절반이 이미지)
-  ./start.sh traffic ${first_gw:-<포트>} --label Qwen3.8-27B-FP8  # 리포트에 백엔드 실모델 기록
+  ./start.sh traffic ${first_gw:-<포트>} --label Qwen3.8-27B-FP8  # 리포트에 백엔드 체크포인트 기록
 "
         traffic_policy="           traffic은 부하가 크므로 무인자/all 호출을 아예 거부한다.
 "

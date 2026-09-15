@@ -9,8 +9,8 @@
 
 기본 실행:
     python tests/speed_test.py                                       # localhost:5015
-    python tests/speed_test.py --base-url http://localhost:5015      # Gemma 게이트웨이
-    python tests/speed_test.py --base-url http://localhost:5016      # Qwen 게이트웨이 (같은 results에 누적)
+    python tests/speed_test.py --base-url http://localhost:5015      # 게이트웨이 5015
+    python tests/speed_test.py --base-url http://localhost:6015      # 다른 게이트웨이 (같은 results에 누적)
     python tests/speed_test.py --base-url http://localhost:5015 --quick   # 빠른 검증
     python tests/speed_test.py --base-url http://localhost:5015 --model my-model --label "MyLabel"
 
@@ -73,7 +73,7 @@ def _endpoint_label(base_url: str) -> str:
 
 # ── 입력 프롬프트 (~2000자 한국어 RAG 컨텍스트 고정) ────────────────
 # 토크나이저별 다르지만 한국어 1자 ≈ 1.5~2 토큰, 본 컨텍스트 ≈ 2500~3500 입력 토큰.
-# prefill 부담을 어느 정도 주면서도 모든 모델에서 max_model_len(32768) 안에 충분히 들어가는 길이.
+# prefill 부담을 어느 정도 주면서도 모든 인스턴스의 max_model_len(최소 16384) 안에 충분히 들어가는 길이.
 PROMPT_KO_CONTEXT = """다음은 한국의 기후, 농업, 발효 식품에 관한 자료입니다. 이 자료를 참고해 마지막 질문에 답변해주세요.
 
 [자료 1: 한국의 기후 특성]
@@ -438,10 +438,10 @@ def main() -> int:
 
     print(f"[speed_test] base_url={endpoint.base_url}")
     print(f"[speed_test] model={endpoint.model}  label={endpoint.label}")
-    # API 노출명이 백엔드와 무관하게 고정돼 있어, 라벨이 없으면 결과 표의 model 열이
-    # 전부 같은 이름으로 쌓여 모델 간 비교가 불가능해진다.
+    # API 모델명이 served_model_name으로 고정돼 있어, 라벨이 없으면 결과 표의 model 열이
+    # 전부 같은 이름으로 쌓여 체크포인트 간 비교가 불가능해진다.
     if not args.label:
-        print("[speed_test] --label 미지정 — 결과 표에 백엔드 실모델이 남지 않습니다")
+        print("[speed_test] --label 미지정 — 결과 표에 백엔드 체크포인트가 남지 않습니다")
     print(f"[speed_test] 시나리오 {len(scenarios)}개 → 결과: {args.results_path}")
 
     if not args.no_warmup:

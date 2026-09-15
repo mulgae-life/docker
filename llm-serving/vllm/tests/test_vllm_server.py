@@ -112,7 +112,7 @@ class TestContext:
 # ── HTTP 헬퍼 ────────────────────────────────────────────
 
 # 마지막 요청/응답 메타. _run_test가 fail 시 자동으로 detail에 부착.
-# 동시 요청 테스트(예: t_8.x)에선 race condition 가능하지만, 그런 케이스는
+# 동시 요청 테스트(t_7.3·t_7.4, t_9.2~t_9.4)에선 race condition 가능하지만, 그런 케이스는
 # 자체 detail로 풍부 정보를 채우므로 보조 컨텍스트로만 사용.
 _LAST_REQUEST: dict | None = None
 _LAST_RESPONSE: dict | None = None
@@ -187,7 +187,7 @@ _TEST_IMAGE_DATA_URL: str | None = None
 
 
 def _load_test_image() -> str:
-    """scripts/vllm/image.png를 data URL(base64)로 로드한다.
+    """tests/image.png를 data URL(base64)로 로드한다.
 
     vLLM OpenAI 호환 API는 image_url.url에 data URL을 직접 받는다.
     동시 10개 테스트에서 반복 디스크 IO를 피하려고 모듈 캐시 사용.

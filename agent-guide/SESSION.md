@@ -1,7 +1,7 @@
 ---
 name: session
 description: docker 레포 현재 상태. 세션 시작 시 다음 작업과 최근 변경 파악용.
-last-updated: 2026-09-14 (my-docker-server 데탑 컨테이너 재생성 — 수동 설치 도구 Dockerfile 고정, compose 프로젝트 전환, sshd 강화 실적용)
+last-updated: 2026-09-15 (llm-serving 배포 범위 주석 정리 + `slm_research/` S3 제외 — 운영 서버로 가는 코드·문서 기준)
 ---
 
 # 세션 상태
@@ -24,8 +24,8 @@ last-updated: 2026-09-14 (my-docker-server 데탑 컨테이너 재생성 — 수
 
 | 우선순위 | 작업 | 상태 |
 |---------|------|------|
-| P1 | **온프레미스 H200 서버 셋업 (`on-prem/`)**: 8/28 골격 신설 — `setup-host.sh`(RHEL 10, 드라이버 580.178.04 LTSB 고정 + versionlock, Docker CE, Fabric Manager는 `/dev/nvidia-nvswitch*`로 판단, 베이스 이미지 사전 pull), `start.sh check`(폐쇄망 준비 점검), `.env.prd`(H200 8장 기준, git 미추적). 컨테이너 계층은 `aws/` 공유. 잔존: ① 설치팀 회신 대기 — HGX/PCIe 구성, 데이터 NVMe 경로(`VOLUME_DEVICE`), RAM ② 실서버에서 `setup-host.sh` 최초 실행 검증(문법·`check` 로직만 연구계에서 확인, RHEL 실기동 미검증) ③ `docker-compose.yml`의 `apparmor=unconfined`가 RHEL Docker에서 무시되는지 확인 ④ 5-3 pip 오프라인 절차 실측. | 골격 ✅, 실서버 검증 대기 |
-| P1 | **`gemma-4` 별칭 + 정체성 프롬프트 운영계 반영**: 8/20 연구계 적용·검증 완료. 잔존 — `./start.sh push` 후 운영계에서 인스턴스·게이트웨이 **둘 다** 재기동. 게이트웨이 재기동만으로 걸리는 것은 호환 계층과 정체성 주입(코드 기본값 on)이고, 별칭과 `fingerprint_mode: custom`은 **인스턴스 재기동이 있어야** 반영된다. 클라이언트 `.env`(`CHAT_MODEL` 등)는 `VLLM_OPS_GUIDE.md` §9.4 참고. | 연구계 ✅, 운영계 대기 |
+| P1 | **온프레미스 H200 서버 셋업 (`on-prem/`)**: 8/28 골격 신설 — `setup-host.sh`(RHEL 10, 드라이버 580.178.04 LTSB 고정 + versionlock, Docker CE, Fabric Manager는 `/dev/nvidia-nvswitch*`로 판단, 베이스 이미지 사전 pull), `start.sh check`(폐쇄망 준비 점검), `.env.prd`(H200 8장 기준, git 미추적). 컨테이너 계층은 `aws/` 공유. 잔존: ① 설치팀 회신 대기 — HGX/PCIe 구성, 데이터 NVMe 경로(`VOLUME_DEVICE`), RAM ② 실서버에서 `setup-host.sh` 최초 실행 검증(문법·`check` 로직만 연구계에서 확인, RHEL 실기동 미검증) ③ `docker-compose.yml`의 `apparmor=unconfined`가 RHEL Docker에서 무시되는지 확인 ④ 5-3 pip 오프라인 절차 실측 ⑤ `start.sh check`의 `_yaml_top_value`가 최상위 키만 읽어 들여쓰인 `speculative_config.model`(drafter `${model}-assistant`)을 검사하지 못한다 — 폐쇄망에서 drafter 누락을 기동 전에 못 잡는다(9/15 확인, 수정 여부 대표님 결정 대기). | 골격 ✅, 실서버 검증 대기 |
+| P1 | **`gemma-4` 별칭 + 정체성 프롬프트 운영계 반영**: 8/20 연구계 적용·검증 완료. 잔존 — `./start.sh push` 후 운영계에서 인스턴스·게이트웨이 **둘 다** 재기동. 게이트웨이 재기동만으로 걸리는 것은 호환 계층과 정체성 주입(코드 기본값 on)이고, 별칭과 `fingerprint_mode: custom`은 **인스턴스 재기동이 있어야** 반영된다. 클라이언트 `.env`(`CHAT_MODEL` 등)는 `VLLM_OPS_GUIDE.md` §9.4 참고. 같은 `push`로 S3의 `slm_research/` 182개 객체가 지워지지만 운영 서버에 이미 내려간 사본은 제외 경로라 `pull --delete`가 안 지운다 — `pull` 후 `vllm/slm_research/`를 한 번 직접 정리할 것. | 연구계 ✅, 운영계 대기 |
 | P1 | **운영계 31B 전환 반영**: 9/4 `prd-gemma`를 26B-A4B → 31B 덴스로 교체(yaml만). 잔존 — ① 운영계 `/models/LLM/google/`에 `gemma-4-31B-it` **본체와 `-assistant` drafter 둘 다** 확보(폐쇄망이라 S3 경유, `${model}-assistant` 치환이라 yaml 수정은 불필요) ② `./start.sh push` → 운영계 `pull` → 인스턴스·게이트웨이 재기동(바로 위 별칭 반영과 같은 재기동에 묶인다) ③ 기동 로그의 `GPU KV cache size`·`Maximum concurrency` 확인 — 31B는 토큰당 KV가 26B의 4배라 `max_num_seqs: 20`이 실효하는지는 이 값으로만 판정된다 ④ 부하 시 `PreemptionMode.RECOMPUTE` 경고가 뜨면 `max_num_seqs`와 게이트웨이 `max_inflight_requests`를 함께 하향. | yaml ✅, 운영계 대기 |
 | P1 | **:5015 운영 프로파일 (26B 기준)**: 2026-07-21부터 :5015 = 비PII 직접 게이트웨이 + gemma-26b(fp8·TP2·gmu 0.9·max_len 65536 — `5a8fd1b`에서 32768→65536, overload 20/40). 잔존: 장문 트래픽 기준 latency·429 비율 측정. | 갱신(모델 교체), 장문 검증 잔존 |
 | P1 | **MTP 실기동 검증 (31B/26B/Qwen)**: 31B·Qwen 27B(5/13) + 26B-A4B(7/21, QA 통과) 실기동 확인. 잔존: ① Qwen 5016 재기동·가용성 ② acceptance/TPOT 사내 벤치(`slm_research/mtp.md` §5 참고). | 부분 완료, 벤치 잔존 |
@@ -52,6 +52,41 @@ last-updated: 2026-09-14 (my-docker-server 데탑 컨테이너 재생성 — 수
 ---
 
 ## 최근 세션
+
+### 2026-09-15 (on-prem 대조 + llm-serving 배포 범위 주석 정리 + `slm_research/` S3 제외)
+
+#### 세션 목표
+- `aws/` EC2 구성을 온프레미스에 그대로 쓸 수 있는지, `on-prem/`이 `aws/`보다 뒤처졌는지 대조
+- 운영 서버로 배포되는 소스·설정·문서의 주석 중 보안 담당자가 의심할 만한 어조를 정리
+- 운영 서버에 갈 이유가 없는 연구 자료가 배포 범위에 섞여 있는지 확인
+
+#### 변경 파일
+
+| 파일 | 변경 유형 | 요약 |
+|------|----------|------|
+| `llm-serving/start.sh` | 설정 | `SYNC_EXCLUDES`에 `*/slm_research/*` 추가 |
+| `llm-serving/DEPLOY_GUIDE.md` | 문서 | 제외 목록 설명에 `slm_research/` 사유 반영 |
+| `llm-serving/VLLM_OPS_GUIDE.md` | 문서 | §10.4·§10.5·§11 측정 안내의 주석 어조 재작성 |
+| `llm-serving/vllm/instances/*.yaml` (6) | 설정 | `served_model_name`·`fingerprint_*` 주석 재작성 |
+| `llm-serving/vllm/gateways/*.yaml` (6) | 설정 | `mask_model_path`·`inject_identity_prompt` 주석 재작성 |
+| `llm-serving/vllm/{instances,gateways}/_SCHEMA.txt` | 문서 | 같은 키 설명 재작성 |
+| `llm-serving/vllm/vllm_gateway.py` | 코드 | 모듈 독스트링 토폴로지 실측 정정(5015→7080 연구계 / 5501→7070 운영계), compat 주석·기동 로그 문구 재작성 |
+| `llm-serving/vllm/start.sh` | 코드 | 없는 게이트웨이 `5016` 예시를 `5501`로, 사라진 줄번호 참조 제거 |
+| `llm-serving/vllm/tests/*.py`, `tests/results/speed_results.md` | 코드·문서 | 옛 포트·경로·테스트 번호 정정, "실모델" 표기를 "체크포인트"로 통일 |
+
+#### 결정 사항
+- **보안 검토 범위는 운영 서버로 가는 것**(`llm-serving/start.sh push` → S3 → 운영계 `pull`)이라고 대표님이 확정. GitHub 공개 여부를 기준으로 삼던 초기 판단은 폐기했다. `/workspace/docker`의 연구계 전용 자료는 대상이 아니다.
+- **정체성 프롬프트(`_DEFAULT_IDENTITY_PROMPT`)는 손대지 않는다.** 서빙 모델의 정상적인 시스템 프롬프트 지침이라는 대표님 지적을 받아들였다.
+- **주석 재작성 원칙**: "누구에게 안 보이게 한다"가 아니라 "무엇을 어떤 값으로 고정하고, 그래서 클라이언트가 무엇을 안 바꿔도 되는가"로 쓴다. 기능과 동작 설명은 그대로 두고 어조만 바꿨으므로 동작 변경은 없다.
+- **`slm_research/`는 배포 제외.** S3에 182개 객체(10,075,140바이트)가 실제로 올라가 있어 운영계가 `pull`하면 그대로 내려간다. 모델 조사 문서와 커뮤니티 수집 원본이라 서빙에 쓰이지 않는다.
+
+#### `on-prem/` 대조 결과
+`on-prem/`은 `aws/`보다 뒤처지지 않았다. 컨테이너 계층(`docker-compose.yml`·`Dockerfile.llm`·`entrypoint-llm.sh`·`user.sh`·`wheels/`)은 공유하고, 갈라지는 것은 호스트 셋업(`setup-ec2.sh` ↔ `setup-host.sh`)과 코드 전달 방식(S3 `start.sh` ↔ `git pull` + `check`)뿐이다. `.env` 키도 정합하다. 유일한 구멍은 `on-prem/start.sh check`의 `_yaml_top_value`가 최상위 키만 읽어 들여쓰인 `speculative_config.model`(drafter `${model}-assistant`)을 검사하지 못하는 것인데, 제안만 하고 손대지 않았다.
+
+#### 현재 상태
+완료. 검증은 `bash -n`(배포·서비스 진입점 2종), `py_compile`(게이트웨이 + 테스트 3종), YAML 파싱(인스턴스·게이트웨이 12종) 전부 통과. 주석 안의 포트·경로·테스트 번호는 실제 yaml과 테스트 함수로 대조했다. `push --dryrun`에서 `slm_research/` 업로드 대상 0건, 삭제 단계 182건(기존 S3 객체)을 확인했고 S3에는 손대지 않았다.
+
+> ⚠️ **운영 서버 수동 정리 필요**: 다음 `push`로 S3의 `slm_research/` 182개 객체는 지워지지만, 제외 경로는 `pull --delete`에서도 보호되므로 운영 서버에 이미 내려간 `vllm/slm_research/`는 남는다. `pull` 후 한 번 직접 지워야 한다.
 
 ### 2026-09-14 (my-docker-server 데탑 컨테이너 재생성 + 수동 설치 도구 이미지 고정)
 

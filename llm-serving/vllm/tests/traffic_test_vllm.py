@@ -6,8 +6,8 @@
 
 테스트 단계:
   1. 모델 확인: --model 미지정 시 /v1/models에서 첫 모델명을 자동 추출.
-       API 노출명은 백엔드와 무관하게 고정돼 있으므로(gemma-4), 무엇을 잰
-       기록인지 남기려면 --label로 백엔드 실모델을 찍어야 한다.
+       API 모델명은 served_model_name(gemma-4)으로 고정돼 있으므로, 어떤
+       체크포인트를 잰 기록인지 남기려면 --label로 체크포인트명을 찍어야 한다.
   2. 사전 스냅샷: /health, /server-status, /v1/models 상태 저장.
   3. 조건 확정: 요청 수, 동시성, 생성 토큰 수, 타임아웃을 CLI 인자로 확정.
   4. 진행 화면: 기본으로 로컬 URL에서 요청별 생성 상태 표시.
@@ -1269,7 +1269,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--base-url", default="http://localhost:5015", help="게이트웨이 URL")
     p.add_argument("--model", default=None, help="요청에 실을 모델명. 미지정 시 /v1/models에서 자동 추출")
     p.add_argument("--label", default=None,
-                   help="리포트에 남길 백엔드 실모델 표시명 (예: Qwen3.8-27B-FP8). "
+                   help="리포트에 남길 백엔드 체크포인트 표시명 (예: Qwen3.8-27B-FP8). "
                         "요청에는 쓰이지 않는다. 미지정 시 --model/자동 추출값과 동일")
     p.add_argument("--mode", choices=("smoke", "overload"), default=None, help=argparse.SUPPRESS)
     p.add_argument("--requests", type=int, default=None, help="총 요청 수")
@@ -1362,8 +1362,8 @@ def main() -> None:
             _wait_for_dashboard_shutdown(dashboard_server, dashboard_url)
             sys.exit(1)
         raise
-    # API 노출명은 백엔드 모델과 무관하게 고정돼 있어(게이트웨이 compat), 리포트의
-    # model만으로는 무엇을 잰 기록인지 알 수 없다. --label이 그 공백을 메운다.
+    # API 모델명은 인스턴스 yaml의 served_model_name으로 고정돼 있어, 리포트의
+    # model만으로는 어떤 체크포인트를 잰 기록인지 알 수 없다. --label이 그 공백을 메운다.
     label = args.label or model
     if dashboard:
         dashboard.configure(args, model, label)
@@ -1372,9 +1372,9 @@ def main() -> None:
     print(f"  서버: {args.base_url}")
     print(f"  모델: {model}")
     if args.label:
-        print(f"  실모델: {label}")
+        print(f"  체크포인트: {label}")
     else:
-        print("  실모델: (--label 미지정 — 리포트에 백엔드 모델이 남지 않습니다)")
+        print("  체크포인트: (--label 미지정 — 리포트에 백엔드 체크포인트가 남지 않습니다)")
     print(f"  요청: {args.requests}, 동시성: {args.concurrency}, stream={args.stream}")
     if args.image_ratio > 0:
         print(f"  이미지: 비율 {args.image_ratio:.0%}, {args.image_edge}px, 풀 {len(_IMAGE_POOL)}장")

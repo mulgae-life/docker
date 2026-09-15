@@ -5,9 +5,9 @@
 주기적 헬스체크, 기동/재기동 시 자동 웜업을 제공한다.
 
 구조 (격리 페어 + 자동 디스커버리):
-    클라이언트 → Gateway(:5015) → vLLM(:7070)            [Gemma 페어]
-    클라이언트 → Gateway(:5016) → vLLM(:7071)            [Qwen 페어]
-    (LB 시) Gateway(:5015) → vLLM(:7070, :7072, ...)     [동일 게이트웨이 소속]
+    클라이언트 → Gateway(:5015) → vLLM(:7080)            [연구계 페어]
+    클라이언트 → Gateway(:5501) → vLLM(:7070)            [운영계 페어]
+    (LB 시) Gateway(:5015) → vLLM(:7080, :7081, ...)     [동일 게이트웨이 소속]
 
 자동 디스커버리:
     gateways/<port>.yaml 의 discover_from 디렉토리(예: ../instances)를 스캔하여
@@ -17,7 +17,7 @@
 
 사용법:
     python vllm_gateway.py -c gateways/5015.yaml
-    python vllm_gateway.py -c gateways/5016.yaml
+    python vllm_gateway.py -c gateways/5501.yaml
 
     # 백그라운드 실행
     mkdir -p logs && nohup python vllm_gateway.py -c gateways/5015.yaml \
@@ -139,13 +139,13 @@ class CompatConfig(BaseModel):
     """모델 교체 호환 계층.
 
     백엔드 모델을 Gemma ↔ Qwen ↔ GLM으로 갈아끼워도 클라이언트가 코드를 고치지
-    않게 만든다. 사용자에게 노출되는 모델명은 인스턴스 yaml의 served_model_name
+    않게 만든다. 클라이언트가 보는 모델명은 인스턴스 yaml의 served_model_name
     으로 고정하고, 모델마다 다른 요청 파라미터는 여기서 흡수한다.
     """
 
     translate_reasoning_effort: bool = True  # effort 값을 백엔드가 아는 값으로 번역
-    mask_model_path: bool = True             # /v1/models의 root를 별칭으로 가림
-    inject_identity_prompt: bool = True      # 정체성 시스템 프롬프트 주입
+    mask_model_path: bool = True             # /v1/models의 root를 id 별칭과 같은 값으로 통일
+    inject_identity_prompt: bool = True      # 모델 자기소개를 API 모델명과 맞추는 시스템 프롬프트 주입
     # 모델 계열별 effort 매핑. 키는 /v1/models의 root(체크포인트 경로)에 대한
     # 부분 문자열(대소문자 무시), 값은 {클라이언트 값: 백엔드 값}.
     # 비워두면 _DEFAULT_EFFORT_PROFILES를 쓴다.
@@ -757,7 +757,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     _compat = config.compat
     logger.info(
-        "호환 계층: effort 번역 %s / 모델 경로 마스킹 %s / 정체성 프롬프트 %s",
+        "호환 계층: effort 번역 %s / 모델 경로 통일 %s / 정체성 프롬프트 %s",
         "on" if _compat.translate_reasoning_effort else "off",
         "on" if _compat.mask_model_path else "off",
         "on" if _compat.inject_identity_prompt else "off",
@@ -833,7 +833,7 @@ app = FastAPI(title="vLLM Gateway", lifespan=lifespan)
 # 모델 교체 호환 계층
 # ═══════════════════════════════════════════════════════
 #
-# 클라이언트에게 노출되는 모델은 항상 하나(served_model_name)이고, 그 뒤에서
+# 클라이언트가 보는 모델명은 항상 하나(served_model_name)이고, 그 뒤에서
 # Gemma/Qwen/GLM을 자유롭게 교체한다. 모델마다 다른 요청 파라미터는 여기서
 # 흡수해 클라이언트가 400/422를 보지 않게 한다.
 #
@@ -842,8 +842,8 @@ app = FastAPI(title="vLLM Gateway", lifespan=lifespan)
 # 아니면 템플릿에서 예외를 던진다. 즉 위험한 쪽은 지원 모델이다.
 #
 # 파라미터와 별개로 모델의 자기소개도 흡수 대상이다. 정체성은 사후 학습으로
-# 가중치에 박혀 있어 서빙 설정으로는 못 바꾼다 — "너 누구야"에 백엔드 실모델을
-# 그대로 답한다(2026-08-20 실측). 시스템 프롬프트 주입이 유일한 수단이다.
+# 가중치에 박혀 있어 서빙 설정으로는 못 바꾼다 — "너 누구야"에 학습 때 이름을
+# 답한다(2026-08-20 실측). API 모델명과 맞추려면 시스템 프롬프트로 지시해야 한다.
 
 # vLLM이 최상위 reasoning_effort로 허용하는 값(chat_completion/protocol.py의 Literal).
 # 이 밖의 문자열은 백엔드에서 422가 되므로 게이트웨이가 먼저 걷어낸다.
@@ -979,8 +979,8 @@ def _inject_identity_prompt(payload: dict, compat: CompatConfig) -> dict | None:
     모르는 role이라 그대로 넘기면 400이다).
 
     정체성 문구가 앞, 클라이언트 지시가 뒤다. 뒤에 오는 지시가 우선하므로
-    클라이언트가 자기 봇 이름을 붙이는 것은 그대로 살아난다 — 막으려는 것은
-    백엔드 실모델 노출이지 클라이언트의 페르소나 설정이 아니다.
+    클라이언트가 자기 봇 이름을 붙이는 것은 그대로 살아난다 — 맞추려는 것은
+    모델 자기소개와 API 모델명의 일치이지 클라이언트의 페르소나 설정이 아니다.
 
     Returns:
         수정된 payload. 변경할 게 없으면 None (호출자가 원본 body를 그대로 흘린다).
@@ -1016,10 +1016,10 @@ def _inject_identity_prompt(payload: dict, compat: CompatConfig) -> dict | None:
 
 
 def _mask_model_list(data: dict) -> dict:
-    """모델 목록에서 실제 체크포인트 경로를 지운다.
+    """모델 목록의 root를 id 별칭과 같은 값으로 통일한다.
 
-    served_model_name으로 id에 별칭을 씌워도 root에는 실경로가 남아 어떤 모델이
-    떠 있는지 그대로 드러난다. 사용자에게는 별칭 하나만 보여야 하므로 root를
+    served_model_name으로 id에 별칭을 씌워도 root에는 체크포인트 경로가 남아
+    식별자가 둘이 된다. 클라이언트가 보는 모델 식별자는 하나여야 하므로 root를
     id와 같은 값으로 덮는다. max_model_len은 클라이언트가 컨텍스트 한도를
     확인하는 용도라 남긴다.
     """
